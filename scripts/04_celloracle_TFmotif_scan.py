@@ -66,7 +66,7 @@ def celloracle_TFmotif_scan(peaks_TSS_mapped, output_path, data_id):
             verbose=True, n_cpus=-1)
 
     # Save tfinfo object
-    tfi.to_hdf5(file_path=output_path + data_id + ".celloracle.tfinfo")
+    tfi.to_hdf5(file_path=output_path + "04_" + data_id + "_peaks_motifs_TFs.celloracle.tfinfo")
 
     # Check motif scan results
     tfi.scanned_df.head()
@@ -84,7 +84,7 @@ def celloracle_TFmotif_scan(peaks_TSS_mapped, output_path, data_id):
     # Get final base GRN
     # Save the result as a dataframe
     df = tfi.to_dataframe()
-    df.to_parquet(output_path + "base_GRN_dataframe_" + data_id + ".parquet")
+    df.to_parquet(output_path + "05_" + data_id + "base_GRN_dataframe" +  + ".parquet")
     
     return df
 
