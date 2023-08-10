@@ -1,5 +1,13 @@
 # Load the Cicero library from the local installation (trapnell lab branch for Signac implementation)
+library(remotes)
+library(devtools)
+# install cicero
+withr::with_libpaths(new="/hpc/scratch/group.data.science/yangjoon.kim/.local/R_lib", 
+                     install_github("cole-trapnell-lab/cicero-release", ref = "monocle3"))
+# cicero
 withr::with_libpaths(new = "/hpc/scratch/group.data.science/yangjoon.kim/.local/R_lib", library(cicero))
+
+# load other libraries
 library(Signac)
 library(Seurat)
 library(SeuratWrappers)
