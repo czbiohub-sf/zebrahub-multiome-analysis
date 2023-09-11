@@ -5,8 +5,10 @@
 # We recommend using RNA modalities to integrate multiple replicates, then perform joint peak-calling (either bulk, or cell-type specific)
 
 # load the libraries
-library(Seurat)
-library(Signac)
+suppressMessages(library(Seurat))
+suppressMessages(library(Seurat))
+#library(Seurat)
+#library(Signac)
 library(SeuratData)
 library(SeuratDisk)
 # genome info
@@ -19,20 +21,37 @@ library(BSgenome.Drerio.UCSC.danRer11)
 print(R.version)
 print(packageVersion("Seurat"))
 
+
 # Input args
-# raw_data_path: filepath for the cellranger-arc output files (h5 files)
+# raw_data_path: filepath for the cellranger-arc output files (h5 and fragment files)
 # gref_path: filepath for the GTF file (used for Cellranger-arc alignment)
 # 
 
 # Output args
 # Seurat: a seurat object containing multiple assays (i.e. RNA, ATAC, peaks_bulk, peaks_celltype, etc.)
-# 
 
+# Parse command-line arguments
+args <- commandArgs(trailingOnly = TRUE)
+
+if (length(args) != 6) {
+  stop("Usage: Rscript bash_01_preprocess_multiome_object_signac.R raw_data_path gref_path reference annotation_class output_filepath data_id")
+}
+
+raw_data_path <- args[1]
+gref_path <- args[2]
+reference <- args[3]
+annotation_class <- args[4] # Let's just use one annotation_class. (i.e. "global_annotation")
+output_filepath <- args[5] # filepath for the output
+data_id <- args[6]
+
+
+# Sub-functions
 # Step1. generate a Seurat object from the Cellranger-arc output (multiome)
-generate_seurat_object <- function(raw_data_path = ,
-                                    gref_path =, ){
+generate_seurat_object <- function(raw_data_path ="" ,
+                                    gref_path ="")
+                                    { # nolint
     # step 0. load the RNA and ATAC data
-    raw_data_path = "/data/yangjoon.kim/bruno/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/TDR119/outs/"
+    #raw_data_path = "/data/yangjoon.kim/bruno/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/TDR119/outs/"
     counts <- Read10X_h5(paste0(raw_data_path, "filtered_feature_bc_matrix.h5"))
     fragpath <- paste0(raw_data_path, "atac_fragments.tsv.gz")
 
@@ -72,7 +91,7 @@ generate_seurat_object <- function(raw_data_path = ,
     #     min.cells = 15
     )
     # return the Seurat object
-    return multiome
+    return(multiome)
 }
 
 # Step1-2. Filter out the low-quality cells.
@@ -109,7 +128,7 @@ filter_low_quality_cells <- function(object = multiome,
     )
 
     # return the subsetted(QCed) Seurat object
-    return multiome
+    return(multiome)
     }
 
 # Step2. Transfer the reference annotation to our dataset using the RNA anchors
@@ -118,23 +137,23 @@ filter_low_quality_cells <- function(object = multiome,
 # annotations: a list of annotation classes that we will transfer (i.e. coarse and fine)
 transfer_reference_annotation_RNA_anchors <- function(object = multiome, 
                                             reference = reference,
-                                            annotation_class = c("cell_annotation", "global_annotation"),
-                                            ){
+                                            annotation_class = "global_annotation")
+                                            {
     # To process the RNA (GEX) data from the Seurat object - SCTransform and RunPCA
     DefaultAssay(multiome) <- "RNA"
     multiome <- SCTransform(multiome)
     multiome <- RunPCA(multiome)
 
     # Import the reference Seurat object
-    # Note that the reference object should be split out for each timepoint
-    reference <- readRDS(reference)
+    #reference <- readRDS(reference)
+    reference <- LoadH5Seurat(reference)
 
     # preprocess the reference (so that we can compute the RNA anchors with our multiome dataset)
     reference <- SCTransform(reference)
     reference <- RunPCA(reference)
 
     # print the annotation labels to check
-    print(unique(reference$annotation_class[1]))
+    print(unique(reference$global_annotation))
 
     # transfer cell type labels from reference to query
     transfer_anchors <- FindTransferAnchors(
@@ -146,36 +165,40 @@ transfer_reference_annotation_RNA_anchors <- function(object = multiome,
         dims = 1:50
     )
 
-    for (annotation in annotation_class){
-        # transfer the label from "annotation" from a list of annotation classes ("annotation_class")
-        predictions <- TransferData(
+    #for (annotation in annotation_class){
+    # transfer the label from "annotation" from a list of annotation classes ("annotation_class")
+    predictions <- TransferData(
         anchorset = transfer_anchors, 
-        refdata = reference$annotation,
+        refdata = reference$global_annotation,
         weight.reduction = multiome[['pca']],
         dims = 1:50
-            )
+        )
 
-        # add the predicted annotation to the main Seurat object
-        multiome <- AddMetaData(
-            object = multiome,
-            metadata = predictions,
-            col.name = annotation, # use the annotation_class label from the reference
-            )
-    }
+    # add the predicted annotation to the main Seurat object
+    # change the column name before adding the Metadata
+    # rename the predictions_fine's colname
+    colnames(predictions)[1] = "global_annotation"
+    
+    # Add the metadata (a dataframe whose column name is col.name)
+    multiome <- AddMetaData(
+        object = multiome,
+        metadata = predictions,
+        #col.name = "global_annotation", # use the annotation_class label from the reference
+        )
+    #}
     
 
     # set the cell identities to the cell type predictions
-    Idents(multiome) <- annotation
+    Idents(multiome) <- "global_annotation"
 
     # return the Seurat object with the transferred annotations
-    return multiome
+    return(multiome)
     }
 
 # Step3. Peak-calling (MACS2 - bulk, cell-type specific)
 # perform MACS2(implemented in Signac) peak-calling for different group.by parameters (bulk, and cell-type specific)
 call_MACS2_peaks_bulk_celltype <- function(object=multiome,
-                                            annotation_class = c("global_annotation"),
-                                            ){
+                                            annotation_class = "global_annotation"){
 
     # Change the default assay to "ATAC" for calling peaks
     DefaultAssay(multiome) <- "ATAC"
@@ -212,7 +235,8 @@ call_MACS2_peaks_bulk_celltype <- function(object=multiome,
 
     # call peaks using the annotations from the "annotation_class" (predicted labels from the reference)
     # We will default this to just one annotation_class for now, can be extended to multiple annotation_classes in future (for loop)
-    annotation <- annotation_class[1]
+    # annotation <- "global_annotation"
+    annotation <- annotation_class
     
     peaks <- CallPeaks(
         object = multiome,
@@ -237,7 +261,7 @@ call_MACS2_peaks_bulk_celltype <- function(object=multiome,
     )
 
     # return the Seurat object with updated ChromatinAssay objects
-    return multiome
+    return(multiome)
     }
 
 
@@ -248,10 +272,8 @@ call_MACS2_peaks_bulk_celltype <- function(object=multiome,
 # Step 5. Compute the dim.reduction and UMAPs - RNA, ATAC, and joint
 # NOTE: We use PCA for RNA, and LSI for ATAC
 # NOTE2: We will use the "peaks_celltype" ChromatinAssay object for computing the LSI/UMAP for the ATAC.
-compute_embeddings <- function(object=multiome,
-                                #assays = c("RNA","peaks_celltype"),
-                                #embeddings=c("umap.rna","umap.atac","umap.joint",
-                                ){
+compute_embeddings <- function(object=multiome)
+    {
     # check which embeddings are already present in the Seurat object (multiome)
     print(multiome@reductions)
 
@@ -280,5 +302,72 @@ compute_embeddings <- function(object=multiome,
 
     # For plotting UMAPs, we can use the following command
     #DimPlot(multiome, label = TRUE, repel = TRUE, reduction = "umap.joint") + NoLegend()
-    return multiome
+    return(multiome)
     }
+
+# Step 6 (Optional). Compute the Gene Activity (Signac)
+# Signac: quantify the activity of each gene in the genome by simply 
+# summing up the fragments intersecting the gene body and promoter region (2kb upstream)
+# Then, we sum up the fragments for each gene, at each cell to construct a new count matrix, "Gene.Activity".
+# This is all wrapped using "GeneActivity" in Signac
+# Note that Cicero also has its own way of computing the Gene Activity count matrix.
+compute_gene_activity <- function(object=multiome){
+    
+    DefaultAssay(multiome) <-"ATAC"
+    # we use the Signac function "GeneActivity"
+    gene.activities <- GeneActivity(multiome)
+    # add the gene activity matrix to the Seurat object as a new assay and normalize it
+    multiome[['Gene.Activity']] <- CreateAssayObject(counts = gene.activities)
+    
+    multiome <- NormalizeData(
+        object = multiome,
+        assay = 'Gene.Activity',
+        normalization.method = 'LogNormalize',
+        scale.factor = 10000
+    )
+    
+    return(multiome)
+    } 
+
+
+
+##### THIS PART IS THE KEY COMMAND #####
+##### ABOVE FUNCTIONS CAN BE WRAPPED INTO UTILITIES #####
+
+# Execution on Linux Terminal
+
+# # Load from here
+# multiome <- readRDS(paste0(output_filepath,data_id,"_processed.RDS"))
+
+# step 1. generate seurat object
+multiome <- generate_seurat_object(raw_data_path, gref_path)
+print("seurat object generated")
+
+# step 2. basic QC
+multiome <- filter_low_quality_cells(multiome)
+saveRDS(object=multiome, file=paste0(output_filepath,data_id,"_processed.RDS"))
+print("seurat object QCed, and saved")
+
+# step 3. transfer the annotation (using RNA)
+multiome <- transfer_reference_annotation_RNA_anchors(multiome, 
+                                                        reference=reference, 
+                                                        annotation_class=annotation_class) # nolint
+saveRDS(object=multiome, file=paste0(output_filepath,data_id,"_processed.RDS"))
+print("annotation transferred")
+
+
+# step 4. peak-calling
+multiome <- call_MACS2_peaks_bulk_celltype(multiome, annotation_class=annotation_class) # nolint
+saveRDS(object=multiome, file=paste0(output_filepath,data_id,"_processed.RDS"))
+print("peak-calling done")
+
+multiome <- compute_embeddings(multiome)
+print("embeddings computed")
+
+# step 5. (Optional) Compute "Gene Activities"
+multiome <- compute_gene_activity(multiome)
+print("gene activity computed")
+
+# step 6. save the RDS object
+saveRDS(object=multiome, file=paste0(output_filepath,data_id,"_processed.RDS"))
+print("seurat object saved")

@@ -13,7 +13,6 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-%matplotlib inline
 import seaborn as sns
 import os, sys, shutil, importlib, glob
 from tqdm.notebook import tqdm
@@ -22,11 +21,12 @@ from celloracle import motif_analysis as ma
 import celloracle as co
 co.__version__
 
-%config InlineBackend.figure_format = 'retina'
+#%config InlineBackend.figure_format = 'retina'
 
 plt.rcParams['figure.figsize'] = [6, 4.5]
 plt.rcParams["savefig.dpi"] = 300
-%matplotlib inline
+#%matplotlib inline
+
 
 # Input Arguments:
 # filepath: input and output filepath. We will put both the inputs and outputs in the same directory.
@@ -37,23 +37,57 @@ plt.rcParams["savefig.dpi"] = 300
 # save_figure: 
 # figpath: path for the plots/figures
 
-def co_CCAN_processing(filepath, 
+# Parse command-line arguments
+import argparse
+
+# a syntax for running the python script as the main program (not in a module)
+#if __name__ == "__main__":
+
+
+# Create an ArgumentParser object
+parser = argparse.ArgumentParser(description="Filter and map data using CellOracle")
+
+# Add command-line arguments
+parser.add_argument('filepath', type=str, help="File path")
+parser.add_argument('peak_file', type=str, help="Peak file")
+parser.add_argument('CCAN_file', type=str, help="CCAN file")
+parser.add_argument('cicero_score_threshold', type=float, help="Cicero score threshold")
+parser.add_argument('filename', type=str, help="Output filename")
+parser.add_argument('save_figure', type=bool, help="Save figure (True/False)")
+parser.add_argument('figpath', type=str, help="Figure path")
+
+# Parse the command-line arguments
+args = parser.parse_args()
+
+# Access the arguments as attributes of the 'args' object
+filepath = args.filepath
+peak_file = args.peak_file
+CCAN_file = args.CCAN_file
+cicero_score_threshold = args.cicero_score_threshold
+filename = args.filename
+save_figure = args.save_figure
+figpath = args.figpath
+
+def process_CCANS(filepath, 
                         peak_file = "01_TDR118_CRG_arc_peaks.csv", 
                         CCAN_file = "02_TDR118_cicero_connections_CRG_arc_peaks.csv", 
                         cicero_score_threshold = 0.8,
-                        filename="processed_peak_file_danRer11.csv",
+                        filename="03_TDR118_processed_peak_file_danRer11.csv",
                         save_figure=False,
-                        figpath):
+                        figpath=None):
 
     # Check if the figpath exists
-    #figpath = "/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/zebrahub-multiome-analysis/figures/peaks_TDR118"
-    os.makedirs(figpath, exist_ok=True)
+    if save_figure==True:
+        # figpath = "/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/zebrahub-multiome-analysis/figures/peaks_TDR118"
+        os.makedirs(figpath, exist_ok=True)
+    else:
+        figpath = None
 
     # Step 1. Load scATAC peak data and peak connection data made with Cicero
     # Load scATAC-seq peak list.
     peaks = pd.read_csv(filepath+peak_file, index_col=0)
     peaks = peaks.x.values
-    print("the number of peaks: " + len(peaks))
+    print("the number of peaks: " + str(len(peaks)))
 
     # add "chr" in front of each peak element for formatting (CellOracle genome reference)
     peaks = "chr" + peaks
@@ -63,9 +97,9 @@ def co_CCAN_processing(filepath,
     peaks = np.array(peaks)
 
     # Load Cicero coaccessibility scores.
-    cicero_connections = pd.read_csv(cicero_output_path + CCAN_file, index_col=0)
+    cicero_connections = pd.read_csv(filepath + CCAN_file, index_col=0)
     cicero_connections.head()
-    print("number of CCANs: ", len(cicero_connections))
+    print("number of CCANs: ", str(len(cicero_connections)))
 
     # Formatting 
     # add "chr" in front of each peak element for formatting (CellOracle genome reference)
@@ -143,3 +177,16 @@ def co_CCAN_processing(filepath,
         plt.xlabel("co-accessibility score (cicero)")
         plt.ylabel("occurences")
         plt.savefig(figpath+"/CCAN_TSS_cicero_scores_histogram.pdf")
+
+
+##### LINUX TERMINAL COMMANDS #####
+print("input arguments:")
+print([filepath, peak_file, 
+                CCAN_file, cicero_score_threshold,
+                filename, save_figure, figpath])
+
+process_CCANS(filepath, peak_file, 
+                CCAN_file, cicero_score_threshold,
+                filename, save_figure, figpath)
+                
+print("CCANS processing completed")
