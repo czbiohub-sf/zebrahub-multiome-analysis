@@ -43,7 +43,8 @@ reference <- args[3]
 annotation_class <- args[4] # Let's just use one annotation_class. (i.e. "global_annotation")
 output_filepath <- args[5] # filepath for the output
 data_id <- args[6]
-
+# assays_save <- args[7] # Assays in Seurat object that will be exported to h5ad objects
+# assays_save <- list("RNA", "ATAC")
 
 # Sub-functions
 # Step1. generate a Seurat object from the Cellranger-arc output (multiome)
@@ -329,6 +330,32 @@ compute_gene_activity <- function(object=multiome){
     return(multiome)
     } 
 
+# step 7. Convert Seurat object (multiple assays) into h5ad objects per assay
+# define the function
+export_seurat_assays <- function(input_dir_prefix, output_dir, assays_save) {
+  
+  # Load required libraries
+  library(Seurat)
+  library(Signac)
+  library(SeuratDisk)
+  
+  # Read the input Seurat object
+  seurat <- readRDS(input_dir_prefix)
+  
+  # Loop through the specified assays
+  for (assay in assays_save) {
+    # Set the default assay
+    DefaultAssay(seurat) <- assay
+    print(seurat)
+    
+    # Save the object (assay)
+    filename <- file.path(output_dir, paste0("data_id_processed_", assay, ".h5Seurat"))
+    SaveH5Seurat(seurat, filename = filename, overwrite = TRUE)
+    
+    # Convert the h5Seurat to h5ad
+    Convert(filename, dest = "h5ad")
+  }
+}
 
 
 ##### THIS PART IS THE KEY COMMAND #####
@@ -371,3 +398,12 @@ print("gene activity computed")
 # step 6. save the RDS object
 saveRDS(object=multiome, file=paste0(output_filepath,data_id,"_processed.RDS"))
 print("seurat object saved")
+
+# step 7. convert the RDS object to h5ad object (both RNA and ATAC)
+# TBD: "assays_save" parameter should be defined at the very top
+export_seurat_assays(input_prefix_dir = paste0(output_filepath,data_id,"_processed.RDS"),
+                    output_dir = output_filepath,
+                    data_id = data_id,
+                    assays_save= list("RNA", "ATAC"))
+                    
+print("seurat object exported to h5ad objects per assay")
