@@ -16,15 +16,15 @@ co.__version__
 
 # Input Arguments:
 # 1) filepath: filepath for the input (Links object)
-# 2) output_path: filepath for the outputs (GRNs from all cell-types)
-# 3) Links: filename for the Links object
-# 4) mfinder_path: filepath for the mfinder (installation)
+# 2) Links: filename for the Links object
+# 3) mfinder_path: filepath for the mfinder (installation)
+# 4) output_path: filepath for the outputs (GRNs from all cell-types)
 
 # Examples:
 # 1) filepath = "/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/TDR118_cicero_output/"
-# 2) output_path = "/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/TDR118_cicero_output/07_TDR118_celloracle_GRN/"
 # 2) filename = "08_TDR118_celltype_GRNs.celloracle.links"
 # 3) mfinder_path = "/hpc/projects/data.science/yangjoon.kim/github_repos/mfinder/mfinder1.21"
+# 4) output_path = "/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/TDR118_cicero_output/07_TDR118_celloracle_GRN/"
 
 
 # Parse command-line arguments
@@ -39,7 +39,8 @@ parser = argparse.ArgumentParser(description="Detect network motifs using mFinde
 # Add command-line arguments
 parser.add_argument('filepath', type=str, help="File path")
 parser.add_argument('filename', type=str, help="File name")
-parser.add_argument('mfinder_path', type=str, help="data_id")
+parser.add_argument('mfinder_path', type=str, help="mfinder_path")
+parser.add_argument('output_path', type=str, help="output File path")
 #parser.add_argument('ref_genome', type=str, help="reference genome")
 #parser.add_argument('motif_score_threshold', type=float, help="motif score threshold")
 
@@ -50,7 +51,7 @@ args = parser.parse_args()
 filepath = args.filepath
 filename = args.filename
 mfinder_path = args.mfinder_path
-#ref_genome = args.ref_genome
+output_path = args.output_path
 #motif_score_threshold = args.motif_score_threshold
 
 # TBD - this can be an input argument as well (path_mfinder)
