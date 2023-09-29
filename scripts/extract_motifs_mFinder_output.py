@@ -13,8 +13,9 @@ def extract_motif_info(mFinder_output):
 
     # Step 1. read out the file, and filter for the relevant text block.
     # Open and read the text file
-    filepath = "/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/baseGRN_CisBP_RNA_zebrahub/09_network_motifs/"
-    with open(filepath + 'motifs_0budstage_Somites_OUT.txt', 'r') as file:
+    #filepath = "/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/baseGRN_CisBP_RNA_zebrahub/09_network_motifs/"
+    #with open(filepath + 'motifs_0budstage_Somites_OUT.txt', 'r') as file:
+    with open(mFinder_output, 'r') as file:
         lines = file.readlines()
 
     # lines
