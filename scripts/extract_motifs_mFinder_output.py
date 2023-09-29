@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 import scanpy as sc
 
-def extract_motifs_mFinder_output(mFinder_output):
+def extract_motif_info(mFinder_output):
 
     # Step 1. read out the file, and filter for the relevant text block.
     # Open and read the text file

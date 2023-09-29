@@ -11,7 +11,6 @@
 
 
 # NOTE: Run this script within the celloracle_env conda environment
-
 # Import libraries
 import os
 import sys
@@ -21,4 +20,8 @@ import numpy as np
 import pandas as pd
 import scanpy as sc
 import seaborn as sns
+
+import celloracle as co
+co.__version__
+
 
