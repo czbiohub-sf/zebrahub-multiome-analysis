@@ -9,6 +9,8 @@ import numpy as np
 import pandas as pd
 import scanpy as sc
 
+import celloracle as co
+
 def extract_motif_info(mFinder_output):
 
     # Step 1. read out the file, and filter for the relevant text block.
@@ -60,7 +62,7 @@ def extract_motif_info(mFinder_output):
 
     # filter out the element that is an empty string (mFinder's mistake in formatting)
     col_names = [element for element in col_names if element]
-    col_names
+    #col_names
 
     # create a dataframe to save the motif ID and scores
     df = pd.DataFrame(columns=col_names)
@@ -84,5 +86,63 @@ def extract_motif_info(mFinder_output):
         motifs_list.append(motif)
         
     df["motifs"] = motifs_list
-    df
+    #df
     return df
+
+
+# A function to extract the gene_names from a GRN for corresponding network motifs
+def extract_gene_names_for_motifs(filepath_GRN, celltype, 
+                                    df_motifs, filepath_output):
+    # Load your GRN dataframe
+    GRN = co.load_hdf5(filepath_GRN)
+    GRN_celltype = GRN.filtered_links[celltype]
+
+    # Convert the dataframe into a set of directed edges for easy querying
+    edges = set(tuple(row) for row in GRN_celltype[['source', 'target']].values)
+
+    # Define your motifs
+    motif_matrices = df_motifs["motifs"]
+    #motif_matrices = [
+    #    [[0, 1, 1], [1, 0, 1], [0, 0, 0]],
+    #    [[0, 0, 1], [1, 0, 1], [1, 0, 0]],
+    #    [[0, 1, 1], [1, 0, 1], [1, 1, 0]]
+    #]
+
+    # Union of unique 'source' and 'target' nodes
+    all_unique_nodes = set(GRN_celltype['source'].unique()).union(set(GRN_celltype['target'].unique()))
+
+    # Check each triplet in the GRN against the motifs
+    instances = {}
+    for idx, motif in enumerate(motif_matrices):
+        instances[idx] = []
+
+        for triplet in combinations(all_unique_nodes, 3):
+            matrix = get_adjacency_matrix(triplet, edges)
+            if matrix == motif:
+                instances[idx].append(triplet)
+
+    # Convert instances into a dataframe
+    rows = []
+    for idx, instance_list in instances.items():
+        for instance in instance_list:
+            rows.append({'MOTIF_ID': idx, 'INSTANCE': instance})
+
+    instances_df = pd.DataFrame(rows)
+
+    #print(instances_df)
+    # replace the indices of instances_df to "MOTIF_ID"
+    dict_motif_id = dict(zip(instances_df["MOTIF_ID"].unique(), df_motifs["MOTIF_ID"]))
+    instances_df.MOTIF_ID = instances_df.MOTIF_ID.map(dict_motif_id)
+    
+    return instances_df
+
+    instances_df.to_csv(filepath_output)
+
+# Function to get adjacency matrix for a triplet from the GRN
+def get_adjacency_matrix(triplet, edges):
+    matrix = np.zeros((3, 3))
+    for i in range(3):
+        for j in range(3):
+            if (triplet[i], triplet[j]) in edges:
+                matrix[i][j] = 1
+    return matrix.tolist()
