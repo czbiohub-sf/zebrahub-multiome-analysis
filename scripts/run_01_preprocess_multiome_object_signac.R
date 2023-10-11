@@ -4,9 +4,11 @@
 # For integration of multiple "replicates", we will need additional steps.
 # We recommend using RNA modalities to integrate multiple replicates, then perform joint peak-calling (either bulk, or cell-type specific)
 
+#### MAKE SURE TO run "module load R/4.3 in HPC"
+
 # load the libraries
 suppressMessages(library(Seurat))
-suppressMessages(library(Seurat))
+suppressMessages(library(Signac))
 #library(Seurat)
 #library(Signac)
 library(SeuratData)
@@ -39,7 +41,7 @@ if (length(args) != 6) {
 
 raw_data_path <- args[1]
 gref_path <- args[2]
-reference <- args[3]
+reference <- args[3] # reference dataset with cell-type annotation
 annotation_class <- args[4] # Let's just use one annotation_class. (i.e. "global_annotation")
 output_filepath <- args[5] # filepath for the output
 data_id <- args[6]
@@ -53,13 +55,13 @@ generate_seurat_object <- function(raw_data_path ="" ,
                                     { # nolint
     # step 0. load the RNA and ATAC data
     #raw_data_path = "/data/yangjoon.kim/bruno/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/TDR119/outs/"
-    counts <- Read10X_h5(paste0(raw_data_path, "filtered_feature_bc_matrix.h5"))
-    fragpath <- paste0(raw_data_path, "atac_fragments.tsv.gz")
+    counts <- Read10X_h5(paste0(raw_data_path, "/filtered_feature_bc_matrix.h5"))
+    fragpath <- paste0(raw_data_path, "/atac_fragments.tsv.gz")
 
     # step 1. add the genome annotation
     # path to the GTF file
-    gff_path = "/data/yangjoon.kim/bruno/projects/sequencing_alignment/alignment_references/"
-    gref_path = paste0(gff_path, "zebrafish_genome_GRCz11/genes/genes.gtf.gz")
+    #gff_path = "/hpc/reference/sequencing_alignment/alignment_references/"
+    #gref_path = paste0(gff_path, "zebrafish_genome_GRCz11/genes/genes.gtf.gz")
     gtf_zf <- rtracklayer::import(gref_path)
 
     # make a gene.coord object
@@ -332,12 +334,8 @@ compute_gene_activity <- function(object=multiome){
 
 # step 7. Convert Seurat object (multiple assays) into h5ad objects per assay
 # define the function
-export_seurat_assays <- function(input_dir_prefix, output_dir, assays_save) {
-  
-  # Load required libraries
-  library(Seurat)
-  library(Signac)
-  library(SeuratDisk)
+export_seurat_assays <- function(input_dir_prefix, output_dir, data_id, assays_save) {
+
   
   # Read the input Seurat object
   seurat <- readRDS(input_dir_prefix)
@@ -349,7 +347,7 @@ export_seurat_assays <- function(input_dir_prefix, output_dir, assays_save) {
     print(seurat)
     
     # Save the object (assay)
-    filename <- file.path(output_dir, paste0("data_id_processed_", assay, ".h5Seurat"))
+    filename <- file.path(output_dir, paste0(data_id, "_processed_", assay, ".h5Seurat"))
     SaveH5Seurat(seurat, filename = filename, overwrite = TRUE)
     
     # Convert the h5Seurat to h5ad
@@ -404,6 +402,6 @@ print("seurat object saved")
 export_seurat_assays(input_prefix_dir = paste0(output_filepath,data_id,"_processed.RDS"),
                     output_dir = output_filepath,
                     data_id = data_id,
-                    assays_save= list("RNA", "ATAC"))
+                    assays_save= c("RNA", "ATAC"))
                     
 print("seurat object exported to h5ad objects per assay")
