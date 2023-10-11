@@ -1,0 +1,7 @@
+Building DAG of jobs...
+MissingInputException in rule preprocess_multiome_data in file /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/snakemake_Signac_CellOracle_mFinder/Snakefile, line 23:
+Missing input files for rule preprocess_multiome_data:
+    output: /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/TDR124_cicero_output/TDR124_processed.RDS, /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/TDR124_cicero_output/TDR124_RNA.h5ad, /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/TDR124_cicero_output/TDR124_ATAC.h5ad
+    wildcards: output_filepath=/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/TDR124_cicero_output, data_id=TDR124
+    affected files:
+        /hpc/projects/sequencing_alignment/alignment_references/zebrafish_genome_GRCz11/genes/genes.gtf.gz
