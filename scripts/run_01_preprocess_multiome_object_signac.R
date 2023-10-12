@@ -230,10 +230,11 @@ call_MACS2_peaks_bulk_celltype <- function(object=multiome,
     # create a new assay using the MACS2 peak set and add it to the Seurat object
     multiome[["peaks_bulk"]] <- CreateChromatinAssay(
         counts = macs2_counts_bulk,
+        sep = c(":", "-"),
         fragments = fragpath,
-        annotation = genome_annotation
+        annotation = genome_annotation,
+        genome = 'GRCz11', # we will manually add the genome version
     )
-
 
 
     # call peaks using the annotations from the "annotation_class" (predicted labels from the reference)
@@ -259,8 +260,10 @@ call_MACS2_peaks_bulk_celltype <- function(object=multiome,
     # create a new assay using the MACS2 peak set and add it to the Seurat object
     multiome[["peaks_celltype"]] <- CreateChromatinAssay(
         counts = macs2_counts,
+        sep = c(":", "-"),
         fragments = fragpath,
         annotation = genome_annotation
+        genome = 'GRCz11', # we will manually add the genome version
     )
 
     # return the Seurat object with updated ChromatinAssay objects
@@ -355,6 +358,10 @@ export_seurat_assays <- function(input_dir_prefix, output_dir, data_id, assays_s
   }
 }
 
+# Define a function to generate unique filenames for each checkpoint
+generate_filename <- function(base_path, data_id, suffix) {
+  return(paste0(base_path, data_id, "_", suffix, ".RDS"))
+}
 
 ##### THIS PART IS THE KEY COMMAND #####
 ##### ABOVE FUNCTIONS CAN BE WRAPPED INTO UTILITIES #####
@@ -370,36 +377,41 @@ print("seurat object generated")
 
 # step 2. basic QC
 multiome <- filter_low_quality_cells(multiome)
-saveRDS(object=multiome, file=paste0(output_filepath,data_id,"_processed.RDS"))
+#saveRDS(object=multiome, file=paste0(output_filepath,data_id,"_processed.RDS"))
+saveRDS(object=multiome, file=generate_filename(output_filepath, data_id, "QCed"))
 print("seurat object QCed, and saved")
 
 # step 3. transfer the annotation (using RNA)
 multiome <- transfer_reference_annotation_RNA_anchors(multiome, 
                                                         reference=reference, 
                                                         annotation_class=annotation_class) # nolint
-saveRDS(object=multiome, file=paste0(output_filepath,data_id,"_processed.RDS"))
+#saveRDS(object=multiome, file=paste0(output_filepath,data_id,"_processed.RDS"))
+saveRDS(object=multiome, file=generate_filename(output_filepath, data_id, "annotated"))
 print("annotation transferred")
 
 
 # step 4. peak-calling
 multiome <- call_MACS2_peaks_bulk_celltype(multiome, annotation_class=annotation_class) # nolint
-saveRDS(object=multiome, file=paste0(output_filepath,data_id,"_processed.RDS"))
+#saveRDS(object=multiome, file=paste0(output_filepath,data_id,"_processed.RDS"))
+saveRDS(object=multiome, file=generate_filename(output_filepath, data_id, "peak_called"))
 print("peak-calling done")
 
 multiome <- compute_embeddings(multiome)
+saveRDS(object=multiome, file=generate_filename(output_filepath, data_id, "embeddings"))
 print("embeddings computed")
 
 # step 5. (Optional) Compute "Gene Activities"
 multiome <- compute_gene_activity(multiome)
+saveRDS(object=multiome, file=generate_filename(output_filepath, data_id, "gene_activity"))
 print("gene activity computed")
 
-# step 6. save the RDS object
-saveRDS(object=multiome, file=paste0(output_filepath,data_id,"_processed.RDS"))
-print("seurat object saved")
+# # step 6. save the RDS object
+# saveRDS(object=multiome, file=paste0(output_filepath,data_id,"_processed.RDS"))
+# print("seurat object saved")
 
 # step 7. convert the RDS object to h5ad object (both RNA and ATAC)
 # TBD: "assays_save" parameter should be defined at the very top
-export_seurat_assays(input_prefix_dir = paste0(output_filepath,data_id,"_processed.RDS"),
+export_seurat_assays(input_prefix_dir = generate_filename(output_filepath, data_id, "gene_activity"),
                     output_dir = output_filepath,
                     data_id = data_id,
                     assays_save= c("RNA", "ATAC"))
