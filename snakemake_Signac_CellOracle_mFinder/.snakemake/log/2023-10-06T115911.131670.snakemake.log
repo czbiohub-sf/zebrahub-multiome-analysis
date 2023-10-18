@@ -1,4 +1,0 @@
-Config file config.yml is extended by additional config specified via the command line.
-CreateRuleException in file /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/snakemake_Signac_CellOracle_mFinder/Snakefile, line 67:
-The name all is already used by another rule
-  File "/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/snakemake_Signac_CellOracle_mFinder/Snakefile", line 67, in <module>

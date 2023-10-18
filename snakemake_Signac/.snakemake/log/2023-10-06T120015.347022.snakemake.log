@@ -1,0 +1,4 @@
+Building DAG of jobs...
+WildcardError in rule preprocess_multiome_data in file /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/snakemake_Signac_CellOracle_mFinder/Snakefile, line 23:
+Wildcards in params cannot be determined from output files. Note that you have to use a function to deactivate automatic wildcard expansion in params strings, e.g., `lambda wildcards: '{test}'`. Also see https://snakemake.readthedocs.io/en/stable/snakefiles/rules.html#non-file-parameters-for-rules:
+'reference'

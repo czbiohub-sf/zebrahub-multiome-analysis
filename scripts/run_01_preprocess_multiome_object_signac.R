@@ -262,7 +262,7 @@ call_MACS2_peaks_bulk_celltype <- function(object=multiome,
         counts = macs2_counts,
         sep = c(":", "-"),
         fragments = fragpath,
-        annotation = genome_annotation
+        annotation = genome_annotation,
         genome = 'GRCz11', # we will manually add the genome version
     )
 
@@ -373,6 +373,7 @@ generate_filename <- function(base_path, data_id, suffix) {
 
 # step 1. generate seurat object
 multiome <- generate_seurat_object(raw_data_path, gref_path)
+saveRDS(object=multiome, file=generate_filename(output_filepath, data_id, "raw"))
 print("seurat object generated")
 
 # step 2. basic QC
@@ -411,9 +412,10 @@ print("gene activity computed")
 
 # step 7. convert the RDS object to h5ad object (both RNA and ATAC)
 # TBD: "assays_save" parameter should be defined at the very top
-export_seurat_assays(input_prefix_dir = generate_filename(output_filepath, data_id, "gene_activity"),
+export_seurat_assays(input_dir_prefix = generate_filename(output_filepath, data_id, "gene_activity"),
                     output_dir = output_filepath,
                     data_id = data_id,
                     assays_save= c("RNA", "ATAC"))
-                    
+
+saveRDS(object=multiome, file=generate_filename(output_filepath, data_id, "processed"))                    
 print("seurat object exported to h5ad objects per assay")
