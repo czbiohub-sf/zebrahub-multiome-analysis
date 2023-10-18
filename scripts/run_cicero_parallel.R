@@ -5,13 +5,14 @@
 # install cicero
 # withr::with_libpaths(new="/hpc/scratch/group.data.science/yangjoon.kim/.local/R_lib", 
 #                      install_github("cole-trapnell-lab/cicero-release", ref = "monocle3"))
-# cicero
+# cicero (local installation - USE only if the global installation is broken)
 #.libPaths("/hpc/scratch/group.data.science/yangjoon.kim/.local/R_lib")
 #withr::with_libpaths(new = "/hpc/scratch/group.data.science/yangjoon.kim/.local/R_lib", library(monocle3))
 # withr::with_libpaths(new = "/hpc/scratch/group.data.science/yangjoon.kim/.local/R_lib", library(cicero))
 
 # load other libraries
-library(cicero)
+library(cicero) # global installation
+#withr::with_libpaths(new = "/hpc/scratch/group.data.science/yangjoon.kim/.local/R_lib", library(cicero))
 library(Signac)
 library(Seurat)
 library(SeuratWrappers)
@@ -43,13 +44,16 @@ peaktype <- args[6]
 # Example Input arguments:
 # seurat_object <- readRDS(seurat_object_path)
 # assay <- "ATAC"
-# dim.reduced <- "UMAP.ATAC"
+# dim.reduced <- "umap.atac"
 # output_path = "",
 # data_id="TDR118",
 # peaktype = "CRG_arc"
 
+# capitalize the dim_reduced, as the single.cell.experiment data format capitalizes all the fields
+dim_reduced <- toupper(dim_reduced)
 
-# Import the Seurat object
+
+# Step 1. Import the Seurat object
 seurat_object <- readRDS(seurat_object_path)
 
 # print out the assays in the seurat object
@@ -66,7 +70,7 @@ print(paste0("default assay is ", assay))
 seurat_object.cds <- as.cell_data_set(x=seurat_object) # a function from SeuratWrappers\
 print("cds object created") 
 
-# make the cicero object
+# Step 2. make the cicero object
 # default: we will use the ATAC.UMAP here for the sampling of the neighborhoods - as we'll treat this dataset as if we only had scATAC-seq.
 # This is something we can ask Kenji Kamimoto/Samantha Morris later for their advice. (or compare the built GRNs from joint.UMAP vs ATAC.UMAP)
 seurat_object.cicero <- make_cicero_cds(seurat_object.cds, reduced_coordinates = reducedDims(seurat_object.cds)$UMAP.ATAC)
@@ -74,16 +78,19 @@ print("cicero object created")
 
 # define the genomic length dataframe (chromosome number ; length)
 df_seqinfo <- as.data.frame(seurat_object@assays$ATAC@seqinfo)
-# zebrafish has 25 chromosomes
+# zebrafish has 25 chromosomes and 1 MT chromosome
 seurat_object@assays$ATAC@annotation@seqinfo@seqlengths <- df_seqinfo$seqlengths[1:26] 
 
-# Perform CCAN computation
+# create a dataframe for chromsomes and their lengths
 # get the chromosome sizes from the Seurat object
 genome <- seqlengths(seurat_object@assays$ATAC@annotation)
 
 # convert chromosome sizes to a dataframe
 genome.df <- data.frame("chr" = names(genome), "length" = genome)
 print(genome.df)
+
+# Step 3. Run Cicero (This part can be parallelized)
+
 # run cicero
 conns <- run_cicero(seurat_object.cicero, genomic_coords = genome.df, sample_num = 100)
 print("CCANs computed")

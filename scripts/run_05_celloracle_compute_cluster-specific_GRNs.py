@@ -30,9 +30,7 @@ import argparse
 
 # Create an ArgumentParser object
 parser = argparse.ArgumentParser(description="Filter and map data using CellOracle")
-
-output_path, RNAdata_path, baseGRN_path, 
-                                    data_id, annotation, dim_reduce
+#output_path, RNAdata_path, baseGRN_path, data_id, annotation, dim_reduce
 # Add command-line arguments
 parser.add_argument('output_path', type=str, help="output filepath")
 parser.add_argument('RNAdata_path', type=str, help="RNA data filepath")
@@ -40,6 +38,7 @@ parser.add_argument('baseGRN_path', type=str, help="base GRN filepath")
 parser.add_argument('data_id', type=str, help="data_id")
 parser.add_argument('annotation', type=str, help="celltype annotation class")
 parser.add_argument('dim_reduce', type=str, help="dim.reduction embedding name")
+parser.add_argument('timepoints', type=list, help="a list of timepoints")
 
 # Parse the command-line arguments
 args = parser.parse_args()
@@ -51,11 +50,12 @@ baseGRN_path = args.baseGRN_path
 data_id = args.data_id
 annotation = args.annotation
 dim_reduce = args.dim_reduce
+timepoints = args.timepoints
 
 
 # Define the function here
 def compute_cluster_specific_GRNs(output_path, RNAdata_path, baseGRN_path, 
-                                    data_id, annotation, dim_reduce):
+                                    data_id, annotation, dim_reduce, timepoints):
     """
     A function to compute cluster(cell-type) specific GRNs using CellOracle.
     It uses a base GRN built from the previous script (04_XXX.py)
@@ -65,8 +65,8 @@ def compute_cluster_specific_GRNs(output_path, RNAdata_path, baseGRN_path,
     
     Parameters:
         output_path: filepath for the output files (below)
-        RNAdata_path: filename for the csv file with peaks mapped to the nearest TSS and filtered for high cicero co-accessibility scores.
-        baseGRN_path: filepath for the directory where the output dataframe will be saved
+        RNAdata_path: filepath for the RNA h5ad file 
+        baseGRN_path: filepath for the base GRN
         data_id: identifier for the output dataframe file
         annotation: annotation class for the clusters (cell-types)
         dim_reduce: dim.reduction name
@@ -81,7 +81,7 @@ def compute_cluster_specific_GRNs(output_path, RNAdata_path, baseGRN_path,
         baseGRN_path = "/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/TDR118_cicero_output/05_TDR118_base_GRN_dataframe.parquet"
         data_id = "TDR118"
         annotation: "global_annotation"
-        dim_reduce: "X_umap"
+        dim_reduce: "umap.atac"
     """
     # create a folder for figures (Optional)
     # output_path = "/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/baseGRN_CisBP_RNA_zebrahub/"
@@ -135,21 +135,23 @@ def compute_cluster_specific_GRNs(output_path, RNAdata_path, baseGRN_path,
     # filepath for the output Oracle objects
     #output_path = "/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/baseGRN_CisBP_RNA_zebrahub/"
 
-    # all timepoints (making this as a default for now)
-    timepoints = adata.obs.timepoint.unique().to_list()
-    timepoints
+    # # all timepoints (making this as a default for now)
+    # timepoints = adata.obs.timepoints.unique().to_list()
+    # timepoints
+    #timepoints = ["TDR124"]
 
     for stage in timepoints:
         # Instantiate Oracle object
         oracle = co.Oracle()
         
-        # subset the anndata for one timepoint
-        adata_subset = adata[adata.obs.timepoint==stage]
+        # # subset the anndata for one timepoint
+        # adata_subset = adata[adata.obs.timepoint==stage]
+        adata_subset = adata
         
         # Step 3-1. Add the scRNA-seq (adata) to the Oracle object
         oracle.import_anndata_as_raw_count(adata=adata_subset,
                                         cluster_column_name="global_annotation", # annotation
-                                        embedding_name="X_umap") # X_umap.cellranger.arc"
+                                        embedding_name="X_umap.atac") # X_umap.cellranger.arc"
         
         # Step 3-2. Add the base GRN (TF info dataframe)
         oracle.import_TF_data(TF_info_matrix=baseGRN)
@@ -174,6 +176,7 @@ def compute_cluster_specific_GRNs(output_path, RNAdata_path, baseGRN_path,
         print(f"Auto-selected k is :{k}")
         
         # KNN imputation
+        n_comps = 50
         oracle.knn_imputation(n_pca_dims=n_comps, k=k, balanced=True, b_sight=k*8,
                             b_maxl=k*4, n_jobs=4)
 
@@ -224,3 +227,10 @@ def compute_cluster_specific_GRNs(output_path, RNAdata_path, baseGRN_path,
         # calculate and print the elapsed time (for one timepoint)
         elapsed_time = end_time - start_time
         print(f"Execution time: {elapsed_time} seconds")
+
+    return links
+
+
+####### LINUX TERMINAL COMMANDS #######
+compute_cluster_specific_GRNs(output_path, RNAdata_path, baseGRN_path, 
+                                    data_id, annotation, dim_reduce, timepoints)
