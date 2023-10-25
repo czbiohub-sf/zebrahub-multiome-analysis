@@ -38,7 +38,7 @@ parser.add_argument('baseGRN_path', type=str, help="base GRN filepath")
 parser.add_argument('data_id', type=str, help="data_id")
 parser.add_argument('annotation', type=str, help="celltype annotation class")
 parser.add_argument('dim_reduce', type=str, help="dim.reduction embedding name")
-parser.add_argument('timepoints', type=list, help="a list of timepoints")
+#parser.add_argument('timepoints', type=list, help="a list of timepoints")
 
 # Parse the command-line arguments
 args = parser.parse_args()
@@ -50,12 +50,12 @@ baseGRN_path = args.baseGRN_path
 data_id = args.data_id
 annotation = args.annotation
 dim_reduce = args.dim_reduce
-timepoints = args.timepoints
+#timepoints = args.timepoints
 
 
 # Define the function here
 def compute_cluster_specific_GRNs(output_path, RNAdata_path, baseGRN_path, 
-                                    data_id, annotation, dim_reduce, timepoints):
+                                    data_id, annotation, dim_reduce):
     """
     A function to compute cluster(cell-type) specific GRNs using CellOracle.
     It uses a base GRN built from the previous script (04_XXX.py)
@@ -135,102 +135,87 @@ def compute_cluster_specific_GRNs(output_path, RNAdata_path, baseGRN_path,
     # filepath for the output Oracle objects
     #output_path = "/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/baseGRN_CisBP_RNA_zebrahub/"
 
-    # # all timepoints (making this as a default for now)
-    # timepoints = adata.obs.timepoints.unique().to_list()
-    # timepoints
-    #timepoints = ["TDR124"]
-
-    for stage in timepoints:
-        # Instantiate Oracle object
-        oracle = co.Oracle()
-        
-        # # subset the anndata for one timepoint
-        # adata_subset = adata[adata.obs.timepoint==stage]
-        adata_subset = adata
-        
-        # Step 3-1. Add the scRNA-seq (adata) to the Oracle object
-        oracle.import_anndata_as_raw_count(adata=adata_subset,
-                                        cluster_column_name="global_annotation", # annotation
-                                        embedding_name="X_umap.atac") # X_umap.cellranger.arc"
-        
-        # Step 3-2. Add the base GRN (TF info dataframe)
-        oracle.import_TF_data(TF_info_matrix=baseGRN)
-        
-        # Step 3-3. KNN imputation
-        # Perform PCA
-        oracle.perform_PCA()
-
-    #     # Select important PCs
-    #     plt.plot(np.cumsum(oracle.pca.explained_variance_ratio_)[:100])
-    #     n_comps = np.where(np.diff(np.diff(np.cumsum(oracle.pca.explained_variance_ratio_))>0.002))[0][0]
-    #     plt.axvline(n_comps, c="k")
-    #     print(n_comps)
-    #     n_comps = min(n_comps, 50)
-        
-        # number of cells
-        n_cell = oracle.adata.shape[0]
-        print(f"cell number is :{n_cell}")
-        
-        # number of k
-        k = int(0.025*n_cell)
-        print(f"Auto-selected k is :{k}")
-        
-        # KNN imputation
-        n_comps = 50
-        oracle.knn_imputation(n_pca_dims=n_comps, k=k, balanced=True, b_sight=k*8,
-                            b_maxl=k*4, n_jobs=4)
-
-        # Save oracle object.output_filepath = "/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/TDR118_cicero_output/"
-        oracle.to_hdf5(output_path + "06_"+ stage + ".celloracle.oracle")
+    # We will assume that we have only one timepoint for now.
+    # Instantiate Oracle object
+    oracle = co.Oracle()
     
+    # Step 3-1. Add the scRNA-seq (adata) to the Oracle object
+    oracle.import_anndata_as_raw_count(adata=adata,
+                                    cluster_column_name="global_annotation", # annotation
+                                    embedding_name="X_umap.atac") # X_umap.cellranger.arc"
+    
+    # Step 3-2. Add the base GRN (TF info dataframe)
+    oracle.import_TF_data(TF_info_matrix=baseGRN)
+    
+    # Step 3-3. KNN imputation
+    # Perform PCA
+    oracle.perform_PCA()
+    
+    # number of cells
+    n_cell = oracle.adata.shape[0]
+    print(f"cell number is :{n_cell}")
+    
+    # number of k
+    k = int(0.025*n_cell)
+    print(f"Auto-selected k is :{k}")
+    
+    # KNN imputation
+    n_comps = 50
+    oracle.knn_imputation(n_pca_dims=n_comps, k=k, balanced=True, b_sight=k*8,
+                        b_maxl=k*4, n_jobs=4)
+
+    # Save oracle object.output_filepath = "/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/TDR118_cicero_output/"
+    oracle.to_hdf5(output_path + "06_"+ data_id + ".celloracle.oracle")
+
+
     # Step 4. Compute cluster-specific (cell-type specific) GRNs for each timepoint (using the Oracle objects computed in Step 3.)
-    for stage in timepoints:
-        # Load the Oracle object for each timepoint
-        oracle = co.load_hdf5(output_path + "06_"+ stage + ".celloracle.oracle")
-        # print the info
-        info = oracle._generate_meta_data()
-        info
+    # Load the Oracle object for each timepoint
+    oracle = co.load_hdf5(output_path + "06_"+ data_id + ".celloracle.oracle")
+    # print the info
+    info = oracle._generate_meta_data()
+    info
 
-        # Start measuring time
-        start_time = time.time()
+    # Start measuring time
+    start_time = time.time()
 
-        # Calculate GRN for each population in "predicted.id" clustering unit.
-        # This step may take long time (~ 1hour)
-        links = oracle.get_links(cluster_name_for_GRN_unit="global_annotation", alpha=10,
-                                verbose_level=10, test_mode=False, n_jobs=-1)
-        
-        # filter the GRN (2000 edges)
-        links.filter_links(p=0.001, weight="coef_abs", threshold_number=2000)
-        
-        # Calculate network scores. It takes several minutes.
-        links.get_score(n_jobs=-1)
-        
-        # save the Links object (for all cell-types)
-        links.to_hdf5(file_path=output_path + "08_"+ stage + "_celltype_GRNs.celloracle.links")
-        
-        # 2) cell-type specific GRNs - save for each cell-type
-        # create a directory for each timepoint
-        os.makedirs(output_path + "07_" + stage, exist_ok=True)
-        GRN_output_path = output_path + "07_" + stage
-        
-        # save cell-type specific GRNs to the timepoint-specific directories
-        for cluster in links.links_dict.keys():
-            # Set cluster name
-            cluster = cluster
+    # Calculate GRN for each population in "predicted.id" clustering unit.
+    # This step may take long time (~ 1hour)
+    links = oracle.get_links(cluster_name_for_GRN_unit="global_annotation", alpha=10,
+                            verbose_level=10, test_mode=False, n_jobs=-1)
+    
+    # filter the GRN (2000 edges)
+    links.filter_links(p=0.001, weight="coef_abs", threshold_number=2000)
+    
+    # Calculate network scores. It takes several minutes.
+    links.get_score(n_jobs=-1)
+    
+    # save the Links object (for all cell-types)
+    links.to_hdf5(file_path=output_path + "08_"+ data_id + "_celltype_GRNs.celloracle.links")
+    
+    # 2) cell-type specific GRNs - save for each cell-type
+    # create a directory for each timepoint
+    os.makedirs(output_path + "07_" + data_id, exist_ok=True)
+    GRN_output_path = output_path + "07_" + data_id
+    
+    # save cell-type specific GRNs to the timepoint-specific directories
+    for cluster in links.links_dict.keys():
+        # Set cluster name
+        cluster = cluster
 
-            # Save as csv
-            links.links_dict[cluster].to_csv(GRN_output_path + "/" + f"raw_GRN_for_{cluster}.csv")
-        
-        # End measuring time
-        end_time = time.time()
+        # Save as csv
+        links.links_dict[cluster].to_csv(GRN_output_path + "/" + f"raw_GRN_for_{cluster}.csv")
+    
+    # End measuring time
+    end_time = time.time()
 
-        # calculate and print the elapsed time (for one timepoint)
-        elapsed_time = end_time - start_time
-        print(f"Execution time: {elapsed_time} seconds")
+    # calculate and print the elapsed time (for one timepoint)
+    elapsed_time = end_time - start_time
+    print(f"Execution time: {elapsed_time} seconds")
 
     return links
 
 
+
 ####### LINUX TERMINAL COMMANDS #######
 compute_cluster_specific_GRNs(output_path, RNAdata_path, baseGRN_path, 
-                                    data_id, annotation, dim_reduce, timepoints)
+                                    data_id, annotation, dim_reduce)
