@@ -1,0 +1,103 @@
+Building DAG of jobs...
+Job stats:
+job                       count
+----------------------  -------
+basic_QC                      1
+compute_embeddings            1
+compute_gene_activity         1
+export_seurat_assays          1
+generate_seurat_object        1
+peak_calling                  1
+transfer_annotation           1
+total                         7
+
+
+[Wed Oct 25 07:29:24 2023]
+rule generate_seurat_object:
+    input: /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/TDR124/outs, /hpc/reference/sequencing_alignment/alignment_references/zebrafish_genome_GRCz11/genes/genes.gtf.gz
+    output: /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/TDR124_snakemake_test/TDR124_raw.RDS
+    jobid: 6
+    reason: Missing output files: /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/TDR124_snakemake_test/TDR124_raw.RDS
+    wildcards: output_filepath=/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/TDR124_snakemake_test, data_id=TDR124
+    resources: tmpdir=/tmp
+
+
+[Wed Oct 25 07:29:24 2023]
+rule basic_QC:
+    input: /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/TDR124_snakemake_test/TDR124_raw.RDS
+    output: /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/TDR124_snakemake_test/TDR124_QCed.RDS
+    jobid: 5
+    reason: Missing output files: /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/TDR124_snakemake_test/TDR124_QCed.RDS; Input files updated by another job: /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/TDR124_snakemake_test/TDR124_raw.RDS
+    wildcards: output_filepath=/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/TDR124_snakemake_test, data_id=TDR124
+    resources: tmpdir=/tmp
+
+
+[Wed Oct 25 07:29:24 2023]
+rule transfer_annotation:
+    input: /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/TDR124_snakemake_test/TDR124_QCed.RDS
+    output: /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/TDR124_snakemake_test/TDR124_annotated.RDS
+    jobid: 4
+    reason: Missing output files: /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/TDR124_snakemake_test/TDR124_annotated.RDS; Input files updated by another job: /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/TDR124_snakemake_test/TDR124_QCed.RDS
+    wildcards: output_filepath=/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/TDR124_snakemake_test, data_id=TDR124
+    resources: tmpdir=/tmp
+
+
+[Wed Oct 25 07:29:24 2023]
+rule peak_calling:
+    input: /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/TDR124_snakemake_test/TDR124_annotated.RDS
+    output: /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/TDR124_snakemake_test/TDR124_peak_called.RDS
+    jobid: 3
+    reason: Missing output files: /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/TDR124_snakemake_test/TDR124_peak_called.RDS; Input files updated by another job: /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/TDR124_snakemake_test/TDR124_annotated.RDS
+    wildcards: output_filepath=/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/TDR124_snakemake_test, data_id=TDR124
+    resources: tmpdir=/tmp
+
+
+[Wed Oct 25 07:29:24 2023]
+rule compute_embeddings:
+    input: /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/TDR124_snakemake_test/TDR124_peak_called.RDS
+    output: /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/TDR124_snakemake_test/TDR124_embeddings.RDS
+    jobid: 2
+    reason: Missing output files: /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/TDR124_snakemake_test/TDR124_embeddings.RDS; Input files updated by another job: /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/TDR124_snakemake_test/TDR124_peak_called.RDS
+    wildcards: output_filepath=/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/TDR124_snakemake_test, data_id=TDR124
+    resources: tmpdir=/tmp
+
+
+[Wed Oct 25 07:29:24 2023]
+rule compute_gene_activity:
+    input: /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/TDR124_snakemake_test/TDR124_embeddings.RDS
+    output: /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/TDR124_snakemake_test/TDR124_gene_activity.RDS
+    jobid: 1
+    reason: Missing output files: /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/TDR124_snakemake_test/TDR124_gene_activity.RDS; Input files updated by another job: /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/TDR124_snakemake_test/TDR124_embeddings.RDS
+    wildcards: output_filepath=/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/TDR124_snakemake_test, data_id=TDR124
+    resources: tmpdir=/tmp
+
+
+[Wed Oct 25 07:29:24 2023]
+rule export_seurat_assays:
+    input: /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/TDR124_snakemake_test/TDR124_gene_activity.RDS
+    output: /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/TDR124_snakemake_test/TDR124_RNA.h5ad, /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/TDR124_snakemake_test/TDR124_ATAC.h5ad, /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/TDR124_snakemake_test/TDR124_processed.RDS
+    jobid: 0
+    reason: Missing output files: /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/TDR124_snakemake_test/TDR124_processed.RDS; Input files updated by another job: /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/TDR124_snakemake_test/TDR124_gene_activity.RDS
+    wildcards: output_filepath=/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/TDR124_snakemake_test, data_id=TDR124
+    resources: tmpdir=/tmp
+
+Job stats:
+job                       count
+----------------------  -------
+basic_QC                      1
+compute_embeddings            1
+compute_gene_activity         1
+export_seurat_assays          1
+generate_seurat_object        1
+peak_calling                  1
+transfer_annotation           1
+total                         7
+
+Reasons:
+    (check individual jobs above for details)
+    input files updated by another job:
+        basic_QC, compute_embeddings, compute_gene_activity, export_seurat_assays, peak_calling, transfer_annotation
+    missing output files:
+        basic_QC, compute_embeddings, compute_gene_activity, export_seurat_assays, generate_seurat_object, peak_calling, transfer_annotation
+
+This was a dry-run (flag -n). The order of jobs does not reflect the order of execution.

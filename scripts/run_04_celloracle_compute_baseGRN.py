@@ -1,5 +1,6 @@
 # This script is from 02_atac_peaks_to_TFinfo_window_20200801.ipynb notebook from the CellOracle github repo.
 # NOTE: Run this script within the celloracle_env conda environment
+#!/usr/bin/env python3
 
 # Import libraries
 import pandas as pd

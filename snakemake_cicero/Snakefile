@@ -1,0 +1,27 @@
+# Snakefile to run Cicero
+# TO-Do: 
+# 1. parallelize the run_cicero part
+# 2. use Slurm for the parallelized job
+
+# Define the target files
+rule all:
+    input:
+        peaks="{output_path}/01_{data_id}_{peaktype}_peaks.csv",
+        cicero_connections="{output_path}/02_{data_id}_cicero_connections_{peaktype}_peaks.csv"
+
+rule run_cicero:
+    input:
+        rds="{output_path}/{data_id}_processed.RDS"
+    output:
+        peaks="{output_path}/01_{data_id}_{peaktype}_peaks.csv",
+        cicero_connections="{output_path}/02_{data_id}_cicero_connections_{peaktype}_peaks.csv"
+    params:
+        script_path=config["cicero_script_path"],
+        assay=config["assay"],  # "ATAC", "peaks_bulk", "peak_celltype", 
+        dim_reduced=config["dim_reduced"],
+        data_id="{data_id}",
+        peaktype=config["peaktype"]  # Placeholder for command line or config file
+    shell:
+        """
+        Rscript {params.script_path} {input.rds} {params.assay} {params.dim_reduced} {wildcards.output_path} {wildcards.data_id} {wildcards.peaktype}
+        """
