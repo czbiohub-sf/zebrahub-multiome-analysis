@@ -162,7 +162,7 @@ def compute_cluster_specific_GRNs(output_path, RNAdata_path, baseGRN_path,
     # KNN imputation
     n_comps = 50
     oracle.knn_imputation(n_pca_dims=n_comps, k=k, balanced=True, b_sight=k*8,
-                        b_maxl=k*4, n_jobs=4)
+                        b_maxl=k*4, n_jobs=8)
 
     # Save oracle object.output_filepath = "/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/TDR118_cicero_output/"
     oracle.to_hdf5(output_path + "06_"+ data_id + ".celloracle.oracle")
