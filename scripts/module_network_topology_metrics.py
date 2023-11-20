@@ -26,7 +26,7 @@ co.__version__
 
 # df_GRN = GRN.merged_score
 
-def compute_corr_betwn_GRNs(GRN1, GRN2, celltype1, celltype2, network_metric):
+def compute_corr_betwn_GRNs(df_GRN1, df_GRN2, celltype1, celltype2, network_metric):
     df1 = df_GRN1[df_GRN1.cluster==celltype1]
     df2 = df_GRN2[df_GRN2.cluster==celltype2]
 
