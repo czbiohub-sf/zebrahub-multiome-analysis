@@ -1,16 +1,10 @@
-# Make a series of coverage plots and save them as a pdf file
-# Input: a list of genes: c("gene A","gene B", ...)
-# Output: a pdf file, a coverage plot of one gene per page.
-
-# 00_coverage_plot_optimization.ipynb
-
 # import the libraries
 library(Seurat)
 library(Signac)
 library(patchwork)
 library(ggplot2)
 
-# example list of genes:
+# example list of genes (marker genes used for 15somite stage):
 # list_genes <- list("lrrc17","comp","ripply1","rx1","vsx2","tbx16","myf5",
 #                  "hes6","crestin","ednrab","dlx2a","cldni","cfl1l",
 #                   "fezf1","sox1b","foxg1a","olig3","hoxd4a","rxrga",
@@ -22,12 +16,23 @@ library(ggplot2)
 #                   "ppl","krt17","icn2","osr1","hand2","shha","shhb","foxa2",
 #                   "cebpa","spi1b","myb","ctslb","surf4l","sec61a1l","mcf2lb",
 #                   "bricd5","etnk1","chd17","acy3")
-# list_genes
 
-
-# define the function (Convert this for linux-terminal executible later)
-# object: filepath for the RDS object (Seurat object)
-# we will assume that the Seurat object is already preprocessed with peaks, etc.
+#' Make a Series of Coverage Plots for Genes
+#'
+#' This function generates coverage plots for a given list of genes from a Seurat object and saves them as a single PDF file.
+#' Each gene's coverage plot is saved on a separate page.
+#'
+#' @param object The file path for the RDS file containing a preprocessed Seurat object.
+#' @param list_genes A vector of gene names for which coverage plots will be generated.
+#' @param output_path The file path where the PDF will be saved.
+#' @return Invisible null. The function is called for its side effect, which is creating a PDF file.
+#' @examples
+#' seurat_obj_path <- "path/to/your/seurat_object.rds"
+#' genes_to_plot <- c("gene1", "gene2", "gene3")
+#' output_pdf_path <- "path/to/output/"
+#' make_coverage_plots(object = seurat_obj_path, list_genes = genes_to_plot, output_path = output_pdf_path)
+#' @export
+#'
 make_coverage_plots <- function(object=object,
                                 list_genes = c(), 
                                 output_path = ""){
@@ -59,10 +64,29 @@ make_coverage_plots <- function(object=object,
 
 }
 
+
+#' Generate a Coverage Plot for a Single Gene
+#'
+#' A sub-function used by `make_coverage_plots` to generate coverage plots for a single gene.
+#' It uses a Seurat object to create coverage plots including bulk and cell-type-specific peak profiles.
+#'
+#' @param object A Seurat object.
+#' @param gene The name of the gene to generate the plot for.
+#' @param annotation_class A character vector for annotation class.
+#' @param peak_profiles A character vector for peak profiles.
+#' @param genomic_region genomic region ("chrX-start-end" format)
+#' @return A ggplot object representing the coverage plot for the specified gene or NULL if the gene is not found.
+#' @examples
+#' # Assume `object` is a preloaded Seurat object with necessary data
+#' coverage_plot(object, "gene_name")
+#' @export
+#'
 # a sub-function to generate a Coverage Plot (for one gene)
 coverage_plot <- function(object, gene, 
                             annotation_class = c("global_annotaiton"),
-                            peak_profiles = c("peak")){
+                            peak_profiles = c("peak"),
+                            genomic_region_input=False,
+                            genomic_region=None){
       # Check if gene exists in GTF file
       if (!gene %in% object@assays$ATAC@annotation$gene_name) {
         cat("Gene", gene, "not found in GTF file. Skipping.\n")
@@ -92,18 +116,23 @@ coverage_plot <- function(object, gene,
         peaks=FALSE
     )
     
-    # for gene/peak plots, we need to find the genomic locations as the old Signac doesn't take the gene name as an input argument.
-    gene.coord <- LookupGeneCoords(object = object, gene = gene)
-    gene.coord.df <- as.data.frame(gene.coord)
-    
-    # extract the chromosome number, start position and end position
-    chromosome <- gene.coord.df$seqnames
-    pos_start <- gene.coord.df$start
-    pos_end <-gene.coord.df$end
-    
-    # compute the genomic region as "chromsome_number-start-end"
-    genomic_region <- paste(chromosome, pos_start, pos_end, sep="-")
-    
+    # define the genomic region (either given by the user or automatically extracted from the gene name)
+    if (genomic_region_input==TRUE){
+        genomic_region = genomic_region
+    }
+    else{
+        # for gene/peak plots, we need to find the genomic locations as the old Signac doesn't take the gene name as an input argument.
+        gene.coord <- LookupGeneCoords(object = object, gene = gene)
+        gene.coord.df <- as.data.frame(gene.coord)
+        
+        # extract the chromosome number, start position and end position
+        chromosome <- gene.coord.df$seqnames
+        pos_start <- gene.coord.df$start
+        pos_end <-gene.coord.df$end
+        
+        # compute the genomic region as "chromsome_number-start-end"
+        genomic_region <- paste(chromosome, pos_start, pos_end, sep="-")
+    }
     # gene annotation
     gene_plot <- AnnotationPlot(
       object = object,
