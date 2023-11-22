@@ -5,7 +5,6 @@
 import os
 import sys
 
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import scanpy as sc
@@ -37,10 +36,15 @@ import argparse
 parser = argparse.ArgumentParser(description="Detect network motifs using mFinder")
 
 # Add command-line arguments
-parser.add_argument('filepath', type=str, help="File path")
-parser.add_argument('filename', type=str, help="File name")
-parser.add_argument('mfinder_path', type=str, help="mfinder_path")
-parser.add_argument('output_path', type=str, help="output File path")
+# parser.add_argument('filepath', type=str, help="File path")
+# parser.add_argument('filename', type=str, help="File name")
+# parser.add_argument('mfinder_path', type=str, help="mfinder_path")
+# parser.add_argument('output_path', type=str, help="output File path")
+# Add command-line arguments with flags
+parser.add_argument('-i', '--inputpath', dest='filepath', type=str, required=True, help="File path for the input")
+parser.add_argument('-n', '--name', dest='filename', type=str, required=True, help="File name for the input")
+parser.add_argument('-m', '--mfinder', dest='mfinder_path', type=str, required=True, help="Path to the mFinder executable")
+parser.add_argument('-o', '--outputpath', dest='output_path', type=str, required=True, help="File path for the output")
 #parser.add_argument('ref_genome', type=str, help="reference genome")
 #parser.add_argument('motif_score_threshold', type=float, help="motif score threshold")
 
@@ -54,18 +58,22 @@ mfinder_path = args.mfinder_path
 output_path = args.output_path
 #motif_score_threshold = args.motif_score_threshold
 
-# TBD - this can be an input argument as well (path_mfinder)
+# Print the arguments
 # define the PATH for mfinder
 cmd = "export PATH="+mfinder_path+":$PATH"
-cmd
 os.system(cmd)
 #os.system("export PATH=/hpc/projects/data.science/yangjoon.kim/github_repos/mfinder/mfinder1.21:$PATH")
 
-# move to the output filepath
+# create the output_path if it doesn't exist
+if not os.path.exists(output_path):
+   os.makedirs(output_path)
+
+# move to the output filepath (This is not the best practice, so we'd need to find an alternative)
 #os.chdir("/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/TDR118_cicero_output/07_TDR118_celloracle_GRN/")
+
 os.chdir(output_path)
 
-def find_network_motifs_mfinder():
+def find_network_motifs_mfinder(filepath, filename, output_path):
 
     # set the filepath for the "filepath", where the GRN is saved.
 
@@ -99,18 +107,27 @@ def find_network_motifs_mfinder():
         df_mfinder["target"] = df_mfinder["target"].map({v: k for k, v in gene_dict.items()})
         df_mfinder
         # save the reformatted GRN into a txt file
-        df_mfinder.to_csv(output_path + "filtered_GRN_"+celltype+"_mfinder_format.txt",
-                            sep="\t", header=False, index=False)
+        # df_mfinder.to_csv(output_path + "filtered_GRN_"+celltype+"_mfinder_format.txt",
+        #                     sep="\t", header=False, index=False)
+        output_file_name = "filtered_GRN_" + celltype + "_mfinder_format.txt"
+        output_file_path = os.path.join(output_path, output_file_name)
+
+        df_mfinder.to_csv(output_file_path, sep="\t", header=False, index=False)
 
         # Step 3. run mFinder
         # default setting (network_size=3, num_random_)
         # input filename
         input_file = "filtered_GRN_"+celltype+"_mfinder_format.txt"
         # output filename
-        output_file = "motifs_" _ celltype
+        output_file = "motifs_"+celltype+ "_OUT.txt"
 
         # define the mFinder command
-        cmd = "mfinder "+input_file_name + " -f "+output_filename
+        cmd = "mfinder "+input_file + " -f "+output_file
+        # directly use the mfinder_path, instead of adding $PATH
+        #cmd = mfinder_path + " " + input_file + " -o " + output_file
         cmd
         # run mFinder
         os.system(cmd)
+
+# run the function
+find_network_motifs_mfinder(filepath, filename, output_path)
