@@ -145,3 +145,54 @@ def get_adjacency_matrix(triplet, edges):
             if (triplet[i], triplet[j]) in edges:
                 matrix[i][j] = 1
     return matrix.tolist()
+
+
+    
+# Use case
+# Step 1. extract the motif information from the text block, and save as a dataframe
+mFinder_output = "/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/baseGRN_CisBP_RNA_zebrahub/09_network_motifs/motifs_0budstage_Somites_OUT.txt"
+df_motifs = extract_motif_info(mFinder_output)
+df_motifs
+
+# Step 2. 
+# filepath_GRN = "/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/baseGRN_CisBP_RNA_zebrahub/08_0budstage_celltype_GRNs.celloracle.links"
+# GRN = co.load_hdf5(filepath_GRN)
+
+# celltype = "Somites"
+# GRN_celltype = GRN.filtered_links[celltype]
+# GRN_celltype
+all_files = os.listdir("/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/baseGRN_CisBP_RNA_zebrahub/09_network_motifs/")
+
+filtered_files = [f for f in all_files if 'motifs' in f]
+print(f"Number of files containing 'motifs': {len(filtered_files)}")
+filtered_files.sort() # sort numerically (timepoints), and alphabetically (cell-types)
+
+# Sets to store unique timepoints and cell-types
+timepoints = set()
+cell_types = set()
+
+for filename in filtered_files:
+    segments = filename.split('_')[1:-1]  # Splitting filename and excluding 'motifs' and 'OUT.txt'
+    # timepoints.add(segments[0])  # The timepoint is the second segment
+    cell_type = '_'.join(segments[1:])  # Joining the segments to get the cell-type
+    cell_types.add(cell_type)
+
+# Convert sets to lists
+# timepoints = list(timepoints)
+cell_types = list(cell_types)
+
+# # sort the timepoints list from early to late timepoints
+# def extract_numeric(s):
+#     # Extracting digits from the string
+#     return int(''.join(filter(str.isdigit, s)))
+
+timepoints = sorted(timepoints, key=extract_numeric)
+
+# sort the cell-types (based on the pseudotime/RNA velocity cell-cell transition graphs)
+cell_types = ["Neural_Crest","Neural_Anterior","Differentiating_Neurons","Neural_Posterior","NMPs",
+              "PSM","Somites","Muscle","Adaxial_Cells","Lateral_Mesoderm","Endoderm",
+              "Germline","Epidermal","Notochord",
+              "unassigned"]
+
+print("Timepoints:", timepoints)
+print("Cell Types:", cell_types)
