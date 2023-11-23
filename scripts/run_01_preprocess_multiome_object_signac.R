@@ -224,7 +224,8 @@ call_MACS2_peaks_bulk_celltype <- function(object=multiome,
     macs2_counts_bulk <- FeatureMatrix(
         fragments = Fragments(multiome),
         features = peaks_bulk,
-        cells = colnames(multiome)
+        cells = colnames(multiome),
+        process_n=200000,
     )
 
     # create a new assay using the MACS2 peak set and add it to the Seurat object
@@ -254,7 +255,8 @@ call_MACS2_peaks_bulk_celltype <- function(object=multiome,
     macs2_counts <- FeatureMatrix(
     fragments = Fragments(multiome),
     features = peaks,
-    cells = colnames(multiome)
+    cells = colnames(multiome),
+    process_n=200000,
     )
 
     # create a new assay using the MACS2 peak set and add it to the Seurat object
@@ -271,7 +273,63 @@ call_MACS2_peaks_bulk_celltype <- function(object=multiome,
     }
 
 
-# Step 4 (TBD). Compute the joint set of peaks (by merging cell-type specific peaks with bulk peaks)
+# Step 4. Compute the joint set of peaks (by merging cell-type specific peaks with bulk, and CRG-arc peaks)
+# Note. we use "iterative overlap merging described in ArchR paper. We assume that the importance of peaks is celltype>bulk>CRG-arc".
+# Note2. We can also use the "union" of the peaks, but we will use the "iterative overlap merging" for now.
+merge_peaks <- function(object=multiome){
+
+    # Step 4-1. Extract non-overlapping (unique) peaks in peaks_bulk that are not in peaks_celltype
+    # first, extract the peaks from the Seurat object (gRanges objects)
+    peaks_celltype <- multiome@assays$peaks_celltype@ranges
+    peaks_bulk <- multiome@assays$peaks_bulk@ranges
+    peaks_CRG <- multiome@assays$ATAC@ranges
+
+    # unique peaks in peaks_bulk compared to peaks_celltype
+    non_overlapping_peaks_bulk <- extractNonOverlappingPeaks(peaks_bulk, peaks_celltype)
+    non_overlapping_peaks_bulk
+
+    # Merge the non-overlapping peaks with the celltype peaks
+    peaks_merged <- c(peaks_celltype, non_overlapping_peaks_bulk)
+    peaks_merged
+
+    # Step 4-2. Extract non-overlapping (unique) peaks in peaks_CRG that are not in peaks_merged
+    non_overlapping_peaks_CRG <- extractNonOverlappingPeaks(peaks_CRG, peaks_merged)
+    non_overlapping_peaks_CRG
+
+    peaks_merged <- c(peaks_merged, non_overlapping_peaks_CRG)
+    peaks_merged
+
+    # Change the default assay to "ATAC" for calling peaks
+    DefaultAssay(multiome) <- "ATAC"
+
+    # genome annotation (we need this to create a ChromatinAssay object)
+    genome_annotation <- Annotation(multiome)
+    # fragment path (path to the Fragment file)
+    fragpath <- Fragments(multiome)[[1]]@path
+
+    # remove peaks on nonstandard chromosomes and in genomic blacklist regions
+    peaks_merged <- keepStandardChromosomes(peaks_merged, pruning.mode = "coarse")
+    # peaks <- subsetByOverlaps(x = peaks, ranges = blacklist_hg38_unified, invert = TRUE)
+
+    # quantify counts in each peak
+    macs2_counts_merged <- FeatureMatrix(
+        fragments = Fragments(multiome),
+        features = peaks_merged,
+        cells = colnames(multiome),
+        process_n=200000,
+    )
+
+    # create a new assay using the MACS2 peak set and add it to the Seurat object
+    multiome[["peaks_merged"]] <- CreateChromatinAssay(
+        counts = macs2_counts_merged,
+        sep = c(":", "-"),
+        fragments = fragpath,
+        annotation = genome_annotation,
+        genome = 'GRCz11', # we will manually add the genome version
+    )
+
+    return(multiome)
+}
 
 
 
@@ -288,7 +346,8 @@ compute_embeddings <- function(object=multiome)
     multiome <- RunUMAP(multiome, reduction = "pca", dims = 1:50, reduction.name = "umap.rna")
     
     # ATAC
-    DefaultAssay(multiome) <-"peaks_celltype"
+    #DefaultAssay(multiome) <-"peaks_celltype"
+    DefaultAssay(multiome) <-"peaks_merged"
     # preprocess the data (dim.reduction for UMAP)
     multiome <- FindTopFeatures(multiome, min.cutoff = 5)
     multiome <- RunTFIDF(multiome)
@@ -319,7 +378,7 @@ compute_embeddings <- function(object=multiome)
 # Note that Cicero also has its own way of computing the Gene Activity count matrix.
 compute_gene_activity <- function(object=multiome){
     
-    DefaultAssay(multiome) <-"ATAC"
+    DefaultAssay(multiome) <-"peaks_merged"
     # we use the Signac function "GeneActivity"
     gene.activities <- GeneActivity(multiome)
     # add the gene activity matrix to the Seurat object as a new assay and normalize it
@@ -363,6 +422,27 @@ generate_filename <- function(base_path, data_id, suffix) {
   return(paste0(base_path, data_id, "_", suffix, ".RDS"))
 }
 
+# define a function that computes non-overlapping peaks between two gRanges objects
+# this function computes the non-overlapping peaks from granges1 (compared to granges2)
+extractNonOverlappingPeaks <- function(granges1, granges2) {
+  # Find overlaps
+  overlaps <- findOverlaps(granges1, granges2)
+
+  # Get unique indices(peaks) of granges1 that overlap with granges2 peaks
+  unique_overlaps <- unique(queryHits(overlaps))
+
+  # Get all indices in granges1
+  all_indices_granges1 <- seq_along(granges1)
+
+  # Find indices in granges1 that are not in unique overlaps
+  unique_indices_granges1 <- setdiff(all_indices_granges1, unique_overlaps)
+
+  # Extract non-overlapping peaks from granges1
+  non_overlapping_peaks <- granges1[unique_indices_granges1]
+
+  return(non_overlapping_peaks)
+}
+
 ##### THIS PART IS THE KEY COMMAND #####
 ##### ABOVE FUNCTIONS CAN BE WRAPPED INTO UTILITIES #####
 
@@ -376,13 +456,13 @@ multiome <- generate_seurat_object(raw_data_path, gref_path)
 saveRDS(object=multiome, file=generate_filename(output_filepath, data_id, "raw"))
 print("seurat object generated")
 
-# step 2. basic QC
+# step 1-2. basic QC
 multiome <- filter_low_quality_cells(multiome)
 #saveRDS(object=multiome, file=paste0(output_filepath,data_id,"_processed.RDS"))
 saveRDS(object=multiome, file=generate_filename(output_filepath, data_id, "QCed"))
 print("seurat object QCed, and saved")
 
-# step 3. transfer the annotation (using RNA)
+# step 2. transfer the annotation (using RNA)
 multiome <- transfer_reference_annotation_RNA_anchors(multiome, 
                                                         reference=reference, 
                                                         annotation_class=annotation_class) # nolint
@@ -391,24 +471,25 @@ saveRDS(object=multiome, file=generate_filename(output_filepath, data_id, "annot
 print("annotation transferred")
 
 
-# step 4. peak-calling
+# step 3. peak-calling
 multiome <- call_MACS2_peaks_bulk_celltype(multiome, annotation_class=annotation_class) # nolint
 #saveRDS(object=multiome, file=paste0(output_filepath,data_id,"_processed.RDS"))
 saveRDS(object=multiome, file=generate_filename(output_filepath, data_id, "peak_called"))
 print("peak-calling done")
 
+# step 4. merge the peaks (CRG, bulk, celltype)
+multiome <- merge_peaks(multiome)
+print("ATAC peaks merged")
+
+# step 5. compute embeddings
 multiome <- compute_embeddings(multiome)
 saveRDS(object=multiome, file=generate_filename(output_filepath, data_id, "embeddings"))
 print("embeddings computed")
 
-# step 5. (Optional) Compute "Gene Activities"
+# step 6. (Optional) Compute "Gene Activities"
 multiome <- compute_gene_activity(multiome)
 saveRDS(object=multiome, file=generate_filename(output_filepath, data_id, "gene_activity"))
 print("gene activity computed")
-
-# # step 6. save the RDS object
-# saveRDS(object=multiome, file=paste0(output_filepath,data_id,"_processed.RDS"))
-# print("seurat object saved")
 
 # step 7. convert the RDS object to h5ad object (both RNA and ATAC)
 # TBD: "assays_save" parameter should be defined at the very top
