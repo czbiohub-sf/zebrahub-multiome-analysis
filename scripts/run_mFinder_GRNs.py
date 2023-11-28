@@ -70,7 +70,6 @@ if not os.path.exists(output_path):
 
 # move to the output filepath (This is not the best practice, so we'd need to find an alternative)
 #os.chdir("/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/TDR118_cicero_output/07_TDR118_celloracle_GRN/")
-
 os.chdir(output_path)
 
 def find_network_motifs_mfinder(filepath, filename, output_path):
@@ -119,7 +118,8 @@ def find_network_motifs_mfinder(filepath, filename, output_path):
         # input filename
         input_file = "filtered_GRN_"+celltype+"_mfinder_format.txt"
         # output filename
-        output_file = "motifs_"+celltype+ "_OUT.txt"
+        # output_file = "motifs_"+celltype+ "_OUT.txt"
+        output_file = "motifs_"+celltype
 
         # define the mFinder command
         cmd = "mfinder "+input_file + " -f "+output_file

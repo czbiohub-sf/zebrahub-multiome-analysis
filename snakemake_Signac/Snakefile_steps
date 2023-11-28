@@ -1,0 +1,124 @@
+"""
+To run on SLURM:
+snakemake -j <number of jobs> \ 
+    --cluster-config=cluster.yml \
+    --cluster "sbatch --mem={cluster.mem} \
+    --time {cluster.time} \
+    --cpus-per-task {threads} \
+    -o {cluster.output} -e {cluster.error}" \
+    --use-singularity \
+    --keep-going
+
+last two parameters are for singularity for R/python components
+keep-going is used if anything errors out, the job still continues to run
+"""
+
+# Define the target files, usually good practice
+rule all:
+    input:
+        rds="{output_filepath}/{data_id}_processed.RDS",
+        h5ad_rna="{output_filepath}/{data_id}_RNA.h5ad",
+        h5ad_atac="{output_filepath}/{data_id}_ATAC.h5ad"
+
+rule generate_seurat_object:
+    input:
+        raw_data_path=config["raw_data_path"],
+        gref=config["gref_path"]
+    output:
+        rds="{output_filepath}/{data_id}_raw.RDS"
+    params:
+        script_path=config["01_script_path"]
+    shell:
+        """
+        Rscript {params.script_path} --step generate_seurat_object {input.raw_data_path} {input.gref} {output.rds} {wildcards.data_id}
+        """
+
+rule basic_QC:
+    input:
+        rds="{output_filepath}/{data_id}_raw.RDS"
+    output:
+        rds="{output_filepath}/{data_id}_QCed.RDS"
+    params:
+        script_path=config["01_script_path"]
+    shell:
+        """
+        Rscript {params.script_path} --step filter_low_quality_cells {input.rds} {output.rds} {wildcards.data_id}
+        """
+
+# Continue this structure for other steps:
+rule transfer_annotation:
+    input:
+        rds="{output_filepath}/{data_id}_QCed.RDS"
+    output:
+        rds="{output_filepath}/{data_id}_annotated.RDS"
+    params:
+        script_path=config["01_script_path"],
+        reference=config["reference"],
+        annotation_class=config["annotation_class"]
+    shell:
+        """
+        Rscript {params.script_path} --step transfer_reference_annotation_RNA_anchors {input.rds} {output.rds} {params.reference} {params.annotation_class} {wildcards.data_id}
+        """
+
+rule peak_calling:
+    input:
+        rds="{output_filepath}/{data_id}_annotated.RDS"
+    output:
+        rds="{output_filepath}/{data_id}_peak_called.RDS"
+    params:
+        script_path=config["01_script_path"],
+        annotation_class=config["annotation_class"]
+    shell:
+        """
+        Rscript {params.script_path} --step call_MACS2_peaks_bulk_celltype {input.rds} {output.rds} {params.annotation_class} {wildcards.data_id}
+        """
+
+rule merge_peaks:
+    input:
+        rds="{output_filepath}/{data_id}_peak_called.RDS"
+    output:
+        rds="{output_filepath}/{data_id}_merged_peaks.RDS"
+    params:
+        script_path=config["01_script_path"]
+    shell:
+        """
+        Rscript {params.script_path} --step merge_peaks {input.rds} {output.rds} {wildcards.data_id}
+        """
+
+rule compute_embeddings:
+    input:
+        rds="{output_filepath}/{data_id}_merged_peaks.RDS"
+    output:
+        rds="{output_filepath}/{data_id}_embeddings.RDS"
+    params:
+        script_path=config["01_script_path"]
+    shell:
+        """
+        Rscript {params.script_path} --step compute_embeddings {input.rds} {output.rds} {wildcards.data_id}
+        """
+
+rule compute_gene_activity:
+    input:
+        rds="{output_filepath}/{data_id}_embeddings.RDS"
+    output:
+        rds="{output_filepath}/{data_id}_gene_activity.RDS"
+    params:
+        script_path=config["01_script_path"]
+    shell:
+        """
+        Rscript {params.script_path} --step compute_gene_activity {input.rds} {output.rds} {wildcards.data_id}
+        """
+
+rule export_seurat_assays:
+    input:
+        rds="{output_filepath}/{data_id}_gene_activity.RDS"
+    output:
+        h5ad_rna="{output_filepath}/{data_id}_RNA.h5ad",
+        h5ad_atac="{output_filepath}/{data_id}_ATAC.h5ad",
+        processed_rds="{output_filepath}/{data_id}_processed.RDS"
+    params:
+        script_path=config["01_script_path"]
+    shell:
+        """
+        Rscript {params.script_path} --step export_seurat_assays {input.rds} {wildcards.output_filepath} {wildcards.data_id}
+        """
