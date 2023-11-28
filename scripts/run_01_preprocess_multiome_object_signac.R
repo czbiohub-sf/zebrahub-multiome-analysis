@@ -13,6 +13,8 @@ suppressMessages(library(Signac))
 #library(Signac)
 library(SeuratData)
 library(SeuratDisk)
+library(Matrix)
+
 # genome info
 library(GenomeInfoDb)
 library(ggplot2)
@@ -396,21 +398,21 @@ compute_gene_activity <- function(object=multiome){
 
 # step 7. Convert Seurat object (multiple assays) into h5ad objects per assay
 # define the function
-export_seurat_assays <- function(input_dir_prefix, output_dir, data_id, assays_save) {
+export_seurat_assays <- function(object=multiome, 
+                                output_dir, data_id, assays_save) {
 
-  
   # Read the input Seurat object
-  seurat <- readRDS(input_dir_prefix)
+  # seurat <- readRDS(input_dir_prefix)
   
   # Loop through the specified assays
   for (assay in assays_save) {
     # Set the default assay
-    DefaultAssay(seurat) <- assay
-    print(seurat)
+    DefaultAssay(multiome) <- assay
+    print(multiome)
     
     # Save the object (assay)
     filename <- file.path(output_dir, paste0(data_id, "_processed_", assay, ".h5Seurat"))
-    SaveH5Seurat(seurat, filename = filename, overwrite = TRUE)
+    SaveH5Seurat(multiome, filename = filename, overwrite = TRUE)
     
     # Convert the h5Seurat to h5ad
     Convert(filename, dest = "h5ad")
@@ -453,13 +455,13 @@ extractNonOverlappingPeaks <- function(granges1, granges2) {
 
 # step 1. generate seurat object
 multiome <- generate_seurat_object(raw_data_path, gref_path)
-saveRDS(object=multiome, file=generate_filename(output_filepath, data_id, "raw"))
+#saveRDS(object=multiome, file=generate_filename(output_filepath, data_id, "raw"))
 print("seurat object generated")
 
 # step 1-2. basic QC
 multiome <- filter_low_quality_cells(multiome)
 #saveRDS(object=multiome, file=paste0(output_filepath,data_id,"_processed.RDS"))
-saveRDS(object=multiome, file=generate_filename(output_filepath, data_id, "QCed"))
+#saveRDS(object=multiome, file=generate_filename(output_filepath, data_id, "QCed"))
 print("seurat object QCed, and saved")
 
 # step 2. transfer the annotation (using RNA)
@@ -467,36 +469,37 @@ multiome <- transfer_reference_annotation_RNA_anchors(multiome,
                                                         reference=reference, 
                                                         annotation_class=annotation_class) # nolint
 #saveRDS(object=multiome, file=paste0(output_filepath,data_id,"_processed.RDS"))
-saveRDS(object=multiome, file=generate_filename(output_filepath, data_id, "annotated"))
+#saveRDS(object=multiome, file=generate_filename(output_filepath, data_id, "annotated"))
 print("annotation transferred")
 
 
 # step 3. peak-calling
 multiome <- call_MACS2_peaks_bulk_celltype(multiome, annotation_class=annotation_class) # nolint
 #saveRDS(object=multiome, file=paste0(output_filepath,data_id,"_processed.RDS"))
-saveRDS(object=multiome, file=generate_filename(output_filepath, data_id, "peak_called"))
+#saveRDS(object=multiome, file=generate_filename(output_filepath, data_id, "peak_called"))
 print("peak-calling done")
 
 # step 4. merge the peaks (CRG, bulk, celltype)
 multiome <- merge_peaks(multiome)
+#saveRDS(object=multiome, file=generate_filename(output_filepath, data_id, "merged_peaks"))
 print("ATAC peaks merged")
 
 # step 5. compute embeddings
 multiome <- compute_embeddings(multiome)
-saveRDS(object=multiome, file=generate_filename(output_filepath, data_id, "embeddings"))
+#saveRDS(object=multiome, file=generate_filename(output_filepath, data_id, "embeddings"))
 print("embeddings computed")
 
 # step 6. (Optional) Compute "Gene Activities"
 multiome <- compute_gene_activity(multiome)
-saveRDS(object=multiome, file=generate_filename(output_filepath, data_id, "gene_activity"))
+#saveRDS(object=multiome, file=generate_filename(output_filepath, data_id, "gene_activity"))
 print("gene activity computed")
 
 # step 7. convert the RDS object to h5ad object (both RNA and ATAC)
 # TBD: "assays_save" parameter should be defined at the very top
-export_seurat_assays(input_dir_prefix = generate_filename(output_filepath, data_id, "gene_activity"),
+export_seurat_assays(object = multiome,
                     output_dir = output_filepath,
                     data_id = data_id,
-                    assays_save= c("RNA", "ATAC"))
+                    assays_save= c("RNA", "peaks_merged"))
 
 saveRDS(object=multiome, file=generate_filename(output_filepath, data_id, "processed"))                    
 print("seurat object exported to h5ad objects per assay")

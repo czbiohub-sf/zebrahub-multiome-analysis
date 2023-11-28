@@ -10,6 +10,7 @@ import pandas as pd
 import scanpy as sc
 
 import celloracle as co
+from itertools import combinations
 
 def extract_motif_info(mFinder_output):
 
@@ -88,10 +89,9 @@ def extract_motif_info(mFinder_output):
     #df
     return df
 
-
-# A function to extract the gene_names from a GRN for corresponding network motifs
-def extract_gene_names_for_motifs(filepath_GRN, celltype, 
-                                    df_motifs, filepath_output):
+# A function to extract the gene_names from a GRN for a corresponding network motif
+# NOTE: This function takes the GRN, and the motif dataframe as inputs, and returns the instances of the motifs ()
+def extract_gene_names_for_motifs(filepath_GRN, df_motifs, filepath_output):
     # Load your GRN dataframe
     GRN = co.load_hdf5(filepath_GRN)
     GRN_celltype = GRN.filtered_links[celltype]
@@ -137,6 +137,55 @@ def extract_gene_names_for_motifs(filepath_GRN, celltype,
 
     instances_df.to_csv(filepath_output)
 
+
+# # A function to extract the gene_names from a GRN for corresponding network motifs
+# def extract_gene_names_for_motifs(filepath_GRN, celltype, 
+#                                     df_motifs, filepath_output):
+#     # Load your GRN dataframe
+#     GRN = co.load_hdf5(filepath_GRN)
+#     GRN_celltype = GRN.filtered_links[celltype]
+
+#     # Convert the dataframe into a set of directed edges for easy querying
+#     edges = set(tuple(row) for row in GRN_celltype[['source', 'target']].values)
+
+#     # Define your motifs
+#     motif_matrices = df_motifs["motifs"]
+#     #motif_matrices = [
+#     #    [[0, 1, 1], [1, 0, 1], [0, 0, 0]],
+#     #    [[0, 0, 1], [1, 0, 1], [1, 0, 0]],
+#     #    [[0, 1, 1], [1, 0, 1], [1, 1, 0]]
+#     #]
+
+#     # Union of unique 'source' and 'target' nodes
+#     all_unique_nodes = set(GRN_celltype['source'].unique()).union(set(GRN_celltype['target'].unique()))
+
+#     # Check each triplet in the GRN against the motifs
+#     instances = {}
+#     for idx, motif in enumerate(motif_matrices):
+#         instances[idx] = []
+
+#         for triplet in combinations(all_unique_nodes, 3):
+#             matrix = get_adjacency_matrix(triplet, edges)
+#             if matrix == motif:
+#                 instances[idx].append(triplet)
+
+#     # Convert instances into a dataframe
+#     rows = []
+#     for idx, instance_list in instances.items():
+#         for instance in instance_list:
+#             rows.append({'MOTIF_ID': idx, 'INSTANCE': instance})
+
+#     instances_df = pd.DataFrame(rows)
+
+#     #print(instances_df)
+#     # replace the indices of instances_df to "MOTIF_ID"
+#     dict_motif_id = dict(zip(instances_df["MOTIF_ID"].unique(), df_motifs["MOTIF_ID"]))
+#     instances_df.MOTIF_ID = instances_df.MOTIF_ID.map(dict_motif_id)
+    
+#     return instances_df
+
+#     instances_df.to_csv(filepath_output)
+
 # Function to get adjacency matrix for a triplet from the GRN
 def get_adjacency_matrix(triplet, edges):
     matrix = np.zeros((3, 3))
@@ -148,51 +197,51 @@ def get_adjacency_matrix(triplet, edges):
 
 
     
-# Use case
-# Step 1. extract the motif information from the text block, and save as a dataframe
-mFinder_output = "/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/baseGRN_CisBP_RNA_zebrahub/09_network_motifs/motifs_0budstage_Somites_OUT.txt"
-df_motifs = extract_motif_info(mFinder_output)
-df_motifs
+# ###### Use Case
+# # Step 1. extract the motif information from the text block, and save as a dataframe
+# mFinder_output = "/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/baseGRN_CisBP_RNA_zebrahub/09_network_motifs/motifs_0budstage_Somites_OUT.txt"
+# df_motifs = extract_motif_info(mFinder_output)
+# df_motifs
 
-# Step 2. 
-# filepath_GRN = "/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/baseGRN_CisBP_RNA_zebrahub/08_0budstage_celltype_GRNs.celloracle.links"
-# GRN = co.load_hdf5(filepath_GRN)
+# # Step 2. 
+# # filepath_GRN = "/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/baseGRN_CisBP_RNA_zebrahub/08_0budstage_celltype_GRNs.celloracle.links"
+# # GRN = co.load_hdf5(filepath_GRN)
 
-# celltype = "Somites"
-# GRN_celltype = GRN.filtered_links[celltype]
-# GRN_celltype
-all_files = os.listdir("/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/baseGRN_CisBP_RNA_zebrahub/09_network_motifs/")
+# # celltype = "Somites"
+# # GRN_celltype = GRN.filtered_links[celltype]
+# # GRN_celltype
+# all_files = os.listdir("/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/baseGRN_CisBP_RNA_zebrahub/09_network_motifs/")
 
-filtered_files = [f for f in all_files if 'motifs' in f]
-print(f"Number of files containing 'motifs': {len(filtered_files)}")
-filtered_files.sort() # sort numerically (timepoints), and alphabetically (cell-types)
+# filtered_files = [f for f in all_files if 'motifs' in f]
+# print(f"Number of files containing 'motifs': {len(filtered_files)}")
+# filtered_files.sort() # sort numerically (timepoints), and alphabetically (cell-types)
 
-# Sets to store unique timepoints and cell-types
-timepoints = set()
-cell_types = set()
+# # Sets to store unique timepoints and cell-types
+# timepoints = set()
+# cell_types = set()
 
-for filename in filtered_files:
-    segments = filename.split('_')[1:-1]  # Splitting filename and excluding 'motifs' and 'OUT.txt'
-    # timepoints.add(segments[0])  # The timepoint is the second segment
-    cell_type = '_'.join(segments[1:])  # Joining the segments to get the cell-type
-    cell_types.add(cell_type)
+# for filename in filtered_files:
+#     segments = filename.split('_')[1:-1]  # Splitting filename and excluding 'motifs' and 'OUT.txt'
+#     # timepoints.add(segments[0])  # The timepoint is the second segment
+#     cell_type = '_'.join(segments[1:])  # Joining the segments to get the cell-type
+#     cell_types.add(cell_type)
 
-# Convert sets to lists
-# timepoints = list(timepoints)
-cell_types = list(cell_types)
+# # Convert sets to lists
+# # timepoints = list(timepoints)
+# cell_types = list(cell_types)
 
-# # sort the timepoints list from early to late timepoints
-# def extract_numeric(s):
-#     # Extracting digits from the string
-#     return int(''.join(filter(str.isdigit, s)))
+# # # sort the timepoints list from early to late timepoints
+# # def extract_numeric(s):
+# #     # Extracting digits from the string
+# #     return int(''.join(filter(str.isdigit, s)))
 
-timepoints = sorted(timepoints, key=extract_numeric)
+# timepoints = sorted(timepoints, key=extract_numeric)
 
-# sort the cell-types (based on the pseudotime/RNA velocity cell-cell transition graphs)
-cell_types = ["Neural_Crest","Neural_Anterior","Differentiating_Neurons","Neural_Posterior","NMPs",
-              "PSM","Somites","Muscle","Adaxial_Cells","Lateral_Mesoderm","Endoderm",
-              "Germline","Epidermal","Notochord",
-              "unassigned"]
+# # sort the cell-types (based on the pseudotime/RNA velocity cell-cell transition graphs)
+# cell_types = ["Neural_Crest","Neural_Anterior","Differentiating_Neurons","Neural_Posterior","NMPs",
+#               "PSM","Somites","Muscle","Adaxial_Cells","Lateral_Mesoderm","Endoderm",
+#               "Germline","Epidermal","Notochord",
+#               "unassigned"]
 
-print("Timepoints:", timepoints)
-print("Cell Types:", cell_types)
+# print("Timepoints:", timepoints)
+# print("Cell Types:", cell_types)
