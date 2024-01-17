@@ -6,9 +6,9 @@
 # withr::with_libpaths(new="/hpc/scratch/group.data.science/yangjoon.kim/.local/R_lib", 
 #                      install_github("cole-trapnell-lab/cicero-release", ref = "monocle3"))
 # cicero
-#.libPaths("/hpc/scratch/group.data.science/yangjoon.kim/.local/R_lib")
-#withr::with_libpaths(new = "/hpc/scratch/group.data.science/yangjoon.kim/.local/R_lib", library(monocle3))
-# withr::with_libpaths(new = "/hpc/scratch/group.data.science/yangjoon.kim/.local/R_lib", library(cicero))
+.libPaths("/hpc/scratch/group.data.science/yangjoon.kim/.local/R_lib")
+withr::with_libpaths(new = "/hpc/scratch/group.data.science/yangjoon.kim/.local/R_lib", library(monocle3))
+withr::with_libpaths(new = "/hpc/scratch/group.data.science/yangjoon.kim/.local/R_lib", library(cicero))
 
 # load other libraries
 library(cicero)

@@ -90,17 +90,21 @@ def extract_motif_info(mFinder_output):
     return df
 
 # A function to extract the gene_names from a GRN for a corresponding network motif
-# NOTE: This function takes the GRN, and the motif dataframe as inputs, and returns the instances of the motifs ()
-def extract_gene_names_for_motifs(filepath_GRN, df_motifs, filepath_output):
-    # Load your GRN dataframe
-    GRN = co.load_hdf5(filepath_GRN)
-    GRN_celltype = GRN.filtered_links[celltype]
+# This function takes a GRN, and a single motif, and returns a dataframe of instances of nodes/edges in the GRN
+
+# (Prerequisite) Load your GRN object (Links object) from the celloracle output
+GRN = co.load_hdf5(filepath_GRN)
+# define the celltype
+celltype = "Somites" # or "NMPs", "Neural_Crest", etc.
+GRN_celltype = GRN.filtered_links[celltype]
+
+def extract_gene_names_for_motif(GRN_celltype, motif, motif_id, filepath_output):
 
     # Convert the dataframe into a set of directed edges for easy querying
     edges = set(tuple(row) for row in GRN_celltype[['source', 'target']].values)
 
     # Define your motifs
-    motif_matrices = df_motifs["motifs"]
+    #motif_matrices = df_motifs["motifs"]
     #motif_matrices = [
     #    [[0, 1, 1], [1, 0, 1], [0, 0, 0]],
     #    [[0, 0, 1], [1, 0, 1], [1, 0, 0]],
@@ -112,19 +116,19 @@ def extract_gene_names_for_motifs(filepath_GRN, df_motifs, filepath_output):
 
     # Check each triplet in the GRN against the motifs
     instances = {}
-    for idx, motif in enumerate(motif_matrices):
-        instances[idx] = []
-
+    instances[motif_id] = []
         for triplet in combinations(all_unique_nodes, 3):
             matrix = get_adjacency_matrix(triplet, edges)
             if matrix == motif:
-                instances[idx].append(triplet)
-
+                instances[motif_id].append(triplet)
+                
     # Convert instances into a dataframe
     rows = []
-    for idx, instance_list in instances.items():
-        for instance in instance_list:
-            rows.append({'MOTIF_ID': idx, 'INSTANCE': instance})
+    rows.append({'MOTIF_ID': motif_id, 'INSTANCE': instances[motif_id]})
+    # for idx, instance_list in instances.items():
+    #     for instance in instance_list:
+    #         rows.append({'MOTIF_ID': idx, 'INSTANCE': instance})
+    
 
     instances_df = pd.DataFrame(rows)
 
@@ -135,7 +139,7 @@ def extract_gene_names_for_motifs(filepath_GRN, df_motifs, filepath_output):
     
     return instances_df
 
-    instances_df.to_csv(filepath_output)
+    #instances_df.to_csv(filepath_output)
 
 
 # # A function to extract the gene_names from a GRN for corresponding network motifs
