@@ -11,7 +11,8 @@ rule all:
 
 rule run_cicero:
     input:
-        rds="{output_path}/{data_id}_processed.RDS"
+        # rds="{output_path}/{data_id}_processed.RDS"
+        rds=lambda wildcards: f"{wildcards.output_path}/{wildcards.data_id}_processed.RDS"
     output:
         peaks="{output_path}/01_{data_id}_{peaktype}_peaks.csv",
         cicero_connections="{output_path}/02_{data_id}_cicero_connections_{peaktype}_peaks.csv"

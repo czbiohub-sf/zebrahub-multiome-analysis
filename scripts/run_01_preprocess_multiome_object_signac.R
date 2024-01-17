@@ -357,7 +357,7 @@ compute_embeddings <- function(object=multiome)
 
     # UMAP
     # remove the first LSI since it's usually highly correlated to the sequencing-depth
-    multiome <- RunUMAP(multiome, reduction = 'lsi', dims = c(2:40), assay = 'peaks_celltype', 
+    multiome <- RunUMAP(multiome, reduction = 'lsi', dims = c(2:40), assay = 'peaks_merged', 
               reduction.name = 'umap.atac')
 
     # joint
@@ -394,13 +394,12 @@ compute_gene_activity <- function(object=multiome){
     )
     
     return(multiome)
-    } 
+    }
 
 # step 7. Convert Seurat object (multiple assays) into h5ad objects per assay
 # define the function
 export_seurat_assays <- function(object=multiome, 
                                 output_dir, data_id, assays_save) {
-
   # Read the input Seurat object
   # seurat <- readRDS(input_dir_prefix)
   
@@ -425,7 +424,7 @@ generate_filename <- function(base_path, data_id, suffix) {
 }
 
 # define a function that computes non-overlapping peaks between two gRanges objects
-# this function computes the non-overlapping peaks from granges1 (compared to granges2)
+# this function computes the non-overlapping peaks in granges1 compared to granges2
 extractNonOverlappingPeaks <- function(granges1, granges2) {
   # Find overlaps
   overlaps <- findOverlaps(granges1, granges2)

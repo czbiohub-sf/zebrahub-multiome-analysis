@@ -1,9 +1,9 @@
 # Define the target files, usually good practice
-# rule all:
-#     input:
-#         rds="{output_filepath}/{data_id}_processed.RDS",
-#         h5ad_rna="{output_filepath}/{data_id}_RNA.h5ad",
-#         h5ad_atac="{output_filepath}/{data_id}_ATAC.h5ad"
+rule all:
+    input:
+        rds="{output_filepath}/{data_id}_processed.RDS",
+        h5ad_rna="{output_filepath}/{data_id}_RNA.h5ad",
+        h5ad_atac="{output_filepath}/{data_id}_ATAC.h5ad"
 
 rule preprocess_multiome_data:
     input:
