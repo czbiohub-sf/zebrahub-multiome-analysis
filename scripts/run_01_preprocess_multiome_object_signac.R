@@ -461,7 +461,7 @@ print("seurat object generated")
 multiome <- filter_low_quality_cells(multiome)
 #saveRDS(object=multiome, file=paste0(output_filepath,data_id,"_processed.RDS"))
 #saveRDS(object=multiome, file=generate_filename(output_filepath, data_id, "QCed"))
-print("seurat object QCed, and saved")
+print("seurat object QCed")
 
 # step 2. transfer the annotation (using RNA)
 multiome <- transfer_reference_annotation_RNA_anchors(multiome, 
@@ -490,7 +490,7 @@ print("embeddings computed")
 
 # step 6. (Optional) Compute "Gene Activities"
 multiome <- compute_gene_activity(multiome)
-#saveRDS(object=multiome, file=generate_filename(output_filepath, data_id, "gene_activity"))
+saveRDS(object=multiome, file=generate_filename(output_filepath, data_id, "gene_activity"))
 print("gene activity computed")
 
 # step 7. convert the RDS object to h5ad object (both RNA and ATAC)
