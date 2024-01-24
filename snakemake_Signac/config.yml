@@ -1,13 +1,8 @@
-#adapters: "-a 'CTGTCTCTTATACACATCT;min_overlap=10' -A 'CTGTCTCTTATACACATCT;min_overlap=10'"
-#cutadapt_extra: "-q 25 -m 10"
-#threads: 16
-#bowtie_extra: ""
-#reference: "reference/pfrt293"
-#macs_control: "aligned/ControlgDNA_S5.sam"
-#gsize: "3.3e9"
-# config file for Signac, CellOracle, and mFinder
+# config file for Signac
 01_script_path: /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/zebrahub-multiome-analysis/scripts/run_01_preprocess_multiome_object_signac.R
 raw_data_path: /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/TDR118/outs/
 gref_path: /hpc/reference/sequencing_alignment/alignment_references/zebrafish_genome_GRCz11/genes/genes.gtf.gz
 reference: /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/annotated_data/ZF_atlas_v01/ZF_atlas_v01_15somite.h5Seurat
 annotation_class: "global_annotation"
+cluster: "sbatch --mem={resources.mem_mb} --cpus-per-task={threads} --time={resources.time_min}"
+default-resources: ['mem_mb=512000', 'time_min=1440']  # Default resources: 512GB of memory and 24 hours
