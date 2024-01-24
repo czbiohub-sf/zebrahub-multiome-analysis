@@ -30,7 +30,7 @@ library(SeuratWrappers)
 args <- commandArgs(trailingOnly = TRUE)
 
 if (length(args) != 6) {
-  stop("Usage: Rscript run_01_compute_CCANS_cicero.R seurat_object_path assay dim_reduced output_path data_id peaktype")
+  stop("Usage: Rscript run_02_compute_CCANS_cicero.R seurat_object_path assay dim_reduced output_path data_id peaktype")
 }
 
 seurat_object_path <- args[1]
@@ -46,7 +46,7 @@ peaktype <- args[6]
 # dim.reduced <- "UMAP.ATAC"
 # output_path = "",
 # data_id="TDR118",
-# peaktype = "CRG_arc"
+# peaktype = "peaks_merged"
 
 
 # Import the Seurat object

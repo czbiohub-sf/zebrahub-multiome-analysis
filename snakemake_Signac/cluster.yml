@@ -1,15 +1,9 @@
 __default__:
   partition: "cpu"
   cpus: "{threads}"
-  time: 512
-  mem: "128g"
+  time: "48:00:00"
+  mem: "512g"
   output: "logs_slurm/{rule}.{wildcards}.out"
   error: "logs_slurm/{rule}.{wildcards}.err"
   email: "yang-joon.kim@czbiohub.org"
-  email_type: "FAIL"
-
-bowtie2:
-  mem: "128g"
-  
-cutadapt:
-  mem: "32g"
+  email_type: "FAIL,END"

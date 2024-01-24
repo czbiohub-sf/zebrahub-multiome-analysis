@@ -1,1681 +1,1 @@
-Building DAG of jobs...
-Using shell: /usr/bin/bash
-Provided cores: 20
-Rules claiming more threads will be scaled down.
-Job stats:
-job                         count
-------------------------  -------
-preprocess_multiome_data        1
-total                           1
-
-Select jobs to execute...
-
-[Sun Jan 21 20:19:20 2024]
-rule preprocess_multiome_data:
-    input: /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/TDR126/outs, /hpc/reference/sequencing_alignment/alignment_references/zebrafish_genome_GRCz11/genes/genes.gtf.gz, /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/annotated_data/ZF_atlas_v01/ZF_atlas_v01_0budstage.h5Seurat
-    output: /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/post_Signac_CellOracle/TDR126/TDR126_processed.RDS, /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/post_Signac_CellOracle/TDR126/TDR126_RNA.h5ad, /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/post_Signac_CellOracle/TDR126/TDR126_ATAC.h5ad
-    jobid: 0
-    reason: Missing output files: /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/post_Signac_CellOracle/TDR126/TDR126_processed.RDS
-    wildcards: output_filepath=/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/post_Signac_CellOracle/TDR126, data_id=TDR126
-    resources: tmpdir=/tmp
-
-Registered S3 method overwritten by 'SeuratDisk':
-  method            from  
-  as.sparse.H5Group Seurat
-Loading required package: BiocGenerics
-
-Attaching package: ‘BiocGenerics’
-
-The following objects are masked from ‘package:stats’:
-
-    IQR, mad, sd, var, xtabs
-
-The following objects are masked from ‘package:base’:
-
-    anyDuplicated, aperm, append, as.data.frame, basename, cbind,
-    colnames, dirname, do.call, duplicated, eval, evalq, Filter, Find,
-    get, grep, grepl, intersect, is.unsorted, lapply, Map, mapply,
-    match, mget, order, paste, pmax, pmax.int, pmin, pmin.int,
-    Position, rank, rbind, Reduce, rownames, sapply, setdiff, sort,
-    table, tapply, union, unique, unsplit, which.max, which.min
-
-Loading required package: S4Vectors
-Loading required package: stats4
-
-Attaching package: ‘S4Vectors’
-
-The following objects are masked from ‘package:Matrix’:
-
-    expand, unname
-
-The following object is masked from ‘package:utils’:
-
-    findMatches
-
-The following objects are masked from ‘package:base’:
-
-    expand.grid, I, unname
-
-Loading required package: IRanges
-Loading required package: BSgenome
-Loading required package: GenomicRanges
-Loading required package: Biostrings
-Loading required package: XVector
-
-Attaching package: ‘Biostrings’
-
-The following object is masked from ‘package:base’:
-
-    strsplit
-
-Loading required package: rtracklayer
-               _                           
-platform       x86_64-pc-linux-gnu         
-arch           x86_64                      
-os             linux-gnu                   
-system         x86_64, linux-gnu           
-status                                     
-major          4                           
-minor          3.2                         
-year           2023                        
-month          10                          
-day            31                          
-svn rev        85441                       
-language       R                           
-version.string R version 4.3.2 (2023-10-31)
-nickname       Eye Holes                   
-[1] ‘4.4.0’
-Genome matrix has multiple modalities, returning a list of matrices for this genome
-Warning: Feature names cannot have underscores ('_'), replacing with dashes ('-')
-Computing hash
-Checking for 15479 cell barcodes
-[1] "seurat object generated"
-Found 15479 cell barcodes
-Done Processing 1 million linesDone Processing 2 million linesDone Processing 3 million linesDone Processing 4 million linesDone Processing 5 million linesDone Processing 6 million linesDone Processing 7 million linesDone Processing 8 million linesDone Processing 9 million lines                                                  Done Processing 10 million linesDone Processing 11 million linesDone Processing 12 million linesDone Processing 13 million linesDone Processing 14 million linesDone Processing 15 million linesDone Processing 16 million linesDone Processing 17 million linesDone Processing 18 million linesDone Processing 19 million lines                                                  Done Processing 20 million linesDone Processing 21 million linesDone Processing 22 million linesDone Processing 23 million linesDone Processing 24 million linesDone Processing 25 million linesDone Processing 26 million linesDone Processing 27 million linesDone Processing 28 million linesDone Processing 29 million lines                                                  Done Processing 30 million linesDone Processing 31 million linesDone Processing 32 million linesDone Processing 33 million linesDone Processing 34 million linesDone Processing 35 million linesDone Processing 36 million linesDone Processing 37 million linesDone Processing 38 million linesDone Processing 39 million lines                                                  Done Processing 40 million linesDone Processing 41 million linesDone Processing 42 million linesDone Processing 43 million linesDone Processing 44 million linesDone Processing 45 million linesDone Processing 46 million linesDone Processing 47 million linesDone Processing 48 million linesDone Processing 49 million lines                                                  Done Processing 50 million linesDone Processing 51 million linesDone Processing 52 million linesDone Processing 53 million linesDone Processing 54 million linesDone Processing 55 million linesDone Processing 56 million linesDone Processing 57 million linesDone Processing 58 million linesDone Processing 59 million lines                                                  Done Processing 60 million linesDone Processing 61 million linesDone Processing 62 million linesDone Processing 63 million linesDone Processing 64 million linesDone Processing 65 million linesDone Processing 66 million linesDone Processing 67 million linesDone Processing 68 million linesDone Processing 69 million lines                                                  Done Processing 70 million linesDone Processing 71 million linesDone Processing 72 million linesDone Processing 73 million linesDone Processing 74 million linesDone Processing 75 million linesDone Processing 76 million linesDone Processing 77 million linesExtracting TSS positions
-Extracting fragments at TSSs
-
-Computing TSS enrichment score
-[1] "seurat object QCed, and saved"
-Calculating cell attributes from input UMI matrix: log_umi
-Variance stabilizing transformation of count matrix of size 23240 by 15036
-Model formula is y ~ log_umi
-Get Negative Binomial regression parameters per gene
-Using 2000 genes, 5000 cells
-  |                                                                              |                                                                      |   0%  |                                                                              |==================                                                    |  25%  |                                                                              |===================================                                   |  50%  |                                                                              |====================================================                  |  75%  |                                                                              |======================================================================| 100%
-Found 89 outliers - those will be ignored in fitting/regularization step
-
-Second step: Get residuals using fitted parameters for 23240 genes
-  |                                                                              |                                                                      |   0%  |                                                                              |=                                                                     |   2%  |                                                                              |===                                                                   |   4%  |                                                                              |====                                                                  |   6%  |                                                                              |======                                                                |   9%  |                                                                              |=======                                                               |  11%  |                                                                              |=========                                                             |  13%  |                                                                              |==========                                                            |  15%  |                                                                              |============                                                          |  17%  |                                                                              |=============                                                         |  19%  |                                                                              |===============                                                       |  21%  |                                                                              |================                                                      |  23%  |                                                                              |==================                                                    |  26%  |                                                                              |===================                                                   |  28%  |                                                                              |=====================                                                 |  30%  |                                                                              |======================                                                |  32%  |                                                                              |========================                                              |  34%  |                                                                              |=========================                                             |  36%  |                                                                              |===========================                                           |  38%  |                                                                              |============================                                          |  40%  |                                                                              |==============================                                        |  43%  |                                                                              |===============================                                       |  45%  |                                                                              |=================================                                     |  47%  |                                                                              |==================================                                    |  49%  |                                                                              |====================================                                  |  51%  |                                                                              |=====================================                                 |  53%  |                                                                              |=======================================                               |  55%  |                                                                              |========================================                              |  57%  |                                                                              |==========================================                            |  60%  |                                                                              |===========================================                           |  62%  |                                                                              |=============================================                         |  64%  |                                                                              |==============================================                        |  66%  |                                                                              |================================================                      |  68%  |                                                                              |=================================================                     |  70%  |                                                                              |===================================================                   |  72%  |                                                                              |====================================================                  |  74%  |                                                                              |======================================================                |  77%  |                                                                              |=======================================================               |  79%  |                                                                              |=========================================================             |  81%  |                                                                              |==========================================================            |  83%  |                                                                              |============================================================          |  85%  |                                                                              |=============================================================         |  87%  |                                                                              |===============================================================       |  89%  |                                                                              |================================================================      |  91%  |                                                                              |==================================================================    |  94%  |                                                                              |===================================================================   |  96%  |                                                                              |===================================================================== |  98%  |                                                                              |======================================================================| 100%
-Computing corrected count matrix for 23240 genes
-  |                                                                              |                                                                      |   0%  |                                                                              |=                                                                     |   2%  |                                                                              |===                                                                   |   4%  |                                                                              |====                                                                  |   6%  |                                                                              |======                                                                |   9%  |                                                                              |=======                                                               |  11%  |                                                                              |=========                                                             |  13%  |                                                                              |==========                                                            |  15%  |                                                                              |============                                                          |  17%  |                                                                              |=============                                                         |  19%  |                                                                              |===============                                                       |  21%  |                                                                              |================                                                      |  23%  |                                                                              |==================                                                    |  26%  |                                                                              |===================                                                   |  28%  |                                                                              |=====================                                                 |  30%  |                                                                              |======================                                                |  32%  |                                                                              |========================                                              |  34%  |                                                                              |=========================                                             |  36%  |                                                                              |===========================                                           |  38%  |                                                                              |============================                                          |  40%  |                                                                              |==============================                                        |  43%  |                                                                              |===============================                                       |  45%  |                                                                              |=================================                                     |  47%  |                                                                              |==================================                                    |  49%  |                                                                              |====================================                                  |  51%  |                                                                              |=====================================                                 |  53%  |                                                                              |=======================================                               |  55%  |                                                                              |========================================                              |  57%  |                                                                              |==========================================                            |  60%  |                                                                              |===========================================                           |  62%  |                                                                              |=============================================                         |  64%  |                                                                              |==============================================                        |  66%  |                                                                              |================================================                      |  68%  |                                                                              |=================================================                     |  70%  |                                                                              |===================================================                   |  72%  |                                                                              |====================================================                  |  74%  |                                                                              |======================================================                |  77%  |                                                                              |=======================================================               |  79%  |                                                                              |=========================================================             |  81%  |                                                                              |==========================================================            |  83%  |                                                                              |============================================================          |  85%  |                                                                              |=============================================================         |  87%  |                                                                              |===============================================================       |  89%  |                                                                              |================================================================      |  91%  |                                                                              |==================================================================    |  94%  |                                                                              |===================================================================   |  96%  |                                                                              |===================================================================== |  98%  |                                                                              |======================================================================| 100%
-Calculating gene attributes
-Wall clock passed: Time difference of 2.808883 mins
-Determine variable features
-Place corrected count matrix in counts slot
-Centering data matrix
-  |                                                                              |                                                                      |   0%  |                                                                              |==================                                                    |  25%  |                                                                              |===================================                                   |  50%  |                                                                              |====================================================                  |  75%  |                                                                              |======================================================================| 100%
-Set default assay to SCT
-PC_ 1 
-Positive:  zgc:174855, zgc:174153, CR383676.2, si:dkey-239j18.2, si:dkey-26g8.5, ctslb, tram1, ELAPOR1, rrbp1b, si:dkey-269i1.4 
-	   zgc:174154, si:dkey-269i1.4.1, BX322603.1, ctslb.2, quo, si:dkey-76k16.6, st6gal2a, snd1, ttll10, he1.1 
-	   he1.2, inhbaa, SORCS3, aplp1, ctslb.1, zbtb46, camk1b, fkbp11, dennd4a, frzb 
-Negative:  hmgb2a, hspb1, eef1a1l1, hmga1a, si:dkey-151g10.6, rpl39, rplp1, h3f3b.1, si:ch211-222l21.1, ptmab 
-	   si:ch73-1a9.3, rpl17, rps12, rpl37.1, rpl36a, rpl19, rps13, rps7, rps14, zgc:171772 
-	   rps5, rplp0, rpl31, rpl23, rps15a, rps11, hsp90ab1, rps26l, rps10, rps24 
-PC_ 2 
-Positive:  CR383676.2, ttn.2, ttn.1, serpinh1b, chsy1, bcam, col11a1a, plod2, fndc3ba, plxna2 
-	   XKR4, robo1, agrn, ntd5, kif26ab, si:dkey-261h17.1, lama5, epha4a, cxcl12b, fsta 
-	   fn1a, pmp22b, arid3c, loxl3b, gli2a, neo1a, trps1, enah, dock1, col2a1a 
-Negative:  zgc:174855, zgc:174153, si:dkey-239j18.2, si:dkey-26g8.5, ctslb, ELAPOR1, tram1, si:dkey-269i1.4.1, si:dkey-269i1.4, zgc:174154 
-	   hmgb2a, BX322603.1, ctslb.2, si:dkey-76k16.6, he1.1, rrbp1b, he1.2, ttll10, si:dkey-151g10.6, quo 
-	   eef1a1l1, ctslb.1, rplp1, rpl39, hspb1, inhbaa, hmga1a, SORCS3, h3f3b.1, aplp1 
-PC_ 3 
-Positive:  pcdh19, bcam, tp63, col18a1a, cntfr, dag1, epha7, lama5, plekha6, pkdcca 
-	   zbtb16b, cyp26c1, CR383676.2, pax3a, gli3, ncam1a, col4a6, hspg2, fgfr4, nova2 
-	   ror1, tead1b, alcamb, rpe65b, unc5b, eya1, pls3, lmx1bb, rfx4, shisa2a 
-Negative:  ttn.1, ttn.2, XKR4, tbx16, fn1b, hoxc3a, msgn1, serpinh1b, her1, mef2d 
-	   samd10b, pcdh8, BX649294.1, phc2a, sulf1, unc45b, mllt3, rbm38, enah, rbm24a 
-	   trps1, tbx6, enox2, draxin, il17rd, efemp2b, dlc, tob1a, hoxc6b, tbx16l 
-PC_ 4 
-Positive:  tp63, lama5, plekha6, pls3, pcdh19, apoc1, bcam, apoeb, fn1a, rpe65b 
-	   gata2a, bmp7a, marcksl1b, tagln2, ppap2d, fermt1, szl, niban2a, cldni, tfap2c 
-	   cdh1, gata3, pth2ra, myh9a, itga3b, epcam, alcama, ved, lamb1a, btbd11b 
-Negative:  cntfr, nova2, epha7, ncam1a, pax3a, rfx4, tenm4, cyp26c1, pax6a, zeb1b 
-	   chrd, greb1l, pappab, ntn1a, lrp2a, rnf220a, gli3, plch1, zbtb16a, adgrl2a 
-	   sox11a, NAV1, jarid2b, epha4a, sox13, adgrv1, SSBP4, plxdc2, foxp4, jag2b 
-PC_ 5 
-Positive:  XKR4, tbx16, hoxc3a, pcdh19, tp63, col18a1a, szl, fn1b, mllt3, phc2a 
-	   BX649294.1, trps1, CR383676.2, dag1, msgn1, apoeb, pls3, macf1a, notch1a, rbm38 
-	   her1, il17rd, wnt5b, plekha6, lef1, NC-002333.17, rpe65b, nradd, tenm4, bmp7a 
-Negative:  col11a1a, ntd5, pmp22b, fsta, cxcl12b, si:dkey-22o22.2, plod2, loxl3b, mtss1lb, caskin1 
-	   col2a1a, sema5bb, twist2, p4ha1b, si:dkey-261h17.1, gabbr2, slit3, ttn.2, ebf3a, hmcn1 
-	   epha4a, col5a3a, arhgap24, colec12, lsp1a, tbx1, pappa2, tmem163b, plxna2, zgc:158328 
-Validating h5Seurat file
-Initializing RNA with data
-Adding counts for RNA
-Adding miscellaneous information for RNA
-Adding command information
-Adding cell-level metadata
-Adding miscellaneous information
-Adding tool-specific results
-Calculating cell attributes from input UMI matrix: log_umi
-Variance stabilizing transformation of count matrix of size 19850 by 1332
-Model formula is y ~ log_umi
-Get Negative Binomial regression parameters per gene
-Using 2000 genes, 1332 cells
-  |                                                                              |                                                                      |   0%  |                                                                              |==================                                                    |  25%  |                                                                              |===================================                                   |  50%  |                                                                              |====================================================                  |  75%  |                                                                              |======================================================================| 100%
-Found 77 outliers - those will be ignored in fitting/regularization step
-
-Second step: Get residuals using fitted parameters for 19850 genes
-  |                                                                              |                                                                      |   0%  |                                                                              |==                                                                    |   2%  |                                                                              |====                                                                  |   5%  |                                                                              |=====                                                                 |   8%  |                                                                              |=======                                                               |  10%  |                                                                              |=========                                                             |  12%  |                                                                              |==========                                                            |  15%  |                                                                              |============                                                          |  18%  |                                                                              |==============                                                        |  20%  |                                                                              |================                                                      |  22%  |                                                                              |==================                                                    |  25%  |                                                                              |===================                                                   |  28%  |                                                                              |=====================                                                 |  30%  |                                                                              |=======================                                               |  32%  |                                                                              |========================                                              |  35%  |                                                                              |==========================                                            |  38%  |                                                                              |============================                                          |  40%  |                                                                              |==============================                                        |  42%  |                                                                              |================================                                      |  45%  |                                                                              |=================================                                     |  48%  |                                                                              |===================================                                   |  50%  |                                                                              |=====================================                                 |  52%  |                                                                              |======================================                                |  55%  |                                                                              |========================================                              |  58%  |                                                                              |==========================================                            |  60%  |                                                                              |============================================                          |  62%  |                                                                              |==============================================                        |  65%  |                                                                              |===============================================                       |  68%  |                                                                              |=================================================                     |  70%  |                                                                              |===================================================                   |  72%  |                                                                              |====================================================                  |  75%  |                                                                              |======================================================                |  78%  |                                                                              |========================================================              |  80%  |                                                                              |==========================================================            |  82%  |                                                                              |============================================================          |  85%  |                                                                              |=============================================================         |  88%  |                                                                              |===============================================================       |  90%  |                                                                              |=================================================================     |  92%  |                                                                              |==================================================================    |  95%  |                                                                              |====================================================================  |  98%  |                                                                              |======================================================================| 100%
-Computing corrected count matrix for 19850 genes
-  |                                                                              |                                                                      |   0%  |                                                                              |==                                                                    |   2%  |                                                                              |====                                                                  |   5%  |                                                                              |=====                                                                 |   8%  |                                                                              |=======                                                               |  10%  |                                                                              |=========                                                             |  12%  |                                                                              |==========                                                            |  15%  |                                                                              |============                                                          |  18%  |                                                                              |==============                                                        |  20%  |                                                                              |================                                                      |  22%  |                                                                              |==================                                                    |  25%  |                                                                              |===================                                                   |  28%  |                                                                              |=====================                                                 |  30%  |                                                                              |=======================                                               |  32%  |                                                                              |========================                                              |  35%  |                                                                              |==========================                                            |  38%  |                                                                              |============================                                          |  40%  |                                                                              |==============================                                        |  42%  |                                                                              |================================                                      |  45%  |                                                                              |=================================                                     |  48%  |                                                                              |===================================                                   |  50%  |                                                                              |=====================================                                 |  52%  |                                                                              |======================================                                |  55%  |                                                                              |========================================                              |  58%  |                                                                              |==========================================                            |  60%  |                                                                              |============================================                          |  62%  |                                                                              |==============================================                        |  65%  |                                                                              |===============================================                       |  68%  |                                                                              |=================================================                     |  70%  |                                                                              |===================================================                   |  72%  |                                                                              |====================================================                  |  75%  |                                                                              |======================================================                |  78%  |                                                                              |========================================================              |  80%  |                                                                              |==========================================================            |  82%  |                                                                              |============================================================          |  85%  |                                                                              |=============================================================         |  88%  |                                                                              |===============================================================       |  90%  |                                                                              |=================================================================     |  92%  |                                                                              |==================================================================    |  95%  |                                                                              |====================================================================  |  98%  |                                                                              |======================================================================| 100%
-Calculating gene attributes
-Wall clock passed: Time difference of 30.24585 secs
-Determine variable features
-Place corrected count matrix in counts slot
-Centering data matrix
-  |                                                                              |                                                                      |   0%  |                                                                              |==================                                                    |  25%  |                                                                              |===================================                                   |  50%  |                                                                              |====================================================                  |  75%  |                                                                              |======================================================================| 100%
-Set default assay to SCT
-PC_ 1 
-Positive:  si:ch211-152c2.3, nova2, mdkb, sox19a, sox3, si:ch211-222l21.1, her2, sox2, aldob, alcamb 
-	   shisa2a, her9, sox11a, si:ch211-137a8.4, si:ch211-212k18.5, her15.2, her4.2, her15.1, auts2b, mex3b 
-	   plxdc2, otx2b, SSBP4, nr2f5, otx1, id1, notch3, her6, pax6b, her4.2-1 
-Negative:  cdx4, tuba8l2, tbx16, fn1b, nid2a, fn1a, cdx1a, asph, tob1a, her7 
-	   cxcl12a, cx43.4, pcdh8, hes6, serpinh1b, si:dkey-261h17.1, efemp2b, dlc, rbm38, her1 
-	   hoxc3a, foxc1a, msgn1, apoc1, hoxc6b, snai1a, vox, dld, tbx16l, aldh1a2 
-PC_ 2 
-Positive:  tagln2, krt8, tfap2a, epcam, dlx3b, akap12b, cldn7b, klf6a, tfap2c, cdh1 
-	   krt92, gata3, xbp1, gata2a, marcksl1b, myh9a, kctd15a, tp63, pcdh19, alcama 
-	   cavin2b, dspa, esrp1, ahnak, cd9b, fat2, foxi1, pfn1, klf2a, bambia 
-Negative:  hspb1, nova2, cdh2, sox19a, mdkb, sox3, her4.2-1, her4.4, zic2b, sox2 
-	   chrd, si:dkey-56m19.5, si:ch211-222l21.1, her4.2, hoxc3a, cx43.4, auts2b, sox11a, tbx16, dld 
-	   hes6, fn1b, si:ch211-212k18.5, plxdc2, mcm2, sox19b, zeb1b, mycn, jam3b, mcm5 
-PC_ 3 
-Positive:  tuba8l2, swap70b, canx, arl4aa, ENSDARG00000104576, atp1b1a, dynll1, papss2b, cdca7a, si:ch73-160h15.3 
-	   tmsb4x, myl12.2, plpp1a, cox17, lrrc59, si:ch73-91k6.2, ost4, cnpy1, pmm2, sult6b1 
-	   capns1a, krt18a.1, copz2, nova2, adipor1b, si:dkey-204f11.64, ACBD3, mboat1, atp5if1b, ftr86 
-Negative:  hist1h4l-6, si:dkey-108k21.10, zgc:110425, hist1h2a6, hist1h4l-16, hist1h4l-11, zgc:153409, si:ch211-113a14.19-2, hist1h4l-10, hist1h4l-14 
-	   si:ch211-113a14.18, zgc:173552-3, zgc:194989, si:ch211-113a14.24, si:dkey-261m9.12, apoc1, si:ch211-113a14.12, zgc:153405, si:ch1073-153i20.5, FQ312024.1 
-	   zgc:173587, hist2h3c, zgc:173552-5, hist1h2a3-1, zgc:173552, si:ch1073-153i20.4, hist1h2a1, CU457819.1, si:dkey-23a13.17, apoeb 
-PC_ 4 
-Positive:  hist1h4l-6, si:dkey-108k21.10, hist1h4l-11, zgc:110425, hist1h2a6, hist1h4l-16, si:ch211-113a14.19-2, hist1h4l-10, si:ch211-113a14.12, zgc:153409 
-	   si:ch211-113a14.18, hist1h4l-14, zgc:173552-3, si:dkey-261m9.12, zgc:194989, mibp, zgc:153405, si:ch211-113a14.24, FQ312024.1, hist2h3c 
-	   si:ch1073-153i20.4, hist1h2a1, si:dkey-23a13.17, hist1h2a3-1, si:ch1073-153i20.5, CU457819.1, zgc:173552-5, zgc:173552, si:dkey-108k21.21, FP236630.1 
-Negative:  marcksl1b, her6, alcama, lsp1a, yap1, hey1, fn1a, tead1b, ahnak, fgfr4 
-	   id3, akap12b, rnd3a, lima1a, cdca7a, hapln1b, snai1b, cxcl12b, rdh10a, cst3 
-	   pcdh19, tpm4a, ripply1, marcksl1a, fsta, cdc42ep4a, six4b, cxxc5b, igf2a, cxcl12a 
-PC_ 5 
-Positive:  hist1h4l-6, shisa2a, ripply1, her6, hist1h4l-11, zgc:153409, si:dkey-108k21.10, zgc:110425, hist1h2a6, meox1 
-	   foxc1a, otx1, pcdh10b, efnb2a, six7, otx2b, mdka, asph, hist1h4l-16, tuba8l2 
-	   zcchc24, nr2f5, cxcl12b, fgfr2, hist1h4l-10, cpn1-1, six3b, sparc, sfrp1a, rdh10a 
-Negative:  cdx4, cdx1a, apoc1, crabp2b, sp5l, her4.4, ved, hes6, znfl2a, hspb1 
-	   raraa, ube2e2, apela, hoxb9a, wls, vox, fgf8a, ptmab, hoxa9a, msx1b 
-	   hoxb10a, her4.2-1, tuba1a, sall4, tbxta, ca9, dag1, vent, her12, BX005254.4 
- [1] "unassigned"              "Neural_Anterior"        
- [3] "Lateral_Mesoderm"        "Neural_Crest"           
- [5] "PSM"                     "Neural_Posterior"       
- [7] "Epidermal"               "Somites"                
- [9] "NMPs"                    "Endoderm"               
-[11] "Muscle"                  "Notochord"              
-[13] "Differentiating_Neurons" "Germline"               
-Projecting cell embeddings
-Finding neighborhoods
-Finding anchors
-	Found 4211 anchors
-Finding integration vectors
-Finding integration vector weights
-0%   10   20   30   40   50   60   70   80   90   100%
-[----|----|----|----|----|----|----|----|----|----|
-**************************************************|
-Predicting cell labels
-[1] "annotation transferred"
-INFO  @ Sun, 21 Jan 2024 20:44:18: 
-# Command line: callpeak -t /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/TDR126/outs/atac_fragments.tsv.gz -g 2.7e+09 -f BED --nomodel --extsize 200 --shift -100 -n SeuratProject --outdir /tmp/RtmpuTg7Y7
-# ARGUMENTS LIST:
-# name = SeuratProject
-# format = BED
-# ChIP-seq file = ['/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/TDR126/outs/atac_fragments.tsv.gz']
-# control file = None
-# effective genome size = 2.70e+09
-# band width = 300
-# model fold = [5, 50]
-# qvalue cutoff = 5.00e-02
-# The maximum gap between significant sites is assigned as the read length/tag size.
-# The minimum length of peaks is assigned as the predicted fragment length "d".
-# Larger dataset will be scaled towards smaller dataset.
-# Range for calculating regional lambda is: 10000 bps
-# Broad region calling is off
-# Paired-End mode is off
- 
-INFO  @ Sun, 21 Jan 2024 20:44:18: #1 read tag files... 
-INFO  @ Sun, 21 Jan 2024 20:44:18: #1 read treatment tags... 
-INFO  @ Sun, 21 Jan 2024 20:44:20:  1000000 
-INFO  @ Sun, 21 Jan 2024 20:44:21:  2000000 
-INFO  @ Sun, 21 Jan 2024 20:44:22:  3000000 
-INFO  @ Sun, 21 Jan 2024 20:44:23:  4000000 
-INFO  @ Sun, 21 Jan 2024 20:44:24:  5000000 
-INFO  @ Sun, 21 Jan 2024 20:44:26:  6000000 
-INFO  @ Sun, 21 Jan 2024 20:44:27:  7000000 
-INFO  @ Sun, 21 Jan 2024 20:44:28:  8000000 
-INFO  @ Sun, 21 Jan 2024 20:44:29:  9000000 
-INFO  @ Sun, 21 Jan 2024 20:44:30:  10000000 
-INFO  @ Sun, 21 Jan 2024 20:44:31:  11000000 
-INFO  @ Sun, 21 Jan 2024 20:44:33:  12000000 
-INFO  @ Sun, 21 Jan 2024 20:44:34:  13000000 
-INFO  @ Sun, 21 Jan 2024 20:44:35:  14000000 
-INFO  @ Sun, 21 Jan 2024 20:44:36:  15000000 
-INFO  @ Sun, 21 Jan 2024 20:44:37:  16000000 
-INFO  @ Sun, 21 Jan 2024 20:44:39:  17000000 
-INFO  @ Sun, 21 Jan 2024 20:44:40:  18000000 
-INFO  @ Sun, 21 Jan 2024 20:44:41:  19000000 
-INFO  @ Sun, 21 Jan 2024 20:44:42:  20000000 
-INFO  @ Sun, 21 Jan 2024 20:44:43:  21000000 
-INFO  @ Sun, 21 Jan 2024 20:44:45:  22000000 
-INFO  @ Sun, 21 Jan 2024 20:44:46:  23000000 
-INFO  @ Sun, 21 Jan 2024 20:44:47:  24000000 
-INFO  @ Sun, 21 Jan 2024 20:44:49:  25000000 
-INFO  @ Sun, 21 Jan 2024 20:44:50:  26000000 
-INFO  @ Sun, 21 Jan 2024 20:44:51:  27000000 
-INFO  @ Sun, 21 Jan 2024 20:44:52:  28000000 
-INFO  @ Sun, 21 Jan 2024 20:44:54:  29000000 
-INFO  @ Sun, 21 Jan 2024 20:44:55:  30000000 
-INFO  @ Sun, 21 Jan 2024 20:44:56:  31000000 
-INFO  @ Sun, 21 Jan 2024 20:44:58:  32000000 
-INFO  @ Sun, 21 Jan 2024 20:44:59:  33000000 
-INFO  @ Sun, 21 Jan 2024 20:45:00:  34000000 
-INFO  @ Sun, 21 Jan 2024 20:45:02:  35000000 
-INFO  @ Sun, 21 Jan 2024 20:45:03:  36000000 
-INFO  @ Sun, 21 Jan 2024 20:45:04:  37000000 
-INFO  @ Sun, 21 Jan 2024 20:45:05:  38000000 
-INFO  @ Sun, 21 Jan 2024 20:45:07:  39000000 
-INFO  @ Sun, 21 Jan 2024 20:45:08:  40000000 
-INFO  @ Sun, 21 Jan 2024 20:45:09:  41000000 
-INFO  @ Sun, 21 Jan 2024 20:45:11:  42000000 
-INFO  @ Sun, 21 Jan 2024 20:45:12:  43000000 
-INFO  @ Sun, 21 Jan 2024 20:45:13:  44000000 
-INFO  @ Sun, 21 Jan 2024 20:45:15:  45000000 
-INFO  @ Sun, 21 Jan 2024 20:45:16:  46000000 
-INFO  @ Sun, 21 Jan 2024 20:45:17:  47000000 
-INFO  @ Sun, 21 Jan 2024 20:45:19:  48000000 
-INFO  @ Sun, 21 Jan 2024 20:45:20:  49000000 
-INFO  @ Sun, 21 Jan 2024 20:45:21:  50000000 
-INFO  @ Sun, 21 Jan 2024 20:45:23:  51000000 
-INFO  @ Sun, 21 Jan 2024 20:45:24:  52000000 
-INFO  @ Sun, 21 Jan 2024 20:45:25:  53000000 
-INFO  @ Sun, 21 Jan 2024 20:45:26:  54000000 
-INFO  @ Sun, 21 Jan 2024 20:45:28:  55000000 
-INFO  @ Sun, 21 Jan 2024 20:45:29:  56000000 
-INFO  @ Sun, 21 Jan 2024 20:45:30:  57000000 
-INFO  @ Sun, 21 Jan 2024 20:45:32:  58000000 
-INFO  @ Sun, 21 Jan 2024 20:45:33:  59000000 
-INFO  @ Sun, 21 Jan 2024 20:45:34:  60000000 
-INFO  @ Sun, 21 Jan 2024 20:45:36:  61000000 
-INFO  @ Sun, 21 Jan 2024 20:45:37:  62000000 
-INFO  @ Sun, 21 Jan 2024 20:45:38:  63000000 
-INFO  @ Sun, 21 Jan 2024 20:45:40:  64000000 
-INFO  @ Sun, 21 Jan 2024 20:45:41:  65000000 
-INFO  @ Sun, 21 Jan 2024 20:45:42:  66000000 
-INFO  @ Sun, 21 Jan 2024 20:45:43:  67000000 
-INFO  @ Sun, 21 Jan 2024 20:45:45:  68000000 
-INFO  @ Sun, 21 Jan 2024 20:45:46:  69000000 
-INFO  @ Sun, 21 Jan 2024 20:45:47:  70000000 
-INFO  @ Sun, 21 Jan 2024 20:45:49:  71000000 
-INFO  @ Sun, 21 Jan 2024 20:45:50:  72000000 
-INFO  @ Sun, 21 Jan 2024 20:45:51:  73000000 
-INFO  @ Sun, 21 Jan 2024 20:45:53:  74000000 
-INFO  @ Sun, 21 Jan 2024 20:45:54:  75000000 
-INFO  @ Sun, 21 Jan 2024 20:45:55:  76000000 
-INFO  @ Sun, 21 Jan 2024 20:45:56:  77000000 
-INFO  @ Sun, 21 Jan 2024 20:45:58:  78000000 
-INFO  @ Sun, 21 Jan 2024 20:45:59:  79000000 
-INFO  @ Sun, 21 Jan 2024 20:46:00:  80000000 
-INFO  @ Sun, 21 Jan 2024 20:46:02:  81000000 
-INFO  @ Sun, 21 Jan 2024 20:46:03:  82000000 
-INFO  @ Sun, 21 Jan 2024 20:46:04:  83000000 
-INFO  @ Sun, 21 Jan 2024 20:46:06:  84000000 
-INFO  @ Sun, 21 Jan 2024 20:46:07:  85000000 
-INFO  @ Sun, 21 Jan 2024 20:46:08:  86000000 
-INFO  @ Sun, 21 Jan 2024 20:46:10:  87000000 
-INFO  @ Sun, 21 Jan 2024 20:46:11:  88000000 
-INFO  @ Sun, 21 Jan 2024 20:46:12:  89000000 
-INFO  @ Sun, 21 Jan 2024 20:46:13:  90000000 
-INFO  @ Sun, 21 Jan 2024 20:46:15:  91000000 
-INFO  @ Sun, 21 Jan 2024 20:46:16:  92000000 
-INFO  @ Sun, 21 Jan 2024 20:46:17:  93000000 
-INFO  @ Sun, 21 Jan 2024 20:46:19:  94000000 
-INFO  @ Sun, 21 Jan 2024 20:46:20:  95000000 
-INFO  @ Sun, 21 Jan 2024 20:46:21:  96000000 
-INFO  @ Sun, 21 Jan 2024 20:46:23:  97000000 
-INFO  @ Sun, 21 Jan 2024 20:46:24:  98000000 
-INFO  @ Sun, 21 Jan 2024 20:46:25:  99000000 
-INFO  @ Sun, 21 Jan 2024 20:46:26:  100000000 
-INFO  @ Sun, 21 Jan 2024 20:46:28:  101000000 
-INFO  @ Sun, 21 Jan 2024 20:46:29:  102000000 
-INFO  @ Sun, 21 Jan 2024 20:46:30:  103000000 
-INFO  @ Sun, 21 Jan 2024 20:46:32:  104000000 
-INFO  @ Sun, 21 Jan 2024 20:46:33:  105000000 
-INFO  @ Sun, 21 Jan 2024 20:46:34:  106000000 
-INFO  @ Sun, 21 Jan 2024 20:46:36:  107000000 
-INFO  @ Sun, 21 Jan 2024 20:46:37:  108000000 
-INFO  @ Sun, 21 Jan 2024 20:46:38:  109000000 
-INFO  @ Sun, 21 Jan 2024 20:46:40:  110000000 
-INFO  @ Sun, 21 Jan 2024 20:46:41:  111000000 
-INFO  @ Sun, 21 Jan 2024 20:46:42:  112000000 
-INFO  @ Sun, 21 Jan 2024 20:46:44:  113000000 
-INFO  @ Sun, 21 Jan 2024 20:46:45:  114000000 
-INFO  @ Sun, 21 Jan 2024 20:46:46:  115000000 
-INFO  @ Sun, 21 Jan 2024 20:46:47:  116000000 
-INFO  @ Sun, 21 Jan 2024 20:46:49:  117000000 
-INFO  @ Sun, 21 Jan 2024 20:46:50:  118000000 
-INFO  @ Sun, 21 Jan 2024 20:46:51:  119000000 
-INFO  @ Sun, 21 Jan 2024 20:46:53:  120000000 
-INFO  @ Sun, 21 Jan 2024 20:46:54:  121000000 
-INFO  @ Sun, 21 Jan 2024 20:46:55:  122000000 
-INFO  @ Sun, 21 Jan 2024 20:46:57:  123000000 
-INFO  @ Sun, 21 Jan 2024 20:46:58:  124000000 
-INFO  @ Sun, 21 Jan 2024 20:46:59:  125000000 
-INFO  @ Sun, 21 Jan 2024 20:47:01:  126000000 
-INFO  @ Sun, 21 Jan 2024 20:47:02:  127000000 
-INFO  @ Sun, 21 Jan 2024 20:47:03:  128000000 
-INFO  @ Sun, 21 Jan 2024 20:47:05:  129000000 
-INFO  @ Sun, 21 Jan 2024 20:47:06:  130000000 
-INFO  @ Sun, 21 Jan 2024 20:47:07:  131000000 
-INFO  @ Sun, 21 Jan 2024 20:47:08:  132000000 
-INFO  @ Sun, 21 Jan 2024 20:47:10:  133000000 
-INFO  @ Sun, 21 Jan 2024 20:47:11:  134000000 
-INFO  @ Sun, 21 Jan 2024 20:47:12:  135000000 
-INFO  @ Sun, 21 Jan 2024 20:47:14:  136000000 
-INFO  @ Sun, 21 Jan 2024 20:47:15:  137000000 
-INFO  @ Sun, 21 Jan 2024 20:47:16:  138000000 
-INFO  @ Sun, 21 Jan 2024 20:47:18:  139000000 
-INFO  @ Sun, 21 Jan 2024 20:47:19:  140000000 
-INFO  @ Sun, 21 Jan 2024 20:47:20:  141000000 
-INFO  @ Sun, 21 Jan 2024 20:47:22:  142000000 
-INFO  @ Sun, 21 Jan 2024 20:47:23:  143000000 
-INFO  @ Sun, 21 Jan 2024 20:47:24:  144000000 
-INFO  @ Sun, 21 Jan 2024 20:47:26:  145000000 
-INFO  @ Sun, 21 Jan 2024 20:47:27:  146000000 
-INFO  @ Sun, 21 Jan 2024 20:47:28:  147000000 
-INFO  @ Sun, 21 Jan 2024 20:47:30:  148000000 
-INFO  @ Sun, 21 Jan 2024 20:47:31:  149000000 
-INFO  @ Sun, 21 Jan 2024 20:47:32:  150000000 
-INFO  @ Sun, 21 Jan 2024 20:47:34:  151000000 
-INFO  @ Sun, 21 Jan 2024 20:47:35:  152000000 
-INFO  @ Sun, 21 Jan 2024 20:47:36:  153000000 
-INFO  @ Sun, 21 Jan 2024 20:47:38:  154000000 
-INFO  @ Sun, 21 Jan 2024 20:47:39:  155000000 
-INFO  @ Sun, 21 Jan 2024 20:47:40:  156000000 
-INFO  @ Sun, 21 Jan 2024 20:47:41:  157000000 
-INFO  @ Sun, 21 Jan 2024 20:47:43:  158000000 
-INFO  @ Sun, 21 Jan 2024 20:47:44:  159000000 
-INFO  @ Sun, 21 Jan 2024 20:47:45:  160000000 
-INFO  @ Sun, 21 Jan 2024 20:47:47:  161000000 
-INFO  @ Sun, 21 Jan 2024 20:47:48:  162000000 
-INFO  @ Sun, 21 Jan 2024 20:47:49:  163000000 
-INFO  @ Sun, 21 Jan 2024 20:47:51:  164000000 
-INFO  @ Sun, 21 Jan 2024 20:47:52:  165000000 
-INFO  @ Sun, 21 Jan 2024 20:47:53:  166000000 
-INFO  @ Sun, 21 Jan 2024 20:47:55:  167000000 
-INFO  @ Sun, 21 Jan 2024 20:47:56:  168000000 
-INFO  @ Sun, 21 Jan 2024 20:47:57:  169000000 
-INFO  @ Sun, 21 Jan 2024 20:47:59:  170000000 
-INFO  @ Sun, 21 Jan 2024 20:48:00:  171000000 
-INFO  @ Sun, 21 Jan 2024 20:48:01:  172000000 
-INFO  @ Sun, 21 Jan 2024 20:48:03:  173000000 
-INFO  @ Sun, 21 Jan 2024 20:48:04:  174000000 
-INFO  @ Sun, 21 Jan 2024 20:48:05:  175000000 
-INFO  @ Sun, 21 Jan 2024 20:48:07:  176000000 
-INFO  @ Sun, 21 Jan 2024 20:48:08:  177000000 
-INFO  @ Sun, 21 Jan 2024 20:48:09:  178000000 
-INFO  @ Sun, 21 Jan 2024 20:48:11:  179000000 
-INFO  @ Sun, 21 Jan 2024 20:48:12:  180000000 
-INFO  @ Sun, 21 Jan 2024 20:48:13:  181000000 
-INFO  @ Sun, 21 Jan 2024 20:48:15:  182000000 
-INFO  @ Sun, 21 Jan 2024 20:48:16:  183000000 
-INFO  @ Sun, 21 Jan 2024 20:48:17:  184000000 
-INFO  @ Sun, 21 Jan 2024 20:48:19:  185000000 
-INFO  @ Sun, 21 Jan 2024 20:48:20:  186000000 
-INFO  @ Sun, 21 Jan 2024 20:48:21:  187000000 
-INFO  @ Sun, 21 Jan 2024 20:48:23:  188000000 
-INFO  @ Sun, 21 Jan 2024 20:48:24:  189000000 
-INFO  @ Sun, 21 Jan 2024 20:48:25:  190000000 
-INFO  @ Sun, 21 Jan 2024 20:48:27:  191000000 
-INFO  @ Sun, 21 Jan 2024 20:48:28:  192000000 
-INFO  @ Sun, 21 Jan 2024 20:48:29:  193000000 
-INFO  @ Sun, 21 Jan 2024 20:48:31:  194000000 
-INFO  @ Sun, 21 Jan 2024 20:48:32:  195000000 
-INFO  @ Sun, 21 Jan 2024 20:48:33:  196000000 
-INFO  @ Sun, 21 Jan 2024 20:48:35:  197000000 
-INFO  @ Sun, 21 Jan 2024 20:48:36:  198000000 
-INFO  @ Sun, 21 Jan 2024 20:48:37:  199000000 
-INFO  @ Sun, 21 Jan 2024 20:48:39:  200000000 
-INFO  @ Sun, 21 Jan 2024 20:48:40:  201000000 
-INFO  @ Sun, 21 Jan 2024 20:48:41:  202000000 
-INFO  @ Sun, 21 Jan 2024 20:48:43:  203000000 
-INFO  @ Sun, 21 Jan 2024 20:48:44:  204000000 
-INFO  @ Sun, 21 Jan 2024 20:48:45:  205000000 
-INFO  @ Sun, 21 Jan 2024 20:48:46:  206000000 
-INFO  @ Sun, 21 Jan 2024 20:48:48:  207000000 
-INFO  @ Sun, 21 Jan 2024 20:48:49:  208000000 
-INFO  @ Sun, 21 Jan 2024 20:48:50:  209000000 
-INFO  @ Sun, 21 Jan 2024 20:48:52:  210000000 
-INFO  @ Sun, 21 Jan 2024 20:48:53:  211000000 
-INFO  @ Sun, 21 Jan 2024 20:48:54:  212000000 
-INFO  @ Sun, 21 Jan 2024 20:48:56:  213000000 
-INFO  @ Sun, 21 Jan 2024 20:48:57:  214000000 
-INFO  @ Sun, 21 Jan 2024 20:48:58:  215000000 
-INFO  @ Sun, 21 Jan 2024 20:49:00:  216000000 
-INFO  @ Sun, 21 Jan 2024 20:49:01:  217000000 
-INFO  @ Sun, 21 Jan 2024 20:49:02:  218000000 
-INFO  @ Sun, 21 Jan 2024 20:49:03:  219000000 
-INFO  @ Sun, 21 Jan 2024 20:49:05:  220000000 
-INFO  @ Sun, 21 Jan 2024 20:49:06:  221000000 
-INFO  @ Sun, 21 Jan 2024 20:49:07:  222000000 
-INFO  @ Sun, 21 Jan 2024 20:49:08:  223000000 
-INFO  @ Sun, 21 Jan 2024 20:49:09:  224000000 
-INFO  @ Sun, 21 Jan 2024 20:49:11:  225000000 
-INFO  @ Sun, 21 Jan 2024 20:49:12:  226000000 
-INFO  @ Sun, 21 Jan 2024 20:49:13:  227000000 
-INFO  @ Sun, 21 Jan 2024 20:49:14:  228000000 
-INFO  @ Sun, 21 Jan 2024 20:49:15:  229000000 
-INFO  @ Sun, 21 Jan 2024 20:49:17:  230000000 
-INFO  @ Sun, 21 Jan 2024 20:49:18:  231000000 
-INFO  @ Sun, 21 Jan 2024 20:49:19:  232000000 
-INFO  @ Sun, 21 Jan 2024 20:49:20:  233000000 
-INFO  @ Sun, 21 Jan 2024 20:49:22:  234000000 
-INFO  @ Sun, 21 Jan 2024 20:49:23:  235000000 
-INFO  @ Sun, 21 Jan 2024 20:49:24:  236000000 
-INFO  @ Sun, 21 Jan 2024 20:49:25:  237000000 
-INFO  @ Sun, 21 Jan 2024 20:49:26:  238000000 
-INFO  @ Sun, 21 Jan 2024 20:49:28:  239000000 
-INFO  @ Sun, 21 Jan 2024 20:49:29:  240000000 
-INFO  @ Sun, 21 Jan 2024 20:49:30:  241000000 
-INFO  @ Sun, 21 Jan 2024 20:49:32:  242000000 
-INFO  @ Sun, 21 Jan 2024 20:49:33:  243000000 
-INFO  @ Sun, 21 Jan 2024 20:49:34:  244000000 
-INFO  @ Sun, 21 Jan 2024 20:49:36:  245000000 
-INFO  @ Sun, 21 Jan 2024 20:49:37:  246000000 
-INFO  @ Sun, 21 Jan 2024 20:49:38:  247000000 
-INFO  @ Sun, 21 Jan 2024 20:49:40:  248000000 
-INFO  @ Sun, 21 Jan 2024 20:49:41:  249000000 
-INFO  @ Sun, 21 Jan 2024 20:49:42:  250000000 
-INFO  @ Sun, 21 Jan 2024 20:49:44:  251000000 
-INFO  @ Sun, 21 Jan 2024 20:49:45:  252000000 
-INFO  @ Sun, 21 Jan 2024 20:49:46:  253000000 
-INFO  @ Sun, 21 Jan 2024 20:49:48:  254000000 
-INFO  @ Sun, 21 Jan 2024 20:49:49:  255000000 
-INFO  @ Sun, 21 Jan 2024 20:49:50:  256000000 
-INFO  @ Sun, 21 Jan 2024 20:49:52:  257000000 
-INFO  @ Sun, 21 Jan 2024 20:49:53:  258000000 
-INFO  @ Sun, 21 Jan 2024 20:49:54:  259000000 
-INFO  @ Sun, 21 Jan 2024 20:49:55:  260000000 
-INFO  @ Sun, 21 Jan 2024 20:49:57:  261000000 
-INFO  @ Sun, 21 Jan 2024 20:49:58:  262000000 
-INFO  @ Sun, 21 Jan 2024 20:49:59:  263000000 
-INFO  @ Sun, 21 Jan 2024 20:50:01:  264000000 
-INFO  @ Sun, 21 Jan 2024 20:50:02:  265000000 
-INFO  @ Sun, 21 Jan 2024 20:50:03:  266000000 
-INFO  @ Sun, 21 Jan 2024 20:50:05:  267000000 
-INFO  @ Sun, 21 Jan 2024 20:50:06:  268000000 
-INFO  @ Sun, 21 Jan 2024 20:50:07:  269000000 
-INFO  @ Sun, 21 Jan 2024 20:50:09:  270000000 
-INFO  @ Sun, 21 Jan 2024 20:50:10:  271000000 
-INFO  @ Sun, 21 Jan 2024 20:50:11:  272000000 
-INFO  @ Sun, 21 Jan 2024 20:50:13:  273000000 
-INFO  @ Sun, 21 Jan 2024 20:50:14:  274000000 
-INFO  @ Sun, 21 Jan 2024 20:50:15:  275000000 
-INFO  @ Sun, 21 Jan 2024 20:50:17:  276000000 
-INFO  @ Sun, 21 Jan 2024 20:50:18:  277000000 
-INFO  @ Sun, 21 Jan 2024 20:50:19:  278000000 
-INFO  @ Sun, 21 Jan 2024 20:50:21:  279000000 
-INFO  @ Sun, 21 Jan 2024 20:50:22:  280000000 
-INFO  @ Sun, 21 Jan 2024 20:50:23:  281000000 
-INFO  @ Sun, 21 Jan 2024 20:50:25:  282000000 
-INFO  @ Sun, 21 Jan 2024 20:50:26:  283000000 
-INFO  @ Sun, 21 Jan 2024 20:50:27:  284000000 
-INFO  @ Sun, 21 Jan 2024 20:50:29:  285000000 
-INFO  @ Sun, 21 Jan 2024 20:50:30:  286000000 
-INFO  @ Sun, 21 Jan 2024 20:50:31:  287000000 
-INFO  @ Sun, 21 Jan 2024 20:50:33:  288000000 
-INFO  @ Sun, 21 Jan 2024 20:50:34:  289000000 
-INFO  @ Sun, 21 Jan 2024 20:50:35:  290000000 
-INFO  @ Sun, 21 Jan 2024 20:50:37:  291000000 
-INFO  @ Sun, 21 Jan 2024 20:50:38:  292000000 
-INFO  @ Sun, 21 Jan 2024 20:50:39:  293000000 
-INFO  @ Sun, 21 Jan 2024 20:50:41:  294000000 
-INFO  @ Sun, 21 Jan 2024 20:50:42:  295000000 
-INFO  @ Sun, 21 Jan 2024 20:50:43:  296000000 
-INFO  @ Sun, 21 Jan 2024 20:50:45:  297000000 
-INFO  @ Sun, 21 Jan 2024 20:50:46:  298000000 
-INFO  @ Sun, 21 Jan 2024 20:50:47:  299000000 
-INFO  @ Sun, 21 Jan 2024 20:50:49:  300000000 
-INFO  @ Sun, 21 Jan 2024 20:50:50:  301000000 
-INFO  @ Sun, 21 Jan 2024 20:50:51:  302000000 
-INFO  @ Sun, 21 Jan 2024 20:50:53:  303000000 
-INFO  @ Sun, 21 Jan 2024 20:50:54:  304000000 
-INFO  @ Sun, 21 Jan 2024 20:50:55:  305000000 
-INFO  @ Sun, 21 Jan 2024 20:50:57:  306000000 
-INFO  @ Sun, 21 Jan 2024 20:50:58:  307000000 
-INFO  @ Sun, 21 Jan 2024 20:50:59:  308000000 
-INFO  @ Sun, 21 Jan 2024 20:51:01:  309000000 
-INFO  @ Sun, 21 Jan 2024 20:51:02:  310000000 
-INFO  @ Sun, 21 Jan 2024 20:51:03:  311000000 
-INFO  @ Sun, 21 Jan 2024 20:51:05:  312000000 
-INFO  @ Sun, 21 Jan 2024 20:51:06:  313000000 
-INFO  @ Sun, 21 Jan 2024 20:51:07:  314000000 
-INFO  @ Sun, 21 Jan 2024 20:51:09:  315000000 
-INFO  @ Sun, 21 Jan 2024 20:51:10:  316000000 
-INFO  @ Sun, 21 Jan 2024 20:51:11:  317000000 
-INFO  @ Sun, 21 Jan 2024 20:51:12:  318000000 
-INFO  @ Sun, 21 Jan 2024 20:51:14:  319000000 
-INFO  @ Sun, 21 Jan 2024 20:51:15:  320000000 
-INFO  @ Sun, 21 Jan 2024 20:51:16:  321000000 
-INFO  @ Sun, 21 Jan 2024 20:51:18:  322000000 
-INFO  @ Sun, 21 Jan 2024 20:51:19:  323000000 
-INFO  @ Sun, 21 Jan 2024 20:51:20:  324000000 
-INFO  @ Sun, 21 Jan 2024 20:51:22:  325000000 
-INFO  @ Sun, 21 Jan 2024 20:51:23:  326000000 
-INFO  @ Sun, 21 Jan 2024 20:51:24:  327000000 
-INFO  @ Sun, 21 Jan 2024 20:51:26:  328000000 
-INFO  @ Sun, 21 Jan 2024 20:51:27:  329000000 
-INFO  @ Sun, 21 Jan 2024 20:51:28:  330000000 
-INFO  @ Sun, 21 Jan 2024 20:51:30:  331000000 
-INFO  @ Sun, 21 Jan 2024 20:51:31:  332000000 
-INFO  @ Sun, 21 Jan 2024 20:51:32:  333000000 
-INFO  @ Sun, 21 Jan 2024 20:51:33:  334000000 
-INFO  @ Sun, 21 Jan 2024 20:51:35:  335000000 
-INFO  @ Sun, 21 Jan 2024 20:51:36:  336000000 
-INFO  @ Sun, 21 Jan 2024 20:51:37:  337000000 
-INFO  @ Sun, 21 Jan 2024 20:51:39:  338000000 
-INFO  @ Sun, 21 Jan 2024 20:51:40:  339000000 
-INFO  @ Sun, 21 Jan 2024 20:51:41:  340000000 
-INFO  @ Sun, 21 Jan 2024 20:51:43:  341000000 
-INFO  @ Sun, 21 Jan 2024 20:51:44:  342000000 
-INFO  @ Sun, 21 Jan 2024 20:51:45:  343000000 
-INFO  @ Sun, 21 Jan 2024 20:51:47:  344000000 
-INFO  @ Sun, 21 Jan 2024 20:51:48:  345000000 
-INFO  @ Sun, 21 Jan 2024 20:51:49:  346000000 
-INFO  @ Sun, 21 Jan 2024 20:51:50:  347000000 
-INFO  @ Sun, 21 Jan 2024 20:51:52:  348000000 
-INFO  @ Sun, 21 Jan 2024 20:51:53:  349000000 
-INFO  @ Sun, 21 Jan 2024 20:51:54:  350000000 
-INFO  @ Sun, 21 Jan 2024 20:51:55:  351000000 
-INFO  @ Sun, 21 Jan 2024 20:51:57:  352000000 
-INFO  @ Sun, 21 Jan 2024 20:51:58:  353000000 
-INFO  @ Sun, 21 Jan 2024 20:51:59:  354000000 
-INFO  @ Sun, 21 Jan 2024 20:52:00:  355000000 
-INFO  @ Sun, 21 Jan 2024 20:52:02:  356000000 
-INFO  @ Sun, 21 Jan 2024 20:52:03:  357000000 
-INFO  @ Sun, 21 Jan 2024 20:52:04:  358000000 
-INFO  @ Sun, 21 Jan 2024 20:52:05:  359000000 
-INFO  @ Sun, 21 Jan 2024 20:52:07:  360000000 
-INFO  @ Sun, 21 Jan 2024 20:52:08:  361000000 
-INFO  @ Sun, 21 Jan 2024 20:52:09:  362000000 
-INFO  @ Sun, 21 Jan 2024 20:52:10:  363000000 
-INFO  @ Sun, 21 Jan 2024 20:52:12:  364000000 
-INFO  @ Sun, 21 Jan 2024 20:52:13:  365000000 
-INFO  @ Sun, 21 Jan 2024 20:52:14:  366000000 
-INFO  @ Sun, 21 Jan 2024 20:52:15:  367000000 
-INFO  @ Sun, 21 Jan 2024 20:52:16:  368000000 
-INFO  @ Sun, 21 Jan 2024 20:52:18:  369000000 
-INFO  @ Sun, 21 Jan 2024 20:52:19:  370000000 
-INFO  @ Sun, 21 Jan 2024 20:52:20:  371000000 
-INFO  @ Sun, 21 Jan 2024 20:52:21:  372000000 
-INFO  @ Sun, 21 Jan 2024 20:52:23:  373000000 
-INFO  @ Sun, 21 Jan 2024 20:52:24:  374000000 
-INFO  @ Sun, 21 Jan 2024 20:52:25:  375000000 
-INFO  @ Sun, 21 Jan 2024 20:52:26:  376000000 
-INFO  @ Sun, 21 Jan 2024 20:52:27:  377000000 
-INFO  @ Sun, 21 Jan 2024 20:52:29:  378000000 
-INFO  @ Sun, 21 Jan 2024 20:52:30:  379000000 
-INFO  @ Sun, 21 Jan 2024 20:52:31:  380000000 
-INFO  @ Sun, 21 Jan 2024 20:52:32:  381000000 
-INFO  @ Sun, 21 Jan 2024 20:52:34:  382000000 
-INFO  @ Sun, 21 Jan 2024 20:52:35:  383000000 
-INFO  @ Sun, 21 Jan 2024 20:52:36:  384000000 
-INFO  @ Sun, 21 Jan 2024 20:52:37:  385000000 
-INFO  @ Sun, 21 Jan 2024 20:52:38:  386000000 
-INFO  @ Sun, 21 Jan 2024 20:52:40:  387000000 
-INFO  @ Sun, 21 Jan 2024 20:52:41:  388000000 
-INFO  @ Sun, 21 Jan 2024 20:52:42:  389000000 
-INFO  @ Sun, 21 Jan 2024 20:52:43:  390000000 
-INFO  @ Sun, 21 Jan 2024 20:52:45:  391000000 
-INFO  @ Sun, 21 Jan 2024 20:52:46:  392000000 
-INFO  @ Sun, 21 Jan 2024 20:52:47:  393000000 
-INFO  @ Sun, 21 Jan 2024 20:52:48:  394000000 
-INFO  @ Sun, 21 Jan 2024 20:52:49:  395000000 
-INFO  @ Sun, 21 Jan 2024 20:52:51:  396000000 
-INFO  @ Sun, 21 Jan 2024 20:52:52:  397000000 
-INFO  @ Sun, 21 Jan 2024 20:52:53:  398000000 
-INFO  @ Sun, 21 Jan 2024 20:52:54:  399000000 
-INFO  @ Sun, 21 Jan 2024 20:52:55:  400000000 
-INFO  @ Sun, 21 Jan 2024 20:52:57:  401000000 
-INFO  @ Sun, 21 Jan 2024 20:52:58:  402000000 
-INFO  @ Sun, 21 Jan 2024 20:52:59:  403000000 
-INFO  @ Sun, 21 Jan 2024 20:53:00:  404000000 
-INFO  @ Sun, 21 Jan 2024 20:53:02:  405000000 
-INFO  @ Sun, 21 Jan 2024 20:53:03:  406000000 
-INFO  @ Sun, 21 Jan 2024 20:53:04:  407000000 
-INFO  @ Sun, 21 Jan 2024 20:53:05:  408000000 
-INFO  @ Sun, 21 Jan 2024 20:53:06:  409000000 
-INFO  @ Sun, 21 Jan 2024 20:53:08:  410000000 
-INFO  @ Sun, 21 Jan 2024 20:53:09:  411000000 
-INFO  @ Sun, 21 Jan 2024 20:53:10:  412000000 
-INFO  @ Sun, 21 Jan 2024 20:53:11:  413000000 
-INFO  @ Sun, 21 Jan 2024 20:53:13:  414000000 
-INFO  @ Sun, 21 Jan 2024 20:53:14:  415000000 
-INFO  @ Sun, 21 Jan 2024 20:53:15:  416000000 
-INFO  @ Sun, 21 Jan 2024 20:53:16:  417000000 
-INFO  @ Sun, 21 Jan 2024 20:53:17:  418000000 
-INFO  @ Sun, 21 Jan 2024 20:53:19:  419000000 
-INFO  @ Sun, 21 Jan 2024 20:53:20:  420000000 
-INFO  @ Sun, 21 Jan 2024 20:53:21:  421000000 
-INFO  @ Sun, 21 Jan 2024 20:53:22:  422000000 
-INFO  @ Sun, 21 Jan 2024 20:53:23:  423000000 
-INFO  @ Sun, 21 Jan 2024 20:53:25:  424000000 
-INFO  @ Sun, 21 Jan 2024 20:53:26:  425000000 
-INFO  @ Sun, 21 Jan 2024 20:53:27:  426000000 
-INFO  @ Sun, 21 Jan 2024 20:53:28:  427000000 
-INFO  @ Sun, 21 Jan 2024 20:53:29:  428000000 
-INFO  @ Sun, 21 Jan 2024 20:53:31:  429000000 
-INFO  @ Sun, 21 Jan 2024 20:53:32:  430000000 
-INFO  @ Sun, 21 Jan 2024 20:53:33:  431000000 
-INFO  @ Sun, 21 Jan 2024 20:53:34:  432000000 
-INFO  @ Sun, 21 Jan 2024 20:53:36:  433000000 
-INFO  @ Sun, 21 Jan 2024 20:53:37:  434000000 
-INFO  @ Sun, 21 Jan 2024 20:53:38:  435000000 
-INFO  @ Sun, 21 Jan 2024 20:53:39:  436000000 
-INFO  @ Sun, 21 Jan 2024 20:53:40:  437000000 
-INFO  @ Sun, 21 Jan 2024 20:53:42:  438000000 
-INFO  @ Sun, 21 Jan 2024 20:53:43:  439000000 
-INFO  @ Sun, 21 Jan 2024 20:53:44:  440000000 
-INFO  @ Sun, 21 Jan 2024 20:53:45:  441000000 
-INFO  @ Sun, 21 Jan 2024 20:53:46:  442000000 
-INFO  @ Sun, 21 Jan 2024 20:53:48:  443000000 
-INFO  @ Sun, 21 Jan 2024 20:53:49:  444000000 
-INFO  @ Sun, 21 Jan 2024 20:53:50:  445000000 
-INFO  @ Sun, 21 Jan 2024 20:53:51:  446000000 
-INFO  @ Sun, 21 Jan 2024 20:53:52:  447000000 
-INFO  @ Sun, 21 Jan 2024 20:53:54:  448000000 
-INFO  @ Sun, 21 Jan 2024 20:53:55:  449000000 
-INFO  @ Sun, 21 Jan 2024 20:53:56:  450000000 
-INFO  @ Sun, 21 Jan 2024 20:53:57:  451000000 
-INFO  @ Sun, 21 Jan 2024 20:53:59:  452000000 
-INFO  @ Sun, 21 Jan 2024 20:54:00:  453000000 
-INFO  @ Sun, 21 Jan 2024 20:54:01:  454000000 
-INFO  @ Sun, 21 Jan 2024 20:54:02:  455000000 
-INFO  @ Sun, 21 Jan 2024 20:54:03:  456000000 
-INFO  @ Sun, 21 Jan 2024 20:54:05:  457000000 
-INFO  @ Sun, 21 Jan 2024 20:54:06:  458000000 
-INFO  @ Sun, 21 Jan 2024 20:54:07:  459000000 
-INFO  @ Sun, 21 Jan 2024 20:54:08:  460000000 
-INFO  @ Sun, 21 Jan 2024 20:54:09:  461000000 
-INFO  @ Sun, 21 Jan 2024 20:54:11:  462000000 
-INFO  @ Sun, 21 Jan 2024 20:54:12:  463000000 
-INFO  @ Sun, 21 Jan 2024 20:54:13:  464000000 
-INFO  @ Sun, 21 Jan 2024 20:54:14:  465000000 
-INFO  @ Sun, 21 Jan 2024 20:54:15:  466000000 
-INFO  @ Sun, 21 Jan 2024 20:54:17:  467000000 
-INFO  @ Sun, 21 Jan 2024 20:54:18:  468000000 
-INFO  @ Sun, 21 Jan 2024 20:54:19:  469000000 
-INFO  @ Sun, 21 Jan 2024 20:54:20:  470000000 
-INFO  @ Sun, 21 Jan 2024 20:54:22:  471000000 
-INFO  @ Sun, 21 Jan 2024 20:54:23:  472000000 
-INFO  @ Sun, 21 Jan 2024 20:54:24:  473000000 
-INFO  @ Sun, 21 Jan 2024 20:54:25:  474000000 
-INFO  @ Sun, 21 Jan 2024 20:54:26:  475000000 
-INFO  @ Sun, 21 Jan 2024 20:54:28:  476000000 
-INFO  @ Sun, 21 Jan 2024 20:54:29:  477000000 
-INFO  @ Sun, 21 Jan 2024 20:54:30:  478000000 
-INFO  @ Sun, 21 Jan 2024 20:54:31:  479000000 
-INFO  @ Sun, 21 Jan 2024 20:54:32:  480000000 
-INFO  @ Sun, 21 Jan 2024 20:54:34:  481000000 
-INFO  @ Sun, 21 Jan 2024 20:54:35:  482000000 
-INFO  @ Sun, 21 Jan 2024 20:54:36:  483000000 
-INFO  @ Sun, 21 Jan 2024 20:54:37:  484000000 
-INFO  @ Sun, 21 Jan 2024 20:54:39:  485000000 
-INFO  @ Sun, 21 Jan 2024 20:54:40:  486000000 
-INFO  @ Sun, 21 Jan 2024 20:54:41:  487000000 
-INFO  @ Sun, 21 Jan 2024 20:54:42:  488000000 
-INFO  @ Sun, 21 Jan 2024 20:54:43:  489000000 
-INFO  @ Sun, 21 Jan 2024 20:54:45:  490000000 
-INFO  @ Sun, 21 Jan 2024 20:54:46:  491000000 
-INFO  @ Sun, 21 Jan 2024 20:54:47:  492000000 
-INFO  @ Sun, 21 Jan 2024 20:54:48:  493000000 
-INFO  @ Sun, 21 Jan 2024 20:54:49:  494000000 
-INFO  @ Sun, 21 Jan 2024 20:54:51:  495000000 
-INFO  @ Sun, 21 Jan 2024 20:54:52:  496000000 
-INFO  @ Sun, 21 Jan 2024 20:54:53:  497000000 
-INFO  @ Sun, 21 Jan 2024 20:54:54:  498000000 
-INFO  @ Sun, 21 Jan 2024 20:54:55:  499000000 
-INFO  @ Sun, 21 Jan 2024 20:54:57:  500000000 
-INFO  @ Sun, 21 Jan 2024 20:54:58:  501000000 
-INFO  @ Sun, 21 Jan 2024 20:54:59:  502000000 
-INFO  @ Sun, 21 Jan 2024 20:55:00:  503000000 
-INFO  @ Sun, 21 Jan 2024 20:55:02:  504000000 
-INFO  @ Sun, 21 Jan 2024 20:55:03:  505000000 
-INFO  @ Sun, 21 Jan 2024 20:55:04:  506000000 
-INFO  @ Sun, 21 Jan 2024 20:55:05:  507000000 
-INFO  @ Sun, 21 Jan 2024 20:55:07:  508000000 
-INFO  @ Sun, 21 Jan 2024 20:55:08:  509000000 
-INFO  @ Sun, 21 Jan 2024 20:55:09:  510000000 
-INFO  @ Sun, 21 Jan 2024 20:55:10:  511000000 
-INFO  @ Sun, 21 Jan 2024 20:55:12:  512000000 
-INFO  @ Sun, 21 Jan 2024 20:55:13:  513000000 
-INFO  @ Sun, 21 Jan 2024 20:55:14:  514000000 
-INFO  @ Sun, 21 Jan 2024 20:55:15:  515000000 
-INFO  @ Sun, 21 Jan 2024 20:55:17:  516000000 
-INFO  @ Sun, 21 Jan 2024 20:55:18:  517000000 
-INFO  @ Sun, 21 Jan 2024 20:55:19:  518000000 
-INFO  @ Sun, 21 Jan 2024 20:55:27: #1 tag size is determined as 124 bps 
-INFO  @ Sun, 21 Jan 2024 20:55:27: #1 tag size = 124.0 
-INFO  @ Sun, 21 Jan 2024 20:55:27: #1  total tags in treatment: 518086517 
-INFO  @ Sun, 21 Jan 2024 20:55:27: #1 user defined the maximum tags... 
-INFO  @ Sun, 21 Jan 2024 20:55:27: #1 filter out redundant tags at the same location and the same strand by allowing at most 1 tag(s) 
-INFO  @ Sun, 21 Jan 2024 20:55:28: #1  tags after filtering in treatment: 169104167 
-INFO  @ Sun, 21 Jan 2024 20:55:28: #1  Redundant rate of treatment: 0.67 
-INFO  @ Sun, 21 Jan 2024 20:55:28: #1 finished! 
-INFO  @ Sun, 21 Jan 2024 20:55:28: #2 Build Peak Model... 
-INFO  @ Sun, 21 Jan 2024 20:55:28: #2 Skipped... 
-INFO  @ Sun, 21 Jan 2024 20:55:28: #2 Use 200 as fragment length 
-INFO  @ Sun, 21 Jan 2024 20:55:28: #2 Sequencing ends will be shifted towards 5' by 100 bp(s) 
-INFO  @ Sun, 21 Jan 2024 20:55:28: #3 Call peaks... 
-INFO  @ Sun, 21 Jan 2024 20:55:28: #3 Pre-compute pvalue-qvalue table... 
-INFO  @ Sun, 21 Jan 2024 21:01:30: #3 Call peaks for each chromosome... 
-INFO  @ Sun, 21 Jan 2024 21:06:14: #4 Write output xls file... /tmp/RtmpuTg7Y7/SeuratProject_peaks.xls 
-INFO  @ Sun, 21 Jan 2024 21:06:16: #4 Write peak in narrowPeak format file... /tmp/RtmpuTg7Y7/SeuratProject_peaks.narrowPeak 
-INFO  @ Sun, 21 Jan 2024 21:06:16: #4 Write summits bed file... /tmp/RtmpuTg7Y7/SeuratProject_summits.bed 
-INFO  @ Sun, 21 Jan 2024 21:06:17: Done! 
-Extracting reads overlapping genomic regions
-Computing hash
-Checking for 15036 cell barcodes
-Warning: Keys should be one or more alphanumeric characters followed by an underscore, setting key from peaks_bulk_ to peaksbulk_
-Processing file /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/TDR126/outs/atac_fragments.tsv.gz
-Keeping 15036 cell barcodes
-Splitting into 13 files
-Done Processing 1 million linesDone Processing 2 million linesDone Processing 3 million linesDone Processing 4 million linesDone Processing 5 million linesDone Processing 6 million linesDone Processing 7 million linesDone Processing 8 million linesDone Processing 9 million lines                                                  Done Processing 10 million linesDone Processing 11 million linesDone Processing 12 million linesDone Processing 13 million linesDone Processing 14 million linesDone Processing 15 million linesDone Processing 16 million linesDone Processing 17 million linesDone Processing 18 million linesDone Processing 19 million lines                                                  Done Processing 20 million linesDone Processing 21 million linesDone Processing 22 million linesDone Processing 23 million linesDone Processing 24 million linesDone Processing 25 million linesDone Processing 26 million linesDone Processing 27 million linesDone Processing 28 million linesDone Processing 29 million lines                                                  Done Processing 30 million linesDone Processing 31 million linesDone Processing 32 million linesDone Processing 33 million linesDone Processing 34 million linesDone Processing 35 million linesDone Processing 36 million linesDone Processing 37 million linesDone Processing 38 million linesDone Processing 39 million lines                                                  Done Processing 40 million linesDone Processing 41 million linesDone Processing 42 million linesDone Processing 43 million linesDone Processing 44 million linesDone Processing 45 million linesDone Processing 46 million linesDone Processing 47 million linesDone Processing 48 million linesDone Processing 49 million lines                                                  Done Processing 50 million linesDone Processing 51 million linesDone Processing 52 million linesDone Processing 53 million linesDone Processing 54 million linesDone Processing 55 million linesDone Processing 56 million linesDone Processing 57 million linesDone Processing 58 million linesDone Processing 59 million lines                                                  Done Processing 60 million linesDone Processing 61 million linesDone Processing 62 million linesDone Processing 63 million linesDone Processing 64 million linesDone Processing 65 million linesDone Processing 66 million linesDone Processing 67 million linesDone Processing 68 million linesDone Processing 69 million lines                                                  Done Processing 70 million linesDone Processing 71 million linesDone Processing 72 million linesDone Processing 73 million linesDone Processing 74 million linesDone Processing 75 million linesDone Processing 76 million linesDone Processing 77 million linesDone Processing 78 million linesDone Processing 79 million lines                                                  Done Processing 80 million linesDone Processing 81 million linesDone Processing 82 million linesDone Processing 83 million linesDone Processing 84 million linesDone Processing 85 million linesDone Processing 86 million linesDone Processing 87 million linesDone Processing 88 million linesDone Processing 89 million lines                                                  Done Processing 90 million linesDone Processing 91 million linesDone Processing 92 million linesDone Processing 93 million linesDone Processing 94 million linesDone Processing 95 million linesDone Processing 96 million linesDone Processing 97 million linesDone Processing 98 million linesDone Processing 99 million lines                                                  Done Processing 100 million linesDone Processing 101 million linesDone Processing 102 million linesDone Processing 103 million linesDone Processing 104 million linesDone Processing 105 million linesDone Processing 106 million linesDone Processing 107 million linesDone Processing 108 million linesDone Processing 109 million lines                                                  Done Processing 110 million linesDone Processing 111 million linesDone Processing 112 million linesDone Processing 113 million linesDone Processing 114 million linesDone Processing 115 million linesDone Processing 116 million linesDone Processing 117 million linesDone Processing 118 million linesDone Processing 119 million lines                                                  Done Processing 120 million linesDone Processing 121 million linesDone Processing 122 million linesDone Processing 123 million linesDone Processing 124 million linesDone Processing 125 million linesDone Processing 126 million linesDone Processing 127 million linesDone Processing 128 million linesDone Processing 129 million lines                                                  Done Processing 130 million linesDone Processing 131 million linesDone Processing 132 million linesDone Processing 133 million linesDone Processing 134 million linesDone Processing 135 million linesDone Processing 136 million linesDone Processing 137 million linesDone Processing 138 million linesDone Processing 139 million lines                                                  Done Processing 140 million linesDone Processing 141 million linesDone Processing 142 million linesDone Processing 143 million linesDone Processing 144 million linesDone Processing 145 million linesDone Processing 146 million linesDone Processing 147 million linesDone Processing 148 million linesDone Processing 149 million lines                                                  Done Processing 150 million linesDone Processing 151 million linesDone Processing 152 million linesDone Processing 153 million linesDone Processing 154 million linesDone Processing 155 million linesDone Processing 156 million linesDone Processing 157 million linesDone Processing 158 million linesDone Processing 159 million lines                                                  Done Processing 160 million linesDone Processing 161 million linesDone Processing 162 million linesDone Processing 163 million linesDone Processing 164 million linesDone Processing 165 million linesDone Processing 166 million linesDone Processing 167 million linesDone Processing 168 million linesDone Processing 169 million lines                                                  Done Processing 170 million linesDone Processing 171 million linesDone Processing 172 million linesDone Processing 173 million linesDone Processing 174 million linesDone Processing 175 million linesDone Processing 176 million linesDone Processing 177 million linesDone Processing 178 million linesDone Processing 179 million lines                                                  Done Processing 180 million linesDone Processing 181 million linesDone Processing 182 million linesDone Processing 183 million linesDone Processing 184 million linesDone Processing 185 million linesDone Processing 186 million linesDone Processing 187 million linesDone Processing 188 million linesDone Processing 189 million lines                                                  Done Processing 190 million linesDone Processing 191 million linesDone Processing 192 million linesDone Processing 193 million linesDone Processing 194 million linesDone Processing 195 million linesDone Processing 196 million linesDone Processing 197 million linesDone Processing 198 million linesDone Processing 199 million lines                                                  Done Processing 200 million linesDone Processing 201 million linesDone Processing 202 million linesDone Processing 203 million linesDone Processing 204 million linesDone Processing 205 million linesDone Processing 206 million linesDone Processing 207 million linesDone Processing 208 million linesDone Processing 209 million lines                                                  Done Processing 210 million linesDone Processing 211 million linesDone Processing 212 million linesDone Processing 213 million linesDone Processing 214 million linesDone Processing 215 million linesDone Processing 216 million linesDone Processing 217 million linesDone Processing 218 million linesDone Processing 219 million lines                                                  Done Processing 220 million linesDone Processing 221 million linesDone Processing 222 million linesDone Processing 223 million linesDone Processing 224 million linesDone Processing 225 million linesDone Processing 226 million linesDone Processing 227 million linesDone Processing 228 million linesDone Processing 229 million lines                                                  Done Processing 230 million linesDone Processing 231 million linesDone Processing 232 million linesDone Processing 233 million linesDone Processing 234 million linesDone Processing 235 million linesDone Processing 236 million linesDone Processing 237 million linesDone Processing 238 million linesDone Processing 239 million lines                                                  Done Processing 240 million linesDone Processing 241 million linesDone Processing 242 million linesDone Processing 243 million linesDone Processing 244 million linesDone Processing 245 million linesDone Processing 246 million linesDone Processing 247 million linesDone Processing 248 million linesDone Processing 249 million lines                                                  Done Processing 250 million linesDone Processing 251 million linesDone Processing 252 million linesDone Processing 253 million linesDone Processing 254 million linesDone Processing 255 million linesDone Processing 256 million linesDone Processing 257 million linesDone Processing 258 million linesDone Processing 259 million lines                                                  Done Processing 260 million linesDone Processing 261 million linesDone Processing 262 million linesDone Processing 263 million linesDone Processing 264 million linesDone Processing 265 million linesDone Processing 266 million linesDone Processing 267 million linesDone Processing 268 million linesDone Processing 269 million lines                                                  Done Processing 270 million linesDone Processing 271 million linesDone Processing 272 million linesDone Processing 273 million linesDone Processing 274 million linesDone Processing 275 million linesDone Processing 276 million linesDone Processing 277 million linesDone Processing 278 million linesDone Processing 279 million lines                                                  Done Processing 280 million linesDone Processing 281 million linesDone Processing 282 million linesDone Processing 283 million linesDone Processing 284 million linesDone Processing 285 million linesDone Processing 286 million linesDone Processing 287 million linesDone Processing 288 million linesDone Processing 289 million lines                                                  Done Processing 290 million linesDone Processing 291 million linesDone Processing 292 million linesDone Processing 293 million linesDone Processing 294 million linesDone Processing 295 million linesDone Processing 296 million linesDone Processing 297 million linesDone Processing 298 million linesDone Processing 299 million lines                                                  Done Processing 300 million linesDone Processing 301 million linesDone Processing 302 million linesDone Processing 303 million linesDone Processing 304 million linesDone Processing 305 million linesDone Processing 306 million linesDone Processing 307 million linesDone Processing 308 million linesDone Processing 309 million lines                                                  Done Processing 310 million linesDone Processing 311 million linesDone Processing 312 million linesDone Processing 313 million linesDone Processing 314 million linesDone Processing 315 million linesDone Processing 316 million linesDone Processing 317 million linesDone Processing 318 million linesDone Processing 319 million lines                                                  Done Processing 320 million linesDone Processing 321 million linesDone Processing 322 million linesDone Processing 323 million linesDone Processing 324 million linesDone Processing 325 million linesDone Processing 326 million linesDone Processing 327 million linesDone Processing 328 million linesDone Processing 329 million lines                                                  Done Processing 330 million linesDone Processing 331 million linesDone Processing 332 million linesDone Processing 333 million linesDone Processing 334 million linesDone Processing 335 million linesDone Processing 336 million linesDone Processing 337 million linesDone Processing 338 million linesDone Processing 339 million lines                                                  Done Processing 340 million linesDone Processing 341 million linesDone Processing 342 million linesDone Processing 343 million linesDone Processing 344 million linesDone Processing 345 million linesDone Processing 346 million linesDone Processing 347 million linesDone Processing 348 million linesDone Processing 349 million lines                                                  Done Processing 350 million linesDone Processing 351 million linesDone Processing 352 million linesDone Processing 353 million linesDone Processing 354 million linesDone Processing 355 million linesDone Processing 356 million linesDone Processing 357 million linesDone Processing 358 million linesDone Processing 359 million lines                                                  Done Processing 360 million linesDone Processing 361 million linesDone Processing 362 million linesDone Processing 363 million linesDone Processing 364 million linesDone Processing 365 million linesDone Processing 366 million linesDone Processing 367 million linesDone Processing 368 million linesDone Processing 369 million lines                                                  Done Processing 370 million linesDone Processing 371 million linesDone Processing 372 million linesDone Processing 373 million linesDone Processing 374 million linesDone Processing 375 million linesDone Processing 376 million linesDone Processing 377 million linesDone Processing 378 million linesDone Processing 379 million lines                                                  Done Processing 380 million linesDone Processing 381 million linesDone Processing 382 million linesDone Processing 383 million linesDone Processing 384 million linesDone Processing 385 million linesDone Processing 386 million linesDone Processing 387 million linesDone Processing 388 million linesDone Processing 389 million lines                                                  Done Processing 390 million linesDone Processing 391 million linesDone Processing 392 million linesDone Processing 393 million linesDone Processing 394 million linesDone Processing 395 million linesDone Processing 396 million linesDone Processing 397 million linesDone Processing 398 million linesDone Processing 399 million lines                                                  Done Processing 400 million linesDone Processing 401 million linesDone Processing 402 million linesDone Processing 403 million linesDone Processing 404 million linesDone Processing 405 million linesDone Processing 406 million linesDone Processing 407 million linesDone Processing 408 million linesDone Processing 409 million lines                                                  Done Processing 410 million linesDone Processing 411 million linesDone Processing 412 million linesDone Processing 413 million linesDone Processing 414 million linesDone Processing 415 million linesDone Processing 416 million linesDone Processing 417 million linesDone Processing 418 million linesDone Processing 419 million lines                                                  Done Processing 420 million linesDone Processing 421 million linesDone Processing 422 million linesDone Processing 423 million linesDone Processing 424 million linesDone Processing 425 million linesDone Processing 426 million linesDone Processing 427 million linesDone Processing 428 million linesDone Processing 429 million lines                                                  Done Processing 430 million linesDone Processing 431 million linesDone Processing 432 million linesDone Processing 433 million linesDone Processing 434 million linesDone Processing 435 million linesDone Processing 436 million linesDone Processing 437 million linesDone Processing 438 million linesDone Processing 439 million lines                                                  Done Processing 440 million linesDone Processing 441 million linesDone Processing 442 million linesDone Processing 443 million linesDone Processing 444 million linesDone Processing 445 million linesDone Processing 446 million linesDone Processing 447 million linesDone Processing 448 million linesDone Processing 449 million lines                                                  Done Processing 450 million linesDone Processing 451 million linesDone Processing 452 million linesDone Processing 453 million linesDone Processing 454 million linesDone Processing 455 million linesDone Processing 456 million linesDone Processing 457 million linesDone Processing 458 million linesDone Processing 459 million lines                                                  Done Processing 460 million linesDone Processing 461 million linesDone Processing 462 million linesDone Processing 463 million linesDone Processing 464 million linesDone Processing 465 million linesDone Processing 466 million linesDone Processing 467 million linesDone Processing 468 million linesDone Processing 469 million lines                                                  Done Processing 470 million linesDone Processing 471 million linesDone Processing 472 million linesDone Processing 473 million linesDone Processing 474 million linesDone Processing 475 million linesDone Processing 476 million linesDone Processing 477 million linesDone Processing 478 million linesDone Processing 479 million lines                                                  Done Processing 480 million linesDone Processing 481 million linesDone Processing 482 million linesDone Processing 483 million linesDone Processing 484 million linesDone Processing 485 million linesDone Processing 486 million linesDone Processing 487 million linesDone Processing 488 million linesDone Processing 489 million lines                                                  Done Processing 490 million linesDone Processing 491 million linesDone Processing 492 million linesDone Processing 493 million linesDone Processing 494 million linesDone Processing 495 million linesDone Processing 496 million linesDone Processing 497 million linesDone Processing 498 million linesDone Processing 499 million lines                                                  Done Processing 500 million linesDone Processing 501 million linesDone Processing 502 million linesDone Processing 503 million linesDone Processing 504 million linesDone Processing 505 million linesDone Processing 506 million linesDone Processing 507 million linesDone Processing 508 million linesDone Processing 509 million lines                                                  Done Processing 510 million linesDone Processing 511 million linesDone Processing 512 million linesDone Processing 513 million linesDone Processing 514 million linesDone Processing 515 million linesDone Processing 516 million linesDone Processing 517 million linesDone Processing 518 million lines
-
-INFO  @ Sun, 21 Jan 2024 22:20:27: 
-# Command line: callpeak -t /tmp/RtmpuTg7Y7/Neural_Crest.bed -g 2.7e+09 -f BED --nomodel --extsize 200 --shift -100 -n Neural_Crest --outdir /tmp/RtmpuTg7Y7
-# ARGUMENTS LIST:
-# name = Neural_Crest
-# format = BED
-# ChIP-seq file = ['/tmp/RtmpuTg7Y7/Neural_Crest.bed']
-# control file = None
-# effective genome size = 2.70e+09
-# band width = 300
-# model fold = [5, 50]
-# qvalue cutoff = 5.00e-02
-# The maximum gap between significant sites is assigned as the read length/tag size.
-# The minimum length of peaks is assigned as the predicted fragment length "d".
-# Larger dataset will be scaled towards smaller dataset.
-# Range for calculating regional lambda is: 10000 bps
-# Broad region calling is off
-# Paired-End mode is off
- 
-INFO  @ Sun, 21 Jan 2024 22:20:27: #1 read tag files... 
-INFO  @ Sun, 21 Jan 2024 22:20:27: #1 read treatment tags... 
-INFO  @ Sun, 21 Jan 2024 22:20:28:  1000000 
-INFO  @ Sun, 21 Jan 2024 22:20:29:  2000000 
-INFO  @ Sun, 21 Jan 2024 22:20:30:  3000000 
-INFO  @ Sun, 21 Jan 2024 22:20:30: #1 tag size is determined as 211 bps 
-INFO  @ Sun, 21 Jan 2024 22:20:30: #1 tag size = 211.0 
-INFO  @ Sun, 21 Jan 2024 22:20:30: #1  total tags in treatment: 3210460 
-INFO  @ Sun, 21 Jan 2024 22:20:30: #1 user defined the maximum tags... 
-INFO  @ Sun, 21 Jan 2024 22:20:30: #1 filter out redundant tags at the same location and the same strand by allowing at most 1 tag(s) 
-INFO  @ Sun, 21 Jan 2024 22:20:30: #1  tags after filtering in treatment: 2750410 
-INFO  @ Sun, 21 Jan 2024 22:20:30: #1  Redundant rate of treatment: 0.14 
-INFO  @ Sun, 21 Jan 2024 22:20:30: #1 finished! 
-INFO  @ Sun, 21 Jan 2024 22:20:30: #2 Build Peak Model... 
-INFO  @ Sun, 21 Jan 2024 22:20:30: #2 Skipped... 
-INFO  @ Sun, 21 Jan 2024 22:20:30: #2 Use 200 as fragment length 
-INFO  @ Sun, 21 Jan 2024 22:20:30: #2 Sequencing ends will be shifted towards 5' by 100 bp(s) 
-INFO  @ Sun, 21 Jan 2024 22:20:30: #3 Call peaks... 
-INFO  @ Sun, 21 Jan 2024 22:20:30: #3 Pre-compute pvalue-qvalue table... 
-INFO  @ Sun, 21 Jan 2024 22:20:35: #3 Call peaks for each chromosome... 
-INFO  @ Sun, 21 Jan 2024 22:20:38: #4 Write output xls file... /tmp/RtmpuTg7Y7/Neural_Crest_peaks.xls 
-INFO  @ Sun, 21 Jan 2024 22:20:38: #4 Write peak in narrowPeak format file... /tmp/RtmpuTg7Y7/Neural_Crest_peaks.narrowPeak 
-INFO  @ Sun, 21 Jan 2024 22:20:39: #4 Write summits bed file... /tmp/RtmpuTg7Y7/Neural_Crest_summits.bed 
-INFO  @ Sun, 21 Jan 2024 22:20:39: Done! 
-INFO  @ Sun, 21 Jan 2024 22:20:39: 
-# Command line: callpeak -t /tmp/RtmpuTg7Y7/Neural_Posterior.bed -g 2.7e+09 -f BED --nomodel --extsize 200 --shift -100 -n Neural_Posterior --outdir /tmp/RtmpuTg7Y7
-# ARGUMENTS LIST:
-# name = Neural_Posterior
-# format = BED
-# ChIP-seq file = ['/tmp/RtmpuTg7Y7/Neural_Posterior.bed']
-# control file = None
-# effective genome size = 2.70e+09
-# band width = 300
-# model fold = [5, 50]
-# qvalue cutoff = 5.00e-02
-# The maximum gap between significant sites is assigned as the read length/tag size.
-# The minimum length of peaks is assigned as the predicted fragment length "d".
-# Larger dataset will be scaled towards smaller dataset.
-# Range for calculating regional lambda is: 10000 bps
-# Broad region calling is off
-# Paired-End mode is off
- 
-INFO  @ Sun, 21 Jan 2024 22:20:39: #1 read tag files... 
-INFO  @ Sun, 21 Jan 2024 22:20:39: #1 read treatment tags... 
-INFO  @ Sun, 21 Jan 2024 22:20:40:  1000000 
-INFO  @ Sun, 21 Jan 2024 22:20:41:  2000000 
-INFO  @ Sun, 21 Jan 2024 22:20:42:  3000000 
-INFO  @ Sun, 21 Jan 2024 22:20:43:  4000000 
-INFO  @ Sun, 21 Jan 2024 22:20:44:  5000000 
-INFO  @ Sun, 21 Jan 2024 22:20:45:  6000000 
-INFO  @ Sun, 21 Jan 2024 22:20:46:  7000000 
-INFO  @ Sun, 21 Jan 2024 22:20:47:  8000000 
-INFO  @ Sun, 21 Jan 2024 22:20:48:  9000000 
-INFO  @ Sun, 21 Jan 2024 22:20:49:  10000000 
-INFO  @ Sun, 21 Jan 2024 22:20:50:  11000000 
-INFO  @ Sun, 21 Jan 2024 22:20:51:  12000000 
-INFO  @ Sun, 21 Jan 2024 22:20:52:  13000000 
-INFO  @ Sun, 21 Jan 2024 22:20:53:  14000000 
-INFO  @ Sun, 21 Jan 2024 22:20:54:  15000000 
-INFO  @ Sun, 21 Jan 2024 22:20:56:  16000000 
-INFO  @ Sun, 21 Jan 2024 22:20:57:  17000000 
-INFO  @ Sun, 21 Jan 2024 22:20:58:  18000000 
-INFO  @ Sun, 21 Jan 2024 22:20:59:  19000000 
-INFO  @ Sun, 21 Jan 2024 22:21:00:  20000000 
-INFO  @ Sun, 21 Jan 2024 22:21:01:  21000000 
-INFO  @ Sun, 21 Jan 2024 22:21:02:  22000000 
-INFO  @ Sun, 21 Jan 2024 22:21:03:  23000000 
-INFO  @ Sun, 21 Jan 2024 22:21:04:  24000000 
-INFO  @ Sun, 21 Jan 2024 22:21:05:  25000000 
-INFO  @ Sun, 21 Jan 2024 22:21:06:  26000000 
-INFO  @ Sun, 21 Jan 2024 22:21:07:  27000000 
-INFO  @ Sun, 21 Jan 2024 22:21:08:  28000000 
-INFO  @ Sun, 21 Jan 2024 22:21:09:  29000000 
-INFO  @ Sun, 21 Jan 2024 22:21:10:  30000000 
-INFO  @ Sun, 21 Jan 2024 22:21:11:  31000000 
-INFO  @ Sun, 21 Jan 2024 22:21:12:  32000000 
-INFO  @ Sun, 21 Jan 2024 22:21:13:  33000000 
-INFO  @ Sun, 21 Jan 2024 22:21:14:  34000000 
-INFO  @ Sun, 21 Jan 2024 22:21:15:  35000000 
-INFO  @ Sun, 21 Jan 2024 22:21:16:  36000000 
-INFO  @ Sun, 21 Jan 2024 22:21:17:  37000000 
-INFO  @ Sun, 21 Jan 2024 22:21:18:  38000000 
-INFO  @ Sun, 21 Jan 2024 22:21:19:  39000000 
-INFO  @ Sun, 21 Jan 2024 22:21:20:  40000000 
-INFO  @ Sun, 21 Jan 2024 22:21:21:  41000000 
-INFO  @ Sun, 21 Jan 2024 22:21:22:  42000000 
-INFO  @ Sun, 21 Jan 2024 22:21:23:  43000000 
-INFO  @ Sun, 21 Jan 2024 22:21:24:  44000000 
-INFO  @ Sun, 21 Jan 2024 22:21:25:  45000000 
-INFO  @ Sun, 21 Jan 2024 22:21:26:  46000000 
-INFO  @ Sun, 21 Jan 2024 22:21:27:  47000000 
-INFO  @ Sun, 21 Jan 2024 22:21:28:  48000000 
-INFO  @ Sun, 21 Jan 2024 22:21:29:  49000000 
-INFO  @ Sun, 21 Jan 2024 22:21:30:  50000000 
-INFO  @ Sun, 21 Jan 2024 22:21:31:  51000000 
-INFO  @ Sun, 21 Jan 2024 22:21:32:  52000000 
-INFO  @ Sun, 21 Jan 2024 22:21:33:  53000000 
-INFO  @ Sun, 21 Jan 2024 22:21:34:  54000000 
-INFO  @ Sun, 21 Jan 2024 22:21:35:  55000000 
-INFO  @ Sun, 21 Jan 2024 22:21:36:  56000000 
-INFO  @ Sun, 21 Jan 2024 22:21:37:  57000000 
-INFO  @ Sun, 21 Jan 2024 22:21:38:  58000000 
-INFO  @ Sun, 21 Jan 2024 22:21:39:  59000000 
-INFO  @ Sun, 21 Jan 2024 22:21:39:  60000000 
-INFO  @ Sun, 21 Jan 2024 22:21:40:  61000000 
-INFO  @ Sun, 21 Jan 2024 22:21:41:  62000000 
-INFO  @ Sun, 21 Jan 2024 22:21:42:  63000000 
-INFO  @ Sun, 21 Jan 2024 22:21:43:  64000000 
-INFO  @ Sun, 21 Jan 2024 22:21:44:  65000000 
-INFO  @ Sun, 21 Jan 2024 22:21:45: #1 tag size is determined as 206 bps 
-INFO  @ Sun, 21 Jan 2024 22:21:45: #1 tag size = 206.0 
-INFO  @ Sun, 21 Jan 2024 22:21:45: #1  total tags in treatment: 65029210 
-INFO  @ Sun, 21 Jan 2024 22:21:45: #1 user defined the maximum tags... 
-INFO  @ Sun, 21 Jan 2024 22:21:45: #1 filter out redundant tags at the same location and the same strand by allowing at most 1 tag(s) 
-INFO  @ Sun, 21 Jan 2024 22:21:45: #1  tags after filtering in treatment: 33776141 
-INFO  @ Sun, 21 Jan 2024 22:21:45: #1  Redundant rate of treatment: 0.48 
-INFO  @ Sun, 21 Jan 2024 22:21:45: #1 finished! 
-INFO  @ Sun, 21 Jan 2024 22:21:45: #2 Build Peak Model... 
-INFO  @ Sun, 21 Jan 2024 22:21:45: #2 Skipped... 
-INFO  @ Sun, 21 Jan 2024 22:21:45: #2 Use 200 as fragment length 
-INFO  @ Sun, 21 Jan 2024 22:21:45: #2 Sequencing ends will be shifted towards 5' by 100 bp(s) 
-INFO  @ Sun, 21 Jan 2024 22:21:45: #3 Call peaks... 
-INFO  @ Sun, 21 Jan 2024 22:21:45: #3 Pre-compute pvalue-qvalue table... 
-INFO  @ Sun, 21 Jan 2024 22:22:53: #3 Call peaks for each chromosome... 
-INFO  @ Sun, 21 Jan 2024 22:23:41: #4 Write output xls file... /tmp/RtmpuTg7Y7/Neural_Posterior_peaks.xls 
-INFO  @ Sun, 21 Jan 2024 22:23:42: #4 Write peak in narrowPeak format file... /tmp/RtmpuTg7Y7/Neural_Posterior_peaks.narrowPeak 
-INFO  @ Sun, 21 Jan 2024 22:23:42: #4 Write summits bed file... /tmp/RtmpuTg7Y7/Neural_Posterior_summits.bed 
-INFO  @ Sun, 21 Jan 2024 22:23:42: Done! 
-INFO  @ Sun, 21 Jan 2024 22:23:44: 
-# Command line: callpeak -t /tmp/RtmpuTg7Y7/Somites.bed -g 2.7e+09 -f BED --nomodel --extsize 200 --shift -100 -n Somites --outdir /tmp/RtmpuTg7Y7
-# ARGUMENTS LIST:
-# name = Somites
-# format = BED
-# ChIP-seq file = ['/tmp/RtmpuTg7Y7/Somites.bed']
-# control file = None
-# effective genome size = 2.70e+09
-# band width = 300
-# model fold = [5, 50]
-# qvalue cutoff = 5.00e-02
-# The maximum gap between significant sites is assigned as the read length/tag size.
-# The minimum length of peaks is assigned as the predicted fragment length "d".
-# Larger dataset will be scaled towards smaller dataset.
-# Range for calculating regional lambda is: 10000 bps
-# Broad region calling is off
-# Paired-End mode is off
- 
-INFO  @ Sun, 21 Jan 2024 22:23:44: #1 read tag files... 
-INFO  @ Sun, 21 Jan 2024 22:23:44: #1 read treatment tags... 
-INFO  @ Sun, 21 Jan 2024 22:23:45:  1000000 
-INFO  @ Sun, 21 Jan 2024 22:23:46:  2000000 
-INFO  @ Sun, 21 Jan 2024 22:23:47:  3000000 
-INFO  @ Sun, 21 Jan 2024 22:23:48:  4000000 
-INFO  @ Sun, 21 Jan 2024 22:23:50:  5000000 
-INFO  @ Sun, 21 Jan 2024 22:23:51:  6000000 
-INFO  @ Sun, 21 Jan 2024 22:23:52:  7000000 
-INFO  @ Sun, 21 Jan 2024 22:23:53:  8000000 
-INFO  @ Sun, 21 Jan 2024 22:23:54:  9000000 
-INFO  @ Sun, 21 Jan 2024 22:23:55:  10000000 
-INFO  @ Sun, 21 Jan 2024 22:23:56:  11000000 
-INFO  @ Sun, 21 Jan 2024 22:23:57:  12000000 
-INFO  @ Sun, 21 Jan 2024 22:23:58:  13000000 
-INFO  @ Sun, 21 Jan 2024 22:23:59:  14000000 
-INFO  @ Sun, 21 Jan 2024 22:24:00:  15000000 
-INFO  @ Sun, 21 Jan 2024 22:24:01:  16000000 
-INFO  @ Sun, 21 Jan 2024 22:24:02:  17000000 
-INFO  @ Sun, 21 Jan 2024 22:24:03:  18000000 
-INFO  @ Sun, 21 Jan 2024 22:24:04:  19000000 
-INFO  @ Sun, 21 Jan 2024 22:24:04:  20000000 
-INFO  @ Sun, 21 Jan 2024 22:24:05:  21000000 
-INFO  @ Sun, 21 Jan 2024 22:24:06:  22000000 
-INFO  @ Sun, 21 Jan 2024 22:24:07:  23000000 
-INFO  @ Sun, 21 Jan 2024 22:24:08: #1 tag size is determined as 171 bps 
-INFO  @ Sun, 21 Jan 2024 22:24:08: #1 tag size = 171.0 
-INFO  @ Sun, 21 Jan 2024 22:24:08: #1  total tags in treatment: 23006782 
-INFO  @ Sun, 21 Jan 2024 22:24:08: #1 user defined the maximum tags... 
-INFO  @ Sun, 21 Jan 2024 22:24:08: #1 filter out redundant tags at the same location and the same strand by allowing at most 1 tag(s) 
-INFO  @ Sun, 21 Jan 2024 22:24:08: #1  tags after filtering in treatment: 14946192 
-INFO  @ Sun, 21 Jan 2024 22:24:08: #1  Redundant rate of treatment: 0.35 
-INFO  @ Sun, 21 Jan 2024 22:24:08: #1 finished! 
-INFO  @ Sun, 21 Jan 2024 22:24:08: #2 Build Peak Model... 
-INFO  @ Sun, 21 Jan 2024 22:24:08: #2 Skipped... 
-INFO  @ Sun, 21 Jan 2024 22:24:08: #2 Use 200 as fragment length 
-INFO  @ Sun, 21 Jan 2024 22:24:08: #2 Sequencing ends will be shifted towards 5' by 100 bp(s) 
-INFO  @ Sun, 21 Jan 2024 22:24:08: #3 Call peaks... 
-INFO  @ Sun, 21 Jan 2024 22:24:08: #3 Pre-compute pvalue-qvalue table... 
-INFO  @ Sun, 21 Jan 2024 22:24:36: #3 Call peaks for each chromosome... 
-INFO  @ Sun, 21 Jan 2024 22:24:56: #4 Write output xls file... /tmp/RtmpuTg7Y7/Somites_peaks.xls 
-INFO  @ Sun, 21 Jan 2024 22:24:56: #4 Write peak in narrowPeak format file... /tmp/RtmpuTg7Y7/Somites_peaks.narrowPeak 
-INFO  @ Sun, 21 Jan 2024 22:24:56: #4 Write summits bed file... /tmp/RtmpuTg7Y7/Somites_summits.bed 
-INFO  @ Sun, 21 Jan 2024 22:24:56: Done! 
-INFO  @ Sun, 21 Jan 2024 22:24:58: 
-# Command line: callpeak -t /tmp/RtmpuTg7Y7/NMPs.bed -g 2.7e+09 -f BED --nomodel --extsize 200 --shift -100 -n NMPs --outdir /tmp/RtmpuTg7Y7
-# ARGUMENTS LIST:
-# name = NMPs
-# format = BED
-# ChIP-seq file = ['/tmp/RtmpuTg7Y7/NMPs.bed']
-# control file = None
-# effective genome size = 2.70e+09
-# band width = 300
-# model fold = [5, 50]
-# qvalue cutoff = 5.00e-02
-# The maximum gap between significant sites is assigned as the read length/tag size.
-# The minimum length of peaks is assigned as the predicted fragment length "d".
-# Larger dataset will be scaled towards smaller dataset.
-# Range for calculating regional lambda is: 10000 bps
-# Broad region calling is off
-# Paired-End mode is off
- 
-INFO  @ Sun, 21 Jan 2024 22:24:58: #1 read tag files... 
-INFO  @ Sun, 21 Jan 2024 22:24:58: #1 read treatment tags... 
-INFO  @ Sun, 21 Jan 2024 22:24:59:  1000000 
-INFO  @ Sun, 21 Jan 2024 22:25:00:  2000000 
-INFO  @ Sun, 21 Jan 2024 22:25:01:  3000000 
-INFO  @ Sun, 21 Jan 2024 22:25:02:  4000000 
-INFO  @ Sun, 21 Jan 2024 22:25:03:  5000000 
-INFO  @ Sun, 21 Jan 2024 22:25:04:  6000000 
-INFO  @ Sun, 21 Jan 2024 22:25:05:  7000000 
-INFO  @ Sun, 21 Jan 2024 22:25:06:  8000000 
-INFO  @ Sun, 21 Jan 2024 22:25:07:  9000000 
-INFO  @ Sun, 21 Jan 2024 22:25:08:  10000000 
-INFO  @ Sun, 21 Jan 2024 22:25:09:  11000000 
-INFO  @ Sun, 21 Jan 2024 22:25:10:  12000000 
-INFO  @ Sun, 21 Jan 2024 22:25:11:  13000000 
-INFO  @ Sun, 21 Jan 2024 22:25:12:  14000000 
-INFO  @ Sun, 21 Jan 2024 22:25:13: #1 tag size is determined as 234 bps 
-INFO  @ Sun, 21 Jan 2024 22:25:13: #1 tag size = 234.0 
-INFO  @ Sun, 21 Jan 2024 22:25:13: #1  total tags in treatment: 14756651 
-INFO  @ Sun, 21 Jan 2024 22:25:13: #1 user defined the maximum tags... 
-INFO  @ Sun, 21 Jan 2024 22:25:13: #1 filter out redundant tags at the same location and the same strand by allowing at most 1 tag(s) 
-INFO  @ Sun, 21 Jan 2024 22:25:13: #1  tags after filtering in treatment: 10434554 
-INFO  @ Sun, 21 Jan 2024 22:25:13: #1  Redundant rate of treatment: 0.29 
-INFO  @ Sun, 21 Jan 2024 22:25:13: #1 finished! 
-INFO  @ Sun, 21 Jan 2024 22:25:13: #2 Build Peak Model... 
-INFO  @ Sun, 21 Jan 2024 22:25:13: #2 Skipped... 
-INFO  @ Sun, 21 Jan 2024 22:25:13: #2 Use 200 as fragment length 
-INFO  @ Sun, 21 Jan 2024 22:25:13: #2 Sequencing ends will be shifted towards 5' by 100 bp(s) 
-INFO  @ Sun, 21 Jan 2024 22:25:13: #3 Call peaks... 
-INFO  @ Sun, 21 Jan 2024 22:25:13: #3 Pre-compute pvalue-qvalue table... 
-INFO  @ Sun, 21 Jan 2024 22:25:32: #3 Call peaks for each chromosome... 
-INFO  @ Sun, 21 Jan 2024 22:25:46: #4 Write output xls file... /tmp/RtmpuTg7Y7/NMPs_peaks.xls 
-INFO  @ Sun, 21 Jan 2024 22:25:46: #4 Write peak in narrowPeak format file... /tmp/RtmpuTg7Y7/NMPs_peaks.narrowPeak 
-INFO  @ Sun, 21 Jan 2024 22:25:46: #4 Write summits bed file... /tmp/RtmpuTg7Y7/NMPs_summits.bed 
-INFO  @ Sun, 21 Jan 2024 22:25:46: Done! 
-INFO  @ Sun, 21 Jan 2024 22:25:48: 
-# Command line: callpeak -t /tmp/RtmpuTg7Y7/Neural_Anterior.bed -g 2.7e+09 -f BED --nomodel --extsize 200 --shift -100 -n Neural_Anterior --outdir /tmp/RtmpuTg7Y7
-# ARGUMENTS LIST:
-# name = Neural_Anterior
-# format = BED
-# ChIP-seq file = ['/tmp/RtmpuTg7Y7/Neural_Anterior.bed']
-# control file = None
-# effective genome size = 2.70e+09
-# band width = 300
-# model fold = [5, 50]
-# qvalue cutoff = 5.00e-02
-# The maximum gap between significant sites is assigned as the read length/tag size.
-# The minimum length of peaks is assigned as the predicted fragment length "d".
-# Larger dataset will be scaled towards smaller dataset.
-# Range for calculating regional lambda is: 10000 bps
-# Broad region calling is off
-# Paired-End mode is off
- 
-INFO  @ Sun, 21 Jan 2024 22:25:48: #1 read tag files... 
-INFO  @ Sun, 21 Jan 2024 22:25:48: #1 read treatment tags... 
-INFO  @ Sun, 21 Jan 2024 22:25:49:  1000000 
-INFO  @ Sun, 21 Jan 2024 22:25:49:  2000000 
-INFO  @ Sun, 21 Jan 2024 22:25:50:  3000000 
-INFO  @ Sun, 21 Jan 2024 22:25:51:  4000000 
-INFO  @ Sun, 21 Jan 2024 22:25:52:  5000000 
-INFO  @ Sun, 21 Jan 2024 22:25:53:  6000000 
-INFO  @ Sun, 21 Jan 2024 22:25:54:  7000000 
-INFO  @ Sun, 21 Jan 2024 22:25:55:  8000000 
-INFO  @ Sun, 21 Jan 2024 22:25:56:  9000000 
-INFO  @ Sun, 21 Jan 2024 22:25:57:  10000000 
-INFO  @ Sun, 21 Jan 2024 22:25:58:  11000000 
-INFO  @ Sun, 21 Jan 2024 22:25:59:  12000000 
-INFO  @ Sun, 21 Jan 2024 22:26:00:  13000000 
-INFO  @ Sun, 21 Jan 2024 22:26:01:  14000000 
-INFO  @ Sun, 21 Jan 2024 22:26:02:  15000000 
-INFO  @ Sun, 21 Jan 2024 22:26:04:  16000000 
-INFO  @ Sun, 21 Jan 2024 22:26:05:  17000000 
-INFO  @ Sun, 21 Jan 2024 22:26:06:  18000000 
-INFO  @ Sun, 21 Jan 2024 22:26:07:  19000000 
-INFO  @ Sun, 21 Jan 2024 22:26:08:  20000000 
-INFO  @ Sun, 21 Jan 2024 22:26:09:  21000000 
-INFO  @ Sun, 21 Jan 2024 22:26:10:  22000000 
-INFO  @ Sun, 21 Jan 2024 22:26:11:  23000000 
-INFO  @ Sun, 21 Jan 2024 22:26:12:  24000000 
-INFO  @ Sun, 21 Jan 2024 22:26:13:  25000000 
-INFO  @ Sun, 21 Jan 2024 22:26:14:  26000000 
-INFO  @ Sun, 21 Jan 2024 22:26:15:  27000000 
-INFO  @ Sun, 21 Jan 2024 22:26:16:  28000000 
-INFO  @ Sun, 21 Jan 2024 22:26:17:  29000000 
-INFO  @ Sun, 21 Jan 2024 22:26:18:  30000000 
-INFO  @ Sun, 21 Jan 2024 22:26:19:  31000000 
-INFO  @ Sun, 21 Jan 2024 22:26:20:  32000000 
-INFO  @ Sun, 21 Jan 2024 22:26:21:  33000000 
-INFO  @ Sun, 21 Jan 2024 22:26:22:  34000000 
-INFO  @ Sun, 21 Jan 2024 22:26:23:  35000000 
-INFO  @ Sun, 21 Jan 2024 22:26:24:  36000000 
-INFO  @ Sun, 21 Jan 2024 22:26:25:  37000000 
-INFO  @ Sun, 21 Jan 2024 22:26:26:  38000000 
-INFO  @ Sun, 21 Jan 2024 22:26:27:  39000000 
-INFO  @ Sun, 21 Jan 2024 22:26:28:  40000000 
-INFO  @ Sun, 21 Jan 2024 22:26:29:  41000000 
-INFO  @ Sun, 21 Jan 2024 22:26:30:  42000000 
-INFO  @ Sun, 21 Jan 2024 22:26:31:  43000000 
-INFO  @ Sun, 21 Jan 2024 22:26:32:  44000000 
-INFO  @ Sun, 21 Jan 2024 22:26:33:  45000000 
-INFO  @ Sun, 21 Jan 2024 22:26:34:  46000000 
-INFO  @ Sun, 21 Jan 2024 22:26:35:  47000000 
-INFO  @ Sun, 21 Jan 2024 22:26:36:  48000000 
-INFO  @ Sun, 21 Jan 2024 22:26:37:  49000000 
-INFO  @ Sun, 21 Jan 2024 22:26:37:  50000000 
-INFO  @ Sun, 21 Jan 2024 22:26:38:  51000000 
-INFO  @ Sun, 21 Jan 2024 22:26:39:  52000000 
-INFO  @ Sun, 21 Jan 2024 22:26:40:  53000000 
-INFO  @ Sun, 21 Jan 2024 22:26:41:  54000000 
-INFO  @ Sun, 21 Jan 2024 22:26:42:  55000000 
-INFO  @ Sun, 21 Jan 2024 22:26:43:  56000000 
-INFO  @ Sun, 21 Jan 2024 22:26:44:  57000000 
-INFO  @ Sun, 21 Jan 2024 22:26:45:  58000000 
-INFO  @ Sun, 21 Jan 2024 22:26:46:  59000000 
-INFO  @ Sun, 21 Jan 2024 22:26:47:  60000000 
-INFO  @ Sun, 21 Jan 2024 22:26:48:  61000000 
-INFO  @ Sun, 21 Jan 2024 22:26:48:  62000000 
-INFO  @ Sun, 21 Jan 2024 22:26:49:  63000000 
-INFO  @ Sun, 21 Jan 2024 22:26:50:  64000000 
-INFO  @ Sun, 21 Jan 2024 22:26:51: #1 tag size is determined as 216 bps 
-INFO  @ Sun, 21 Jan 2024 22:26:51: #1 tag size = 216.0 
-INFO  @ Sun, 21 Jan 2024 22:26:51: #1  total tags in treatment: 64074095 
-INFO  @ Sun, 21 Jan 2024 22:26:51: #1 user defined the maximum tags... 
-INFO  @ Sun, 21 Jan 2024 22:26:51: #1 filter out redundant tags at the same location and the same strand by allowing at most 1 tag(s) 
-INFO  @ Sun, 21 Jan 2024 22:26:51: #1  tags after filtering in treatment: 33218206 
-INFO  @ Sun, 21 Jan 2024 22:26:51: #1  Redundant rate of treatment: 0.48 
-INFO  @ Sun, 21 Jan 2024 22:26:51: #1 finished! 
-INFO  @ Sun, 21 Jan 2024 22:26:51: #2 Build Peak Model... 
-INFO  @ Sun, 21 Jan 2024 22:26:51: #2 Skipped... 
-INFO  @ Sun, 21 Jan 2024 22:26:51: #2 Use 200 as fragment length 
-INFO  @ Sun, 21 Jan 2024 22:26:51: #2 Sequencing ends will be shifted towards 5' by 100 bp(s) 
-INFO  @ Sun, 21 Jan 2024 22:26:51: #3 Call peaks... 
-INFO  @ Sun, 21 Jan 2024 22:26:51: #3 Pre-compute pvalue-qvalue table... 
-INFO  @ Sun, 21 Jan 2024 22:27:56: #3 Call peaks for each chromosome... 
-INFO  @ Sun, 21 Jan 2024 22:28:46: #4 Write output xls file... /tmp/RtmpuTg7Y7/Neural_Anterior_peaks.xls 
-INFO  @ Sun, 21 Jan 2024 22:28:46: #4 Write peak in narrowPeak format file... /tmp/RtmpuTg7Y7/Neural_Anterior_peaks.narrowPeak 
-INFO  @ Sun, 21 Jan 2024 22:28:47: #4 Write summits bed file... /tmp/RtmpuTg7Y7/Neural_Anterior_summits.bed 
-INFO  @ Sun, 21 Jan 2024 22:28:47: Done! 
-INFO  @ Sun, 21 Jan 2024 22:28:49: 
-# Command line: callpeak -t /tmp/RtmpuTg7Y7/unassigned.bed -g 2.7e+09 -f BED --nomodel --extsize 200 --shift -100 -n unassigned --outdir /tmp/RtmpuTg7Y7
-# ARGUMENTS LIST:
-# name = unassigned
-# format = BED
-# ChIP-seq file = ['/tmp/RtmpuTg7Y7/unassigned.bed']
-# control file = None
-# effective genome size = 2.70e+09
-# band width = 300
-# model fold = [5, 50]
-# qvalue cutoff = 5.00e-02
-# The maximum gap between significant sites is assigned as the read length/tag size.
-# The minimum length of peaks is assigned as the predicted fragment length "d".
-# Larger dataset will be scaled towards smaller dataset.
-# Range for calculating regional lambda is: 10000 bps
-# Broad region calling is off
-# Paired-End mode is off
- 
-INFO  @ Sun, 21 Jan 2024 22:28:49: #1 read tag files... 
-INFO  @ Sun, 21 Jan 2024 22:28:49: #1 read treatment tags... 
-INFO  @ Sun, 21 Jan 2024 22:28:50:  1000000 
-INFO  @ Sun, 21 Jan 2024 22:28:51:  2000000 
-INFO  @ Sun, 21 Jan 2024 22:28:52:  3000000 
-INFO  @ Sun, 21 Jan 2024 22:28:53:  4000000 
-INFO  @ Sun, 21 Jan 2024 22:28:54:  5000000 
-INFO  @ Sun, 21 Jan 2024 22:28:55:  6000000 
-INFO  @ Sun, 21 Jan 2024 22:28:56:  7000000 
-INFO  @ Sun, 21 Jan 2024 22:28:57:  8000000 
-INFO  @ Sun, 21 Jan 2024 22:28:58:  9000000 
-INFO  @ Sun, 21 Jan 2024 22:28:59:  10000000 
-INFO  @ Sun, 21 Jan 2024 22:29:00:  11000000 
-INFO  @ Sun, 21 Jan 2024 22:29:01:  12000000 
-INFO  @ Sun, 21 Jan 2024 22:29:02:  13000000 
-INFO  @ Sun, 21 Jan 2024 22:29:03:  14000000 
-INFO  @ Sun, 21 Jan 2024 22:29:04:  15000000 
-INFO  @ Sun, 21 Jan 2024 22:29:05:  16000000 
-INFO  @ Sun, 21 Jan 2024 22:29:06:  17000000 
-INFO  @ Sun, 21 Jan 2024 22:29:07:  18000000 
-INFO  @ Sun, 21 Jan 2024 22:29:08:  19000000 
-INFO  @ Sun, 21 Jan 2024 22:29:09:  20000000 
-INFO  @ Sun, 21 Jan 2024 22:29:10:  21000000 
-INFO  @ Sun, 21 Jan 2024 22:29:11:  22000000 
-INFO  @ Sun, 21 Jan 2024 22:29:12:  23000000 
-INFO  @ Sun, 21 Jan 2024 22:29:13:  24000000 
-INFO  @ Sun, 21 Jan 2024 22:29:14:  25000000 
-INFO  @ Sun, 21 Jan 2024 22:29:15:  26000000 
-INFO  @ Sun, 21 Jan 2024 22:29:16:  27000000 
-INFO  @ Sun, 21 Jan 2024 22:29:17:  28000000 
-INFO  @ Sun, 21 Jan 2024 22:29:18:  29000000 
-INFO  @ Sun, 21 Jan 2024 22:29:19:  30000000 
-INFO  @ Sun, 21 Jan 2024 22:29:20:  31000000 
-INFO  @ Sun, 21 Jan 2024 22:29:21:  32000000 
-INFO  @ Sun, 21 Jan 2024 22:29:22:  33000000 
-INFO  @ Sun, 21 Jan 2024 22:29:23:  34000000 
-INFO  @ Sun, 21 Jan 2024 22:29:24:  35000000 
-INFO  @ Sun, 21 Jan 2024 22:29:25:  36000000 
-INFO  @ Sun, 21 Jan 2024 22:29:26:  37000000 
-INFO  @ Sun, 21 Jan 2024 22:29:27:  38000000 
-INFO  @ Sun, 21 Jan 2024 22:29:28:  39000000 
-INFO  @ Sun, 21 Jan 2024 22:29:29:  40000000 
-INFO  @ Sun, 21 Jan 2024 22:29:30:  41000000 
-INFO  @ Sun, 21 Jan 2024 22:29:31:  42000000 
-INFO  @ Sun, 21 Jan 2024 22:29:32:  43000000 
-INFO  @ Sun, 21 Jan 2024 22:29:33:  44000000 
-INFO  @ Sun, 21 Jan 2024 22:29:34:  45000000 
-INFO  @ Sun, 21 Jan 2024 22:29:35:  46000000 
-INFO  @ Sun, 21 Jan 2024 22:29:36:  47000000 
-INFO  @ Sun, 21 Jan 2024 22:29:37:  48000000 
-INFO  @ Sun, 21 Jan 2024 22:29:37:  49000000 
-INFO  @ Sun, 21 Jan 2024 22:29:38:  50000000 
-INFO  @ Sun, 21 Jan 2024 22:29:39:  51000000 
-INFO  @ Sun, 21 Jan 2024 22:29:41: #1 tag size is determined as 261 bps 
-INFO  @ Sun, 21 Jan 2024 22:29:41: #1 tag size = 261.0 
-INFO  @ Sun, 21 Jan 2024 22:29:41: #1  total tags in treatment: 51761673 
-INFO  @ Sun, 21 Jan 2024 22:29:41: #1 user defined the maximum tags... 
-INFO  @ Sun, 21 Jan 2024 22:29:41: #1 filter out redundant tags at the same location and the same strand by allowing at most 1 tag(s) 
-INFO  @ Sun, 21 Jan 2024 22:29:41: #1  tags after filtering in treatment: 29176910 
-INFO  @ Sun, 21 Jan 2024 22:29:41: #1  Redundant rate of treatment: 0.44 
-INFO  @ Sun, 21 Jan 2024 22:29:41: #1 finished! 
-INFO  @ Sun, 21 Jan 2024 22:29:41: #2 Build Peak Model... 
-INFO  @ Sun, 21 Jan 2024 22:29:41: #2 Skipped... 
-INFO  @ Sun, 21 Jan 2024 22:29:41: #2 Use 200 as fragment length 
-INFO  @ Sun, 21 Jan 2024 22:29:41: #2 Sequencing ends will be shifted towards 5' by 100 bp(s) 
-INFO  @ Sun, 21 Jan 2024 22:29:41: #3 Call peaks... 
-INFO  @ Sun, 21 Jan 2024 22:29:41: #3 Pre-compute pvalue-qvalue table... 
-INFO  @ Sun, 21 Jan 2024 22:30:38: #3 Call peaks for each chromosome... 
-INFO  @ Sun, 21 Jan 2024 22:31:19: #4 Write output xls file... /tmp/RtmpuTg7Y7/unassigned_peaks.xls 
-INFO  @ Sun, 21 Jan 2024 22:31:20: #4 Write peak in narrowPeak format file... /tmp/RtmpuTg7Y7/unassigned_peaks.narrowPeak 
-INFO  @ Sun, 21 Jan 2024 22:31:20: #4 Write summits bed file... /tmp/RtmpuTg7Y7/unassigned_summits.bed 
-INFO  @ Sun, 21 Jan 2024 22:31:20: Done! 
-INFO  @ Sun, 21 Jan 2024 22:31:22: 
-# Command line: callpeak -t /tmp/RtmpuTg7Y7/Muscle.bed -g 2.7e+09 -f BED --nomodel --extsize 200 --shift -100 -n Muscle --outdir /tmp/RtmpuTg7Y7
-# ARGUMENTS LIST:
-# name = Muscle
-# format = BED
-# ChIP-seq file = ['/tmp/RtmpuTg7Y7/Muscle.bed']
-# control file = None
-# effective genome size = 2.70e+09
-# band width = 300
-# model fold = [5, 50]
-# qvalue cutoff = 5.00e-02
-# The maximum gap between significant sites is assigned as the read length/tag size.
-# The minimum length of peaks is assigned as the predicted fragment length "d".
-# Larger dataset will be scaled towards smaller dataset.
-# Range for calculating regional lambda is: 10000 bps
-# Broad region calling is off
-# Paired-End mode is off
- 
-INFO  @ Sun, 21 Jan 2024 22:31:22: #1 read tag files... 
-INFO  @ Sun, 21 Jan 2024 22:31:22: #1 read treatment tags... 
-INFO  @ Sun, 21 Jan 2024 22:31:23:  1000000 
-INFO  @ Sun, 21 Jan 2024 22:31:24:  2000000 
-INFO  @ Sun, 21 Jan 2024 22:31:25:  3000000 
-INFO  @ Sun, 21 Jan 2024 22:31:27:  4000000 
-INFO  @ Sun, 21 Jan 2024 22:31:27:  5000000 
-INFO  @ Sun, 21 Jan 2024 22:31:28: #1 tag size is determined as 264 bps 
-INFO  @ Sun, 21 Jan 2024 22:31:28: #1 tag size = 264.0 
-INFO  @ Sun, 21 Jan 2024 22:31:28: #1  total tags in treatment: 5804626 
-INFO  @ Sun, 21 Jan 2024 22:31:28: #1 user defined the maximum tags... 
-INFO  @ Sun, 21 Jan 2024 22:31:28: #1 filter out redundant tags at the same location and the same strand by allowing at most 1 tag(s) 
-INFO  @ Sun, 21 Jan 2024 22:31:28: #1  tags after filtering in treatment: 4774294 
-INFO  @ Sun, 21 Jan 2024 22:31:28: #1  Redundant rate of treatment: 0.18 
-INFO  @ Sun, 21 Jan 2024 22:31:28: #1 finished! 
-INFO  @ Sun, 21 Jan 2024 22:31:28: #2 Build Peak Model... 
-INFO  @ Sun, 21 Jan 2024 22:31:28: #2 Skipped... 
-INFO  @ Sun, 21 Jan 2024 22:31:28: #2 Use 200 as fragment length 
-INFO  @ Sun, 21 Jan 2024 22:31:28: #2 Sequencing ends will be shifted towards 5' by 100 bp(s) 
-INFO  @ Sun, 21 Jan 2024 22:31:28: #3 Call peaks... 
-INFO  @ Sun, 21 Jan 2024 22:31:28: #3 Pre-compute pvalue-qvalue table... 
-INFO  @ Sun, 21 Jan 2024 22:31:37: #3 Call peaks for each chromosome... 
-INFO  @ Sun, 21 Jan 2024 22:31:43: #4 Write output xls file... /tmp/RtmpuTg7Y7/Muscle_peaks.xls 
-INFO  @ Sun, 21 Jan 2024 22:31:44: #4 Write peak in narrowPeak format file... /tmp/RtmpuTg7Y7/Muscle_peaks.narrowPeak 
-INFO  @ Sun, 21 Jan 2024 22:31:44: #4 Write summits bed file... /tmp/RtmpuTg7Y7/Muscle_summits.bed 
-INFO  @ Sun, 21 Jan 2024 22:31:44: Done! 
-INFO  @ Sun, 21 Jan 2024 22:31:45: 
-# Command line: callpeak -t /tmp/RtmpuTg7Y7/Epidermal.bed -g 2.7e+09 -f BED --nomodel --extsize 200 --shift -100 -n Epidermal --outdir /tmp/RtmpuTg7Y7
-# ARGUMENTS LIST:
-# name = Epidermal
-# format = BED
-# ChIP-seq file = ['/tmp/RtmpuTg7Y7/Epidermal.bed']
-# control file = None
-# effective genome size = 2.70e+09
-# band width = 300
-# model fold = [5, 50]
-# qvalue cutoff = 5.00e-02
-# The maximum gap between significant sites is assigned as the read length/tag size.
-# The minimum length of peaks is assigned as the predicted fragment length "d".
-# Larger dataset will be scaled towards smaller dataset.
-# Range for calculating regional lambda is: 10000 bps
-# Broad region calling is off
-# Paired-End mode is off
- 
-INFO  @ Sun, 21 Jan 2024 22:31:45: #1 read tag files... 
-INFO  @ Sun, 21 Jan 2024 22:31:45: #1 read treatment tags... 
-INFO  @ Sun, 21 Jan 2024 22:31:46:  1000000 
-INFO  @ Sun, 21 Jan 2024 22:31:47:  2000000 
-INFO  @ Sun, 21 Jan 2024 22:31:48:  3000000 
-INFO  @ Sun, 21 Jan 2024 22:31:49:  4000000 
-INFO  @ Sun, 21 Jan 2024 22:31:50:  5000000 
-INFO  @ Sun, 21 Jan 2024 22:31:51:  6000000 
-INFO  @ Sun, 21 Jan 2024 22:31:52:  7000000 
-INFO  @ Sun, 21 Jan 2024 22:31:53:  8000000 
-INFO  @ Sun, 21 Jan 2024 22:31:54:  9000000 
-INFO  @ Sun, 21 Jan 2024 22:31:55:  10000000 
-INFO  @ Sun, 21 Jan 2024 22:31:56:  11000000 
-INFO  @ Sun, 21 Jan 2024 22:31:57:  12000000 
-INFO  @ Sun, 21 Jan 2024 22:31:58:  13000000 
-INFO  @ Sun, 21 Jan 2024 22:31:59:  14000000 
-INFO  @ Sun, 21 Jan 2024 22:32:00:  15000000 
-INFO  @ Sun, 21 Jan 2024 22:32:01:  16000000 
-INFO  @ Sun, 21 Jan 2024 22:32:03:  17000000 
-INFO  @ Sun, 21 Jan 2024 22:32:04:  18000000 
-INFO  @ Sun, 21 Jan 2024 22:32:05:  19000000 
-INFO  @ Sun, 21 Jan 2024 22:32:06:  20000000 
-INFO  @ Sun, 21 Jan 2024 22:32:07:  21000000 
-INFO  @ Sun, 21 Jan 2024 22:32:08:  22000000 
-INFO  @ Sun, 21 Jan 2024 22:32:09:  23000000 
-INFO  @ Sun, 21 Jan 2024 22:32:10:  24000000 
-INFO  @ Sun, 21 Jan 2024 22:32:11:  25000000 
-INFO  @ Sun, 21 Jan 2024 22:32:12:  26000000 
-INFO  @ Sun, 21 Jan 2024 22:32:13:  27000000 
-INFO  @ Sun, 21 Jan 2024 22:32:14:  28000000 
-INFO  @ Sun, 21 Jan 2024 22:32:15:  29000000 
-INFO  @ Sun, 21 Jan 2024 22:32:16:  30000000 
-INFO  @ Sun, 21 Jan 2024 22:32:17:  31000000 
-INFO  @ Sun, 21 Jan 2024 22:32:18:  32000000 
-INFO  @ Sun, 21 Jan 2024 22:32:19:  33000000 
-INFO  @ Sun, 21 Jan 2024 22:32:20:  34000000 
-INFO  @ Sun, 21 Jan 2024 22:32:21:  35000000 
-INFO  @ Sun, 21 Jan 2024 22:32:22:  36000000 
-INFO  @ Sun, 21 Jan 2024 22:32:23:  37000000 
-INFO  @ Sun, 21 Jan 2024 22:32:24:  38000000 
-INFO  @ Sun, 21 Jan 2024 22:32:25:  39000000 
-INFO  @ Sun, 21 Jan 2024 22:32:26:  40000000 
-INFO  @ Sun, 21 Jan 2024 22:32:27:  41000000 
-INFO  @ Sun, 21 Jan 2024 22:32:28:  42000000 
-INFO  @ Sun, 21 Jan 2024 22:32:29:  43000000 
-INFO  @ Sun, 21 Jan 2024 22:32:30:  44000000 
-INFO  @ Sun, 21 Jan 2024 22:32:31:  45000000 
-INFO  @ Sun, 21 Jan 2024 22:32:32: #1 tag size is determined as 220 bps 
-INFO  @ Sun, 21 Jan 2024 22:32:32: #1 tag size = 220.0 
-INFO  @ Sun, 21 Jan 2024 22:32:32: #1  total tags in treatment: 45208537 
-INFO  @ Sun, 21 Jan 2024 22:32:32: #1 user defined the maximum tags... 
-INFO  @ Sun, 21 Jan 2024 22:32:32: #1 filter out redundant tags at the same location and the same strand by allowing at most 1 tag(s) 
-INFO  @ Sun, 21 Jan 2024 22:32:32: #1  tags after filtering in treatment: 25952317 
-INFO  @ Sun, 21 Jan 2024 22:32:32: #1  Redundant rate of treatment: 0.43 
-INFO  @ Sun, 21 Jan 2024 22:32:32: #1 finished! 
-INFO  @ Sun, 21 Jan 2024 22:32:32: #2 Build Peak Model... 
-INFO  @ Sun, 21 Jan 2024 22:32:32: #2 Skipped... 
-INFO  @ Sun, 21 Jan 2024 22:32:32: #2 Use 200 as fragment length 
-INFO  @ Sun, 21 Jan 2024 22:32:32: #2 Sequencing ends will be shifted towards 5' by 100 bp(s) 
-INFO  @ Sun, 21 Jan 2024 22:32:32: #3 Call peaks... 
-INFO  @ Sun, 21 Jan 2024 22:32:32: #3 Pre-compute pvalue-qvalue table... 
-INFO  @ Sun, 21 Jan 2024 22:33:23: #3 Call peaks for each chromosome... 
-INFO  @ Sun, 21 Jan 2024 22:33:59: #4 Write output xls file... /tmp/RtmpuTg7Y7/Epidermal_peaks.xls 
-INFO  @ Sun, 21 Jan 2024 22:34:00: #4 Write peak in narrowPeak format file... /tmp/RtmpuTg7Y7/Epidermal_peaks.narrowPeak 
-INFO  @ Sun, 21 Jan 2024 22:34:00: #4 Write summits bed file... /tmp/RtmpuTg7Y7/Epidermal_summits.bed 
-INFO  @ Sun, 21 Jan 2024 22:34:00: Done! 
-INFO  @ Sun, 21 Jan 2024 22:34:02: 
-# Command line: callpeak -t /tmp/RtmpuTg7Y7/PSM.bed -g 2.7e+09 -f BED --nomodel --extsize 200 --shift -100 -n PSM --outdir /tmp/RtmpuTg7Y7
-# ARGUMENTS LIST:
-# name = PSM
-# format = BED
-# ChIP-seq file = ['/tmp/RtmpuTg7Y7/PSM.bed']
-# control file = None
-# effective genome size = 2.70e+09
-# band width = 300
-# model fold = [5, 50]
-# qvalue cutoff = 5.00e-02
-# The maximum gap between significant sites is assigned as the read length/tag size.
-# The minimum length of peaks is assigned as the predicted fragment length "d".
-# Larger dataset will be scaled towards smaller dataset.
-# Range for calculating regional lambda is: 10000 bps
-# Broad region calling is off
-# Paired-End mode is off
- 
-INFO  @ Sun, 21 Jan 2024 22:34:02: #1 read tag files... 
-INFO  @ Sun, 21 Jan 2024 22:34:02: #1 read treatment tags... 
-INFO  @ Sun, 21 Jan 2024 22:34:03:  1000000 
-INFO  @ Sun, 21 Jan 2024 22:34:04:  2000000 
-INFO  @ Sun, 21 Jan 2024 22:34:05:  3000000 
-INFO  @ Sun, 21 Jan 2024 22:34:06:  4000000 
-INFO  @ Sun, 21 Jan 2024 22:34:07:  5000000 
-INFO  @ Sun, 21 Jan 2024 22:34:08:  6000000 
-INFO  @ Sun, 21 Jan 2024 22:34:09:  7000000 
-INFO  @ Sun, 21 Jan 2024 22:34:11:  8000000 
-INFO  @ Sun, 21 Jan 2024 22:34:12:  9000000 
-INFO  @ Sun, 21 Jan 2024 22:34:13:  10000000 
-INFO  @ Sun, 21 Jan 2024 22:34:14:  11000000 
-INFO  @ Sun, 21 Jan 2024 22:34:15:  12000000 
-INFO  @ Sun, 21 Jan 2024 22:34:16:  13000000 
-INFO  @ Sun, 21 Jan 2024 22:34:17:  14000000 
-INFO  @ Sun, 21 Jan 2024 22:34:18:  15000000 
-INFO  @ Sun, 21 Jan 2024 22:34:19:  16000000 
-INFO  @ Sun, 21 Jan 2024 22:34:20:  17000000 
-INFO  @ Sun, 21 Jan 2024 22:34:21:  18000000 
-INFO  @ Sun, 21 Jan 2024 22:34:22:  19000000 
-INFO  @ Sun, 21 Jan 2024 22:34:23:  20000000 
-INFO  @ Sun, 21 Jan 2024 22:34:24:  21000000 
-INFO  @ Sun, 21 Jan 2024 22:34:25:  22000000 
-INFO  @ Sun, 21 Jan 2024 22:34:26:  23000000 
-INFO  @ Sun, 21 Jan 2024 22:34:27:  24000000 
-INFO  @ Sun, 21 Jan 2024 22:34:28:  25000000 
-INFO  @ Sun, 21 Jan 2024 22:34:28:  26000000 
-INFO  @ Sun, 21 Jan 2024 22:34:29:  27000000 
-INFO  @ Sun, 21 Jan 2024 22:34:30:  28000000 
-INFO  @ Sun, 21 Jan 2024 22:34:31: #1 tag size is determined as 270 bps 
-INFO  @ Sun, 21 Jan 2024 22:34:31: #1 tag size = 270.0 
-INFO  @ Sun, 21 Jan 2024 22:34:31: #1  total tags in treatment: 28828054 
-INFO  @ Sun, 21 Jan 2024 22:34:31: #1 user defined the maximum tags... 
-INFO  @ Sun, 21 Jan 2024 22:34:31: #1 filter out redundant tags at the same location and the same strand by allowing at most 1 tag(s) 
-INFO  @ Sun, 21 Jan 2024 22:34:32: #1  tags after filtering in treatment: 17761143 
-INFO  @ Sun, 21 Jan 2024 22:34:32: #1  Redundant rate of treatment: 0.38 
-INFO  @ Sun, 21 Jan 2024 22:34:32: #1 finished! 
-INFO  @ Sun, 21 Jan 2024 22:34:32: #2 Build Peak Model... 
-INFO  @ Sun, 21 Jan 2024 22:34:32: #2 Skipped... 
-INFO  @ Sun, 21 Jan 2024 22:34:32: #2 Use 200 as fragment length 
-INFO  @ Sun, 21 Jan 2024 22:34:32: #2 Sequencing ends will be shifted towards 5' by 100 bp(s) 
-INFO  @ Sun, 21 Jan 2024 22:34:32: #3 Call peaks... 
-INFO  @ Sun, 21 Jan 2024 22:34:32: #3 Pre-compute pvalue-qvalue table... 
-INFO  @ Sun, 21 Jan 2024 22:35:06: #3 Call peaks for each chromosome... 
-INFO  @ Sun, 21 Jan 2024 22:35:30: #4 Write output xls file... /tmp/RtmpuTg7Y7/PSM_peaks.xls 
-INFO  @ Sun, 21 Jan 2024 22:35:31: #4 Write peak in narrowPeak format file... /tmp/RtmpuTg7Y7/PSM_peaks.narrowPeak 
-INFO  @ Sun, 21 Jan 2024 22:35:31: #4 Write summits bed file... /tmp/RtmpuTg7Y7/PSM_summits.bed 
-INFO  @ Sun, 21 Jan 2024 22:35:31: Done! 
-INFO  @ Sun, 21 Jan 2024 22:35:33: 
-# Command line: callpeak -t /tmp/RtmpuTg7Y7/Endoderm.bed -g 2.7e+09 -f BED --nomodel --extsize 200 --shift -100 -n Endoderm --outdir /tmp/RtmpuTg7Y7
-# ARGUMENTS LIST:
-# name = Endoderm
-# format = BED
-# ChIP-seq file = ['/tmp/RtmpuTg7Y7/Endoderm.bed']
-# control file = None
-# effective genome size = 2.70e+09
-# band width = 300
-# model fold = [5, 50]
-# qvalue cutoff = 5.00e-02
-# The maximum gap between significant sites is assigned as the read length/tag size.
-# The minimum length of peaks is assigned as the predicted fragment length "d".
-# Larger dataset will be scaled towards smaller dataset.
-# Range for calculating regional lambda is: 10000 bps
-# Broad region calling is off
-# Paired-End mode is off
- 
-INFO  @ Sun, 21 Jan 2024 22:35:33: #1 read tag files... 
-INFO  @ Sun, 21 Jan 2024 22:35:33: #1 read treatment tags... 
-INFO  @ Sun, 21 Jan 2024 22:35:34:  1000000 
-INFO  @ Sun, 21 Jan 2024 22:35:35:  2000000 
-INFO  @ Sun, 21 Jan 2024 22:35:36:  3000000 
-INFO  @ Sun, 21 Jan 2024 22:35:37:  4000000 
-INFO  @ Sun, 21 Jan 2024 22:35:38:  5000000 
-INFO  @ Sun, 21 Jan 2024 22:35:39:  6000000 
-INFO  @ Sun, 21 Jan 2024 22:35:40:  7000000 
-INFO  @ Sun, 21 Jan 2024 22:35:41:  8000000 
-INFO  @ Sun, 21 Jan 2024 22:35:42:  9000000 
-INFO  @ Sun, 21 Jan 2024 22:35:43:  10000000 
-INFO  @ Sun, 21 Jan 2024 22:35:44:  11000000 
-INFO  @ Sun, 21 Jan 2024 22:35:45:  12000000 
-INFO  @ Sun, 21 Jan 2024 22:35:46:  13000000 
-INFO  @ Sun, 21 Jan 2024 22:35:47: #1 tag size is determined as 199 bps 
-INFO  @ Sun, 21 Jan 2024 22:35:47: #1 tag size = 199.0 
-INFO  @ Sun, 21 Jan 2024 22:35:47: #1  total tags in treatment: 13937988 
-INFO  @ Sun, 21 Jan 2024 22:35:47: #1 user defined the maximum tags... 
-INFO  @ Sun, 21 Jan 2024 22:35:47: #1 filter out redundant tags at the same location and the same strand by allowing at most 1 tag(s) 
-INFO  @ Sun, 21 Jan 2024 22:35:47: #1  tags after filtering in treatment: 10105325 
-INFO  @ Sun, 21 Jan 2024 22:35:47: #1  Redundant rate of treatment: 0.27 
-INFO  @ Sun, 21 Jan 2024 22:35:47: #1 finished! 
-INFO  @ Sun, 21 Jan 2024 22:35:47: #2 Build Peak Model... 
-INFO  @ Sun, 21 Jan 2024 22:35:47: #2 Skipped... 
-INFO  @ Sun, 21 Jan 2024 22:35:47: #2 Use 200 as fragment length 
-INFO  @ Sun, 21 Jan 2024 22:35:47: #2 Sequencing ends will be shifted towards 5' by 100 bp(s) 
-INFO  @ Sun, 21 Jan 2024 22:35:47: #3 Call peaks... 
-INFO  @ Sun, 21 Jan 2024 22:35:47: #3 Pre-compute pvalue-qvalue table... 
-INFO  @ Sun, 21 Jan 2024 22:36:06: #3 Call peaks for each chromosome... 
-INFO  @ Sun, 21 Jan 2024 22:36:18: #4 Write output xls file... /tmp/RtmpuTg7Y7/Endoderm_peaks.xls 
-INFO  @ Sun, 21 Jan 2024 22:36:19: #4 Write peak in narrowPeak format file... /tmp/RtmpuTg7Y7/Endoderm_peaks.narrowPeak 
-INFO  @ Sun, 21 Jan 2024 22:36:19: #4 Write summits bed file... /tmp/RtmpuTg7Y7/Endoderm_summits.bed 
-INFO  @ Sun, 21 Jan 2024 22:36:19: Done! 
-INFO  @ Sun, 21 Jan 2024 22:36:20: 
-# Command line: callpeak -t /tmp/RtmpuTg7Y7/Lateral_Mesoderm.bed -g 2.7e+09 -f BED --nomodel --extsize 200 --shift -100 -n Lateral_Mesoderm --outdir /tmp/RtmpuTg7Y7
-# ARGUMENTS LIST:
-# name = Lateral_Mesoderm
-# format = BED
-# ChIP-seq file = ['/tmp/RtmpuTg7Y7/Lateral_Mesoderm.bed']
-# control file = None
-# effective genome size = 2.70e+09
-# band width = 300
-# model fold = [5, 50]
-# qvalue cutoff = 5.00e-02
-# The maximum gap between significant sites is assigned as the read length/tag size.
-# The minimum length of peaks is assigned as the predicted fragment length "d".
-# Larger dataset will be scaled towards smaller dataset.
-# Range for calculating regional lambda is: 10000 bps
-# Broad region calling is off
-# Paired-End mode is off
- 
-INFO  @ Sun, 21 Jan 2024 22:36:20: #1 read tag files... 
-INFO  @ Sun, 21 Jan 2024 22:36:20: #1 read treatment tags... 
-INFO  @ Sun, 21 Jan 2024 22:36:21:  1000000 
-INFO  @ Sun, 21 Jan 2024 22:36:22:  2000000 
-INFO  @ Sun, 21 Jan 2024 22:36:23:  3000000 
-INFO  @ Sun, 21 Jan 2024 22:36:25:  4000000 
-INFO  @ Sun, 21 Jan 2024 22:36:26:  5000000 
-INFO  @ Sun, 21 Jan 2024 22:36:27:  6000000 
-INFO  @ Sun, 21 Jan 2024 22:36:28:  7000000 
-INFO  @ Sun, 21 Jan 2024 22:36:29:  8000000 
-INFO  @ Sun, 21 Jan 2024 22:36:30:  9000000 
-INFO  @ Sun, 21 Jan 2024 22:36:31:  10000000 
-INFO  @ Sun, 21 Jan 2024 22:36:32:  11000000 
-INFO  @ Sun, 21 Jan 2024 22:36:33:  12000000 
-INFO  @ Sun, 21 Jan 2024 22:36:34:  13000000 
-INFO  @ Sun, 21 Jan 2024 22:36:35:  14000000 
-INFO  @ Sun, 21 Jan 2024 22:36:37:  15000000 
-INFO  @ Sun, 21 Jan 2024 22:36:38:  16000000 
-INFO  @ Sun, 21 Jan 2024 22:36:39:  17000000 
-INFO  @ Sun, 21 Jan 2024 22:36:40:  18000000 
-INFO  @ Sun, 21 Jan 2024 22:36:41:  19000000 
-INFO  @ Sun, 21 Jan 2024 22:36:42:  20000000 
-INFO  @ Sun, 21 Jan 2024 22:36:43:  21000000 
-INFO  @ Sun, 21 Jan 2024 22:36:44:  22000000 
-INFO  @ Sun, 21 Jan 2024 22:36:45:  23000000 
-INFO  @ Sun, 21 Jan 2024 22:36:46:  24000000 
-INFO  @ Sun, 21 Jan 2024 22:36:47:  25000000 
-INFO  @ Sun, 21 Jan 2024 22:36:49:  26000000 
-INFO  @ Sun, 21 Jan 2024 22:36:50:  27000000 
-INFO  @ Sun, 21 Jan 2024 22:36:51:  28000000 
-INFO  @ Sun, 21 Jan 2024 22:36:52:  29000000 
-INFO  @ Sun, 21 Jan 2024 22:36:53:  30000000 
-INFO  @ Sun, 21 Jan 2024 22:36:54:  31000000 
-INFO  @ Sun, 21 Jan 2024 22:36:55:  32000000 
-INFO  @ Sun, 21 Jan 2024 22:36:56:  33000000 
-INFO  @ Sun, 21 Jan 2024 22:36:57:  34000000 
-INFO  @ Sun, 21 Jan 2024 22:36:58:  35000000 
-INFO  @ Sun, 21 Jan 2024 22:36:59:  36000000 
-INFO  @ Sun, 21 Jan 2024 22:37:00:  37000000 
-INFO  @ Sun, 21 Jan 2024 22:37:01:  38000000 
-INFO  @ Sun, 21 Jan 2024 22:37:02:  39000000 
-INFO  @ Sun, 21 Jan 2024 22:37:03:  40000000 
-INFO  @ Sun, 21 Jan 2024 22:37:05:  41000000 
-INFO  @ Sun, 21 Jan 2024 22:37:06:  42000000 
-INFO  @ Sun, 21 Jan 2024 22:37:07:  43000000 
-INFO  @ Sun, 21 Jan 2024 22:37:08:  44000000 
-INFO  @ Sun, 21 Jan 2024 22:37:09:  45000000 
-INFO  @ Sun, 21 Jan 2024 22:37:10:  46000000 
-INFO  @ Sun, 21 Jan 2024 22:37:11:  47000000 
-INFO  @ Sun, 21 Jan 2024 22:37:12:  48000000 
-INFO  @ Sun, 21 Jan 2024 22:37:13:  49000000 
-INFO  @ Sun, 21 Jan 2024 22:37:14: #1 tag size is determined as 182 bps 
-INFO  @ Sun, 21 Jan 2024 22:37:14: #1 tag size = 182.0 
-INFO  @ Sun, 21 Jan 2024 22:37:14: #1  total tags in treatment: 49664960 
-INFO  @ Sun, 21 Jan 2024 22:37:14: #1 user defined the maximum tags... 
-INFO  @ Sun, 21 Jan 2024 22:37:14: #1 filter out redundant tags at the same location and the same strand by allowing at most 1 tag(s) 
-INFO  @ Sun, 21 Jan 2024 22:37:14: #1  tags after filtering in treatment: 28374761 
-INFO  @ Sun, 21 Jan 2024 22:37:14: #1  Redundant rate of treatment: 0.43 
-INFO  @ Sun, 21 Jan 2024 22:37:14: #1 finished! 
-INFO  @ Sun, 21 Jan 2024 22:37:14: #2 Build Peak Model... 
-INFO  @ Sun, 21 Jan 2024 22:37:14: #2 Skipped... 
-INFO  @ Sun, 21 Jan 2024 22:37:14: #2 Use 200 as fragment length 
-INFO  @ Sun, 21 Jan 2024 22:37:14: #2 Sequencing ends will be shifted towards 5' by 100 bp(s) 
-INFO  @ Sun, 21 Jan 2024 22:37:14: #3 Call peaks... 
-INFO  @ Sun, 21 Jan 2024 22:37:14: #3 Pre-compute pvalue-qvalue table... 
-INFO  @ Sun, 21 Jan 2024 22:38:11: #3 Call peaks for each chromosome... 
-INFO  @ Sun, 21 Jan 2024 22:38:51: #4 Write output xls file... /tmp/RtmpuTg7Y7/Lateral_Mesoderm_peaks.xls 
-INFO  @ Sun, 21 Jan 2024 22:38:52: #4 Write peak in narrowPeak format file... /tmp/RtmpuTg7Y7/Lateral_Mesoderm_peaks.narrowPeak 
-INFO  @ Sun, 21 Jan 2024 22:38:52: #4 Write summits bed file... /tmp/RtmpuTg7Y7/Lateral_Mesoderm_summits.bed 
-INFO  @ Sun, 21 Jan 2024 22:38:52: Done! 
-INFO  @ Sun, 21 Jan 2024 22:38:54: 
-# Command line: callpeak -t /tmp/RtmpuTg7Y7/Differentiating_Neurons.bed -g 2.7e+09 -f BED --nomodel --extsize 200 --shift -100 -n Differentiating_Neurons --outdir /tmp/RtmpuTg7Y7
-# ARGUMENTS LIST:
-# name = Differentiating_Neurons
-# format = BED
-# ChIP-seq file = ['/tmp/RtmpuTg7Y7/Differentiating_Neurons.bed']
-# control file = None
-# effective genome size = 2.70e+09
-# band width = 300
-# model fold = [5, 50]
-# qvalue cutoff = 5.00e-02
-# The maximum gap between significant sites is assigned as the read length/tag size.
-# The minimum length of peaks is assigned as the predicted fragment length "d".
-# Larger dataset will be scaled towards smaller dataset.
-# Range for calculating regional lambda is: 10000 bps
-# Broad region calling is off
-# Paired-End mode is off
- 
-INFO  @ Sun, 21 Jan 2024 22:38:54: #1 read tag files... 
-INFO  @ Sun, 21 Jan 2024 22:38:54: #1 read treatment tags... 
-INFO  @ Sun, 21 Jan 2024 22:38:55:  1000000 
-INFO  @ Sun, 21 Jan 2024 22:38:56:  2000000 
-INFO  @ Sun, 21 Jan 2024 22:38:58:  3000000 
-INFO  @ Sun, 21 Jan 2024 22:38:59:  4000000 
-INFO  @ Sun, 21 Jan 2024 22:38:59:  5000000 
-INFO  @ Sun, 21 Jan 2024 22:39:00: #1 tag size is determined as 172 bps 
-INFO  @ Sun, 21 Jan 2024 22:39:00: #1 tag size = 172.0 
-INFO  @ Sun, 21 Jan 2024 22:39:00: #1  total tags in treatment: 5338150 
-INFO  @ Sun, 21 Jan 2024 22:39:00: #1 user defined the maximum tags... 
-INFO  @ Sun, 21 Jan 2024 22:39:00: #1 filter out redundant tags at the same location and the same strand by allowing at most 1 tag(s) 
-INFO  @ Sun, 21 Jan 2024 22:39:00: #1  tags after filtering in treatment: 4408607 
-INFO  @ Sun, 21 Jan 2024 22:39:00: #1  Redundant rate of treatment: 0.17 
-INFO  @ Sun, 21 Jan 2024 22:39:00: #1 finished! 
-INFO  @ Sun, 21 Jan 2024 22:39:00: #2 Build Peak Model... 
-INFO  @ Sun, 21 Jan 2024 22:39:00: #2 Skipped... 
-INFO  @ Sun, 21 Jan 2024 22:39:00: #2 Use 200 as fragment length 
-INFO  @ Sun, 21 Jan 2024 22:39:00: #2 Sequencing ends will be shifted towards 5' by 100 bp(s) 
-INFO  @ Sun, 21 Jan 2024 22:39:00: #3 Call peaks... 
-INFO  @ Sun, 21 Jan 2024 22:39:00: #3 Pre-compute pvalue-qvalue table... 
-INFO  @ Sun, 21 Jan 2024 22:39:08: #3 Call peaks for each chromosome... 
-INFO  @ Sun, 21 Jan 2024 22:39:14: #4 Write output xls file... /tmp/RtmpuTg7Y7/Differentiating_Neurons_peaks.xls 
-INFO  @ Sun, 21 Jan 2024 22:39:14: #4 Write peak in narrowPeak format file... /tmp/RtmpuTg7Y7/Differentiating_Neurons_peaks.narrowPeak 
-INFO  @ Sun, 21 Jan 2024 22:39:14: #4 Write summits bed file... /tmp/RtmpuTg7Y7/Differentiating_Neurons_summits.bed 
-INFO  @ Sun, 21 Jan 2024 22:39:14: Done! 
-INFO  @ Sun, 21 Jan 2024 22:39:15: 
-# Command line: callpeak -t /tmp/RtmpuTg7Y7/Notochord.bed -g 2.7e+09 -f BED --nomodel --extsize 200 --shift -100 -n Notochord --outdir /tmp/RtmpuTg7Y7
-# ARGUMENTS LIST:
-# name = Notochord
-# format = BED
-# ChIP-seq file = ['/tmp/RtmpuTg7Y7/Notochord.bed']
-# control file = None
-# effective genome size = 2.70e+09
-# band width = 300
-# model fold = [5, 50]
-# qvalue cutoff = 5.00e-02
-# The maximum gap between significant sites is assigned as the read length/tag size.
-# The minimum length of peaks is assigned as the predicted fragment length "d".
-# Larger dataset will be scaled towards smaller dataset.
-# Range for calculating regional lambda is: 10000 bps
-# Broad region calling is off
-# Paired-End mode is off
- 
-INFO  @ Sun, 21 Jan 2024 22:39:15: #1 read tag files... 
-INFO  @ Sun, 21 Jan 2024 22:39:15: #1 read treatment tags... 
-INFO  @ Sun, 21 Jan 2024 22:39:16:  1000000 
-INFO  @ Sun, 21 Jan 2024 22:39:17:  2000000 
-INFO  @ Sun, 21 Jan 2024 22:39:18:  3000000 
-INFO  @ Sun, 21 Jan 2024 22:39:19:  4000000 
-INFO  @ Sun, 21 Jan 2024 22:39:20:  5000000 
-INFO  @ Sun, 21 Jan 2024 22:39:21: #1 tag size is determined as 275 bps 
-INFO  @ Sun, 21 Jan 2024 22:39:21: #1 tag size = 275.0 
-INFO  @ Sun, 21 Jan 2024 22:39:21: #1  total tags in treatment: 5837119 
-INFO  @ Sun, 21 Jan 2024 22:39:21: #1 user defined the maximum tags... 
-INFO  @ Sun, 21 Jan 2024 22:39:21: #1 filter out redundant tags at the same location and the same strand by allowing at most 1 tag(s) 
-INFO  @ Sun, 21 Jan 2024 22:39:21: #1  tags after filtering in treatment: 4900758 
-INFO  @ Sun, 21 Jan 2024 22:39:21: #1  Redundant rate of treatment: 0.16 
-INFO  @ Sun, 21 Jan 2024 22:39:21: #1 finished! 
-INFO  @ Sun, 21 Jan 2024 22:39:21: #2 Build Peak Model... 
-INFO  @ Sun, 21 Jan 2024 22:39:21: #2 Skipped... 
-INFO  @ Sun, 21 Jan 2024 22:39:21: #2 Use 200 as fragment length 
-INFO  @ Sun, 21 Jan 2024 22:39:21: #2 Sequencing ends will be shifted towards 5' by 100 bp(s) 
-INFO  @ Sun, 21 Jan 2024 22:39:21: #3 Call peaks... 
-INFO  @ Sun, 21 Jan 2024 22:39:21: #3 Pre-compute pvalue-qvalue table... 
-INFO  @ Sun, 21 Jan 2024 22:39:30: #3 Call peaks for each chromosome... 
-INFO  @ Sun, 21 Jan 2024 22:39:36: #4 Write output xls file... /tmp/RtmpuTg7Y7/Notochord_peaks.xls 
-INFO  @ Sun, 21 Jan 2024 22:39:37: #4 Write peak in narrowPeak format file... /tmp/RtmpuTg7Y7/Notochord_peaks.narrowPeak 
-INFO  @ Sun, 21 Jan 2024 22:39:37: #4 Write summits bed file... /tmp/RtmpuTg7Y7/Notochord_summits.bed 
-INFO  @ Sun, 21 Jan 2024 22:39:37: Done! 
-Extracting reads overlapping genomic regions
-Computing hash
-Checking for 15036 cell barcodes
-Warning: Keys should be one or more alphanumeric characters followed by an underscore, setting key from peaks_celltype_ to peakscelltype_
-[1] "peak-calling done"
-Extracting reads overlapping genomic regions
+Unlocking working directory.
