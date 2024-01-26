@@ -1,9 +1,9 @@
 #!/bin/bash
 #SBATCH --job-name=cicero_analysis
-#SBATCH --output=/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/cicero_shell_scripts/cicero_analysis_%j.out
-#SBATCH --error=/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/cicero_shell_scripts/cicero_analysis_%j.err
+#SBATCH --output=/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/cicero_slurm_outputs/cicero_analysis_%j.out
+#SBATCH --error=/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/cicero_slurm_outputs/cicero_analysis_%j.err
 #SBATCH --time=48:00:00
-#SBATCH --mem=1250G
+#SBATCH --mem=125G
 #SBATCH --cpus-per-task=25
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=yang-joon.kim@czbiohub.org
