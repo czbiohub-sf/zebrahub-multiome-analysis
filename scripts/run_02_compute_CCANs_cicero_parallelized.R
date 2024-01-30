@@ -52,12 +52,13 @@ shell_script_dir <- args[7]
 # output_path = "",
 # data_id="TDR118",
 # peaktype = "peaks_merged"
-# shell_script_dir = "/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/zebrahub-multiome-analysis/scripts/cicero_shell_scripts/"
+# shell_script_dir = "/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/cicero_slurm_outputs/"
 
 # Define the directory to save the shell scripts (for cicero parallelization)
-#shell_script_dir <- "/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/zebrahub-multiome-analysis/scripts/cicero_shell_scripts/"
+#shell_script_dir <- "/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/cicero_slurm_outputs/"
 script_dir <- shell_script_dir
 dir.create(script_dir, showWarnings = FALSE, recursive = TRUE)
+setwd(script_dir) # set as the temp working directory
 
 # Import the Seurat object
 seurat_object <- readRDS(seurat_object_path)
@@ -105,6 +106,7 @@ distance_param <- estimate_distance_parameter(seurat_object.cicero,
 
 # averate the distance_param to get the final distance_param
 mean_distance_param <- mean(distance_param)
+print(paste0("mean distance parameter = ", mean_distance_param))
 
 # Step 2: Generate Cicero models for each chromosome using Slurm
 #chromosomes <- unique(seurat_object.cicero$chromosome)
