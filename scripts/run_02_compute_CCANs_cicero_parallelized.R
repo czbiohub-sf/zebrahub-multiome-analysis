@@ -52,12 +52,13 @@ shell_script_dir <- args[7]
 # output_path = "",
 # data_id="TDR118",
 # peaktype = "peaks_merged"
-# shell_script_dir = "/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/zebrahub-multiome-analysis/scripts/cicero_shell_scripts/"
+# shell_script_dir = "/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/cicero_slurm_outputs/"
 
 # Define the directory to save the shell scripts (for cicero parallelization)
-#shell_script_dir <- "/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/zebrahub-multiome-analysis/scripts/cicero_shell_scripts/"
+#shell_script_dir <- "/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/cicero_slurm_outputs/"
 script_dir <- shell_script_dir
 dir.create(script_dir, showWarnings = FALSE, recursive = TRUE)
+setwd(script_dir) # set as the temp working directory
 
 # Import the Seurat object
 seurat_object <- readRDS(seurat_object_path)
@@ -105,6 +106,7 @@ distance_param <- estimate_distance_parameter(seurat_object.cicero,
 
 # averate the distance_param to get the final distance_param
 mean_distance_param <- mean(distance_param)
+print(paste0("mean distance parameter = ", mean_distance_param))
 
 # Step 2: Generate Cicero models for each chromosome using Slurm
 #chromosomes <- unique(seurat_object.cicero$chromosome)
@@ -126,8 +128,8 @@ for (current_chr in chromosomes) {
     "#!/bin/bash\n",
     "#SBATCH --output=", script_dir, "cicero_chr_", current_chr, "_%j.out\n",
     "#SBATCH --error=", script_dir, "cicero_chr_", current_chr, "_%j.err\n",
-    "#SBATCH --time=01:00:00\n",
-    "#SBATCH --mem=50G\n",
+    "#SBATCH --time=24:00:00\n",
+    "#SBATCH --mem=5G\n",
     "#SBATCH --mail-type=FAIL\n", # reporting only in case of failure
     "#SBATCH --mail-user=yang-joon.kim@czbiohub.org\n",
     "module load R/4.3\n",
@@ -158,6 +160,15 @@ for (current_chr in chromosomes) {
 # Assuming your RDS files are named in the format "cicero_model_<chromosome>.rds"
 #chromosomes <- unique(seurat_object.cicero$chromosome) # List of chromosomes
 model_files <- paste0(script_dir, "cicero_model_", chromosomes, ".rds")
+
+# check if all 25 chromosomes are present (from individual slurm jobs)
+existing_files <- sapply(model_files, file.exists)
+
+if (sum(existing_files) != 25) {
+    stop("Not all cicero_model files are present. Expected 25, found: ", sum(existing_files))
+} else {
+    print("All 25 cicero_model files are present. Proceeding to Step 3.")
+}
 
 # Read all the Cicero models
 cicero_models <- lapply(model_files, function(file) {

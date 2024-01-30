@@ -1673,3 +1673,43 @@ INFO  @ Wed, 24 Jan 2024 13:46:58: #4 Write output xls file... /tmp/RtmpLXdYfV/N
 INFO  @ Wed, 24 Jan 2024 13:46:58: #4 Write peak in narrowPeak format file... /tmp/RtmpLXdYfV/Notochord_peaks.narrowPeak 
 INFO  @ Wed, 24 Jan 2024 13:46:58: #4 Write summits bed file... /tmp/RtmpLXdYfV/Notochord_summits.bed 
 INFO  @ Wed, 24 Jan 2024 13:46:59: Done! 
+Extracting reads overlapping genomic regions
+Computing hash
+Checking for 15036 cell barcodes
+Warning: Keys should be one or more alphanumeric characters followed by an underscore, setting key from peaks_celltype_ to peakscelltype_
+[1] "peak-calling done"
+Extracting reads overlapping genomic regions
+Computing hash
+Checking for 15036 cell barcodes
+Warning: Keys should be one or more alphanumeric characters followed by an underscore, setting key from peaks_merged_ to peaksmerged_
+[1] "ATAC peaks merged"
+$pca
+A dimensional reduction object with key PC_ 
+ Number of dimensions: 50 
+ Projected dimensional reduction calculated:  FALSE 
+ Jackstraw run: FALSE 
+ Computed using assay: SCT 
+
+Warning: The default method for RunUMAP has changed from calling Python UMAP via reticulate to the R-native UWOT using the cosine metric
+To use Python UMAP via reticulate, set umap.method to 'umap-learn' and metric to 'correlation'
+This message will be shown once per session
+17:00:35 UMAP embedding parameters a = 0.9922 b = 1.112
+17:00:35 Read 15036 rows and found 50 numeric columns
+17:00:35 Using Annoy for neighbor search, n_neighbors = 30
+17:00:35 Building Annoy index with metric = cosine, n_trees = 50
+0%   10   20   30   40   50   60   70   80   90   100%
+[----|----|----|----|----|----|----|----|----|----|
+**************************************************|
+17:00:43 Writing NN index file to temp file /tmp/RtmpLXdYfV/file28191644224906
+17:00:43 Searching Annoy index using 1 thread, search_k = 3000
+17:01:14 Annoy recall = 100%
+17:01:27 Commencing smooth kNN distance calibration using 1 thread with target n_neighbors = 30
+17:01:37 Initializing from normalized Laplacian + noise (using irlba)
+17:01:40 Commencing optimization for 200 epochs, with 662660 positive edges
+Using method 'umap'
+0%   10   20   30   40   50   60   70   80   90   100%
+[----|----|----|----|----|----|----|----|----|----|
+**************************************************|
+17:02:11 Optimization finished
+Performing TF-IDF normalization
+Running SVD

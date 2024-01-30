@@ -25,6 +25,15 @@ library(BSgenome.Drerio.UCSC.danRer11)
 print(R.version)
 print(packageVersion("Seurat"))
 
+# parallelization in Signac: https://stuartlab.org/signac/articles/future
+library(future)
+plan()
+
+plan("multicore", workers = 20)
+plan()
+
+# set the max memory size for the future
+options(future.globals.maxSize = 256 * 1024 ^ 3) # for 256 Gb RAM
 
 # Input args
 # raw_data_path: filepath for the cellranger-arc output files (h5 and fragment files)
@@ -38,7 +47,7 @@ print(packageVersion("Seurat"))
 args <- commandArgs(trailingOnly = TRUE)
 
 if (length(args) != 6) {
-  stop("Usage: Rscript bash_01_preprocess_multiome_object_signac.R raw_data_path gref_path reference annotation_class output_filepath data_id")
+  stop("Usage: Rscript run_01_preprocess_multiome_object_signac.R raw_data_path gref_path reference annotation_class output_filepath data_id")
 }
 
 raw_data_path <- args[1]
