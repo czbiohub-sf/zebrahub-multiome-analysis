@@ -1,11 +1,12 @@
 # Load the Cicero library from the local installation (trapnell lab branch for Signac implementation)
-library(remotes)
-library(devtools)
+#library(remotes)
+#library(devtools)
 # install cicero
-withr::with_libpaths(new="/hpc/scratch/group.data.science/yangjoon.kim/.local/R_lib", 
-                     install_github("cole-trapnell-lab/cicero-release", ref = "monocle3"))
+#withr::with_libpaths(new="/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/archive/.local/R_lib", 
+#                     install_github("cole-trapnell-lab/cicero-release", ref = "monocle3"))
 # cicero
-withr::with_libpaths(new = "/hpc/scratch/group.data.science/yangjoon.kim/.local/R_lib", library(cicero))
+.libPaths("/hpc/scratch/group.data.science/yangjoon.kim/.local/R_lib")
+withr::with_libpaths(new = "/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/archive/.local/R_lib", library(cicero))
 
 # load other libraries
 library(Signac)
@@ -19,9 +20,9 @@ library(SeuratWrappers)
 # assay: "ATAC", "peaks", etc. - a ChromatinAssay object generated with Signac using the best peak profiles
 # dim_reduced: "ATAC.UMAP", "UMAP", "PCA", etc. - a dimensionality reduction 
 
-seurat_object <- readRDS("/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/annotated_data/TDR118_processed.rds")
+seurat_object <- readRDS("/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/TDR119_cicero_output/TDR119_processed.rds")
 #assay <- "ATAC"
-dim.reduced <- "ATAC.UMAP"
+dim.reduced <- "umap.atac"
 
 # print out the assays in the seurat object
 #seurat_object@assays
@@ -33,7 +34,7 @@ dim.reduced <- "ATAC.UMAP"
 # (and corresponding count matrices of cells-by-peaks) from the previous steps.
 DefaultAssay(seurat_object) <- "ATAC"
 
-# convert to CellDataSet (CDS) format
+# conver to CellDataSet (CDS) format
 seurat_object.cds <- as.cell_data_set(x=seurat_object) # a function from SeuratWrappers\
 
 print("cds object created")
@@ -66,6 +67,6 @@ print("CCANs computed")
 # ...
 #all_peaks <- row.names(exprs(TDR118.cds))
 all_peaks <- row.names(seurat_object@assays$ATAC@data)
-output_folder <- "/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data"
-write.csv(x = all_peaks, file = paste0(output_folder, "/TDR118_CRG_arc_peaks.csv"))
-write.csv(x = conns, file = paste0(output_folder, "/TDR118_cicero_connections_CRG_arc_peaks.csv"))
+output_folder <- "/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/TDR119_cicero_output/"
+write.csv(x = all_peaks, file = paste0(output_folder, "02_TDR119_CRG_arc_peaks.csv"))
+write.csv(x = conns, file = paste0(output_folder, "03_TDR119_cicero_connections_CRG_arc_peaks.csv"))

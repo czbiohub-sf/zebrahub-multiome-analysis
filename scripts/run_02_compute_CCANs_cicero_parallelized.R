@@ -73,11 +73,11 @@ seurat_object <- readRDS(seurat_object_path)
 DefaultAssay(seurat_object) <- assay
 print(paste0("default assay is ", assay))
 
-# conver to CellDataSet (CDS) format
-seurat_object.cds <- as.cell_data_set(x=seurat_object) # a function from SeuratWrappers\
+# convert to CellDataSet (CDS) format
+seurat_object.cds <- as.cell_data_set(x=seurat_object) # a function from SeuratWrappers
 print("cds object created") 
 
-# make the cicero object
+# create the cicero object
 # default: we will use the ATAC.UMAP here for the sampling of the neighborhoods - as we'll treat this dataset as if we only had scATAC-seq.
 # This is something we can ask Kenji Kamimoto/Samantha Morris later for their advice. (or compare the built GRNs from joint.UMAP vs ATAC.UMAP)
 seurat_object.cicero <- make_cicero_cds(seurat_object.cds, reduced_coordinates = reducedDims(seurat_object.cds)$UMAP.ATAC)
