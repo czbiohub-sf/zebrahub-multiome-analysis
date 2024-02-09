@@ -20,4 +20,4 @@ module load R/4.3
 cd /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/zebrahub-multiome-analysis/scripts/R_scripts/
 
 # Run the R script
-Rscript integrate_seurat_timepoints.R
+Rscript integrate_seurat_timepoints_ATAC.R
