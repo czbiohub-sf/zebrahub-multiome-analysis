@@ -1,9 +1,9 @@
 #!/bin/bash
 
-#SBATCH --job-name=integrate_ATAC_objects      # Job name
+#SBATCH --job-name=integrate_RNA_objects      # Job name
 #SBATCH --partition=cpu                     # Partition name
-#SBATCH --output=/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/slurm_logs/signac_integrate_%j.out # File to which STDOUT will be written, including job ID
-#SBATCH --error=/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/slurm_logs/signac_integrate_%j.err  # File to which STDERR will be written, including job ID
+#SBATCH --output=/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/slurm_logs/signac_integrate_rna_%j.out # File to which STDOUT will be written, including job ID
+#SBATCH --error=/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/slurm_logs/signac_integrate_rna_%j.err  # File to which STDERR will be written, including job ID
 #SBATCH --time=48:00:00                     # Runtime in HH:MM:SS            
 #SBATCH --mem=512G                          # Memory total in GB (for all cores)
 #SBATCH --cpus-per-task=8                  # Number of CPU cores per task
@@ -20,4 +20,4 @@ module load R/4.3
 cd /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/zebrahub-multiome-analysis/scripts/R_scripts/
 
 # Run the R script
-Rscript integrate_seurat_timepoints_ATAC.R
+Rscript integrate_seurat_timepoints_RNA.R
