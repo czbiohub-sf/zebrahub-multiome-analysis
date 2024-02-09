@@ -1,11 +1,11 @@
 # From 02_preprocess_peak_data_CellOracle.ipynb notebook
 
 # Overview (from the original notebooks by Kamimoto and Morris, Nature, 2023)
-# Before building the base GRN, we need to annotate the coaccessible peaks 
+# Before building the base GRN, we need to annotate the co-accessible peaks 
 # and filter our active promoter/enhancer elements. 
 # First, we will identify the peaks around transcription starting sites (TSS). 
 # We will then merge the Cicero data with the TSS peak information and 
-# filter any peaks with weak connections to the TSS peaks. 
+# filter out any peaks with weak connections to the TSS peaks. 
 # As such, the filtered peak data will only include TSS peaks and peaks with strong TSS connections. 
 # These will be our active promoter/enhancer elements for our base GRN. 
 
@@ -34,6 +34,7 @@ plt.rcParams["savefig.dpi"] = 300
 # CCAN_file: name of the cicero output file. i.e. "02_TDR118_cicero_connections_CRG_arc_peaks.csv"
 # cicero_score_threshold: threshold for the cicero_score. CellOracle used cicero_score>=0.8
 # filename: name of the file. i.e. "03_TDR118_processed_peak_file_danRer11.csv"
+# data_id: data identifier for the plots/figures
 # save_figure: 
 # figpath: path for the plots/figures
 
@@ -53,6 +54,7 @@ parser.add_argument('peak_file', type=str, help="Peak file")
 parser.add_argument('CCAN_file', type=str, help="CCAN file")
 parser.add_argument('cicero_score_threshold', type=float, help="Cicero score threshold")
 parser.add_argument('filename', type=str, help="Output filename")
+parser.add_argument('data_id', type=str, help="Data identifier for the plots/figures")
 parser.add_argument('save_figure', type=bool, help="Save figure (True/False)")
 parser.add_argument('figpath', type=str, help="Figure path")
 
@@ -65,6 +67,7 @@ peak_file = args.peak_file
 CCAN_file = args.CCAN_file
 cicero_score_threshold = args.cicero_score_threshold
 filename = args.filename
+data_id = args.data_id
 save_figure = args.save_figure
 figpath = args.figpath
 
@@ -73,6 +76,7 @@ def process_CCANS(filepath,
                         CCAN_file = "02_TDR118_cicero_connections_CRG_arc_peaks.csv", 
                         cicero_score_threshold = 0.8,
                         filename="03_TDR118_processed_peak_file_danRer11.csv",
+                        data_id="TDR118",
                         save_figure=False,
                         figpath=None):
 
@@ -153,7 +157,7 @@ def process_CCANS(filepath,
         plt.yscale("log")
         plt.xlabel("co-accessibility score")
         plt.ylabel("occurences")
-        plt.savefig(figpath+"/cicero_scores_histogram.pdf")
+        plt.savefig(figpath+"/"+data_id+"_cicero_scores_histogram.pdf")
 
         # plot2. number of CCANs per chromosome
         # NOTE: normalize the counts with the length of each chromosome
@@ -169,14 +173,14 @@ def process_CCANS(filepath,
         sns.barplot(x=list(np.arange(1,26)), y=n_peaks_chrom, palette = "viridis")
         plt.xlabel("chromosomes")
         plt.ylabel("number of peaks")
-        plt.savefig(figpath+"/n_CCANs_per_chromosome.pdf")
+        plt.savefig(figpath+"/"+data_id+"_n_CCANs_per_chromosome.pdf")
 
         # plot 3. a histogram to see the distribution of the co-accessibility scores
         plt.hist(integrated["coaccess"], bins=30)
         plt.yscale("log")
         plt.xlabel("co-accessibility score (cicero)")
         plt.ylabel("occurences")
-        plt.savefig(figpath+"/CCAN_TSS_cicero_scores_histogram.pdf")
+        plt.savefig(figpath+"/"+data_id+"_CCAN_TSS_cicero_scores_histogram.pdf")
 
 
 ##### LINUX TERMINAL COMMANDS #####

@@ -5,7 +5,7 @@
 # inputs:
 # 1) adata_atac: anndata for the scATAC-seq (cells-by-peaks)
 # output:
-def function compute_GC_contents_scATAC(adata_atac, genome_name, provider):
+def compute_GC_contents_scATAC(adata_atac, genome_name, provider):
     import numpy as np
     import anndata as ad
 
@@ -15,10 +15,10 @@ def function compute_GC_contents_scATAC(adata_atac, genome_name, provider):
     #adata_atac = ad.read_h5ad('../write/filtered_data_atac.h5ad')
 
     # download genome from NCBI
-    genome_name = "GRCh38"
-    provider = "NCBI"
-    genomepy.install_genome(name=genome_name, provider=provider, genome_dir = "../data")
-    genome = genomepy.Genome(name=genome_name, genome_dir="../data")
+    genome_name = "GRCz11"
+    provider = "Ensembl"
+    genomepy.install_genome(name=genome_name, provider=provider, genome_dir = "/hpc/scratch/group.data.science/yangjoon.kim/data")
+    genome = genomepy.Genome(name=genome_name, genome_dir="/hpc/scratch/group.data.science/yangjoon.kim/data")
     #genomepy.install_genome(name='GRCh38', provider='NCBI', genomes_dir = ''../data') # took about 9 min
     #genome = genomepy.Genome(name = 'GRCh38', genomes_dir = '../data')
 
