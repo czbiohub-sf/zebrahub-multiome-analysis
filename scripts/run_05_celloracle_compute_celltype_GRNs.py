@@ -211,7 +211,7 @@ def compute_cluster_specific_GRNs(output_path, RNAdata_path, baseGRN_path,
 
         # Save as csv
         links.links_dict[cluster].to_csv(GRN_output_path + "/" + f"raw_GRN_for_{cluster}.csv")
-    
+
     # End measuring time
     end_time = time.time()
 
