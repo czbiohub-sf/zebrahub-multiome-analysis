@@ -58,7 +58,7 @@ def compute_cluster_specific_GRNs(output_path, RNAdata_path, baseGRN_path,
                                     data_id, annotation, dim_reduce):
     """
     A function to compute cluster(cell-type) specific GRNs using CellOracle.
-    It uses a base GRN built from the previous script (04_XXX.py)
+    It uses a base GRN built from the previous script (run_04_celloracle_compute_baseGRN.py)
     Note that we can subset the scRNA-seq datasets in different ways - i.e. cell-type annotation, timepoints, condition, etc.
     # Optional: For multiple timepoints, we will add an option for splitting out the data for "timepoints" before subsetting for "cluster".
     # 
@@ -81,7 +81,7 @@ def compute_cluster_specific_GRNs(output_path, RNAdata_path, baseGRN_path,
         baseGRN_path = "/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/TDR118_cicero_output/05_TDR118_base_GRN_dataframe.parquet"
         data_id = "TDR118"
         annotation: "global_annotation"
-        dim_reduce: "umap.atac"
+        dim_reduce: "umap.joint"
     """
     # create a folder for figures (Optional)
     # output_path = "/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/baseGRN_CisBP_RNA_zebrahub/"
@@ -92,6 +92,13 @@ def compute_cluster_specific_GRNs(output_path, RNAdata_path, baseGRN_path,
     # Load the zebrahub early timepoints
     adata = sc.read_h5ad(RNAdata_path)
     adata
+
+    # Check if adata.X has integer values (raw counts)
+    has_raw_counts = np.all(adata.X.data == adata.X.data.astype(int))
+    if has_raw_counts:
+        print(f"adata.X contains raw counts: {has_raw_counts}")
+    else:
+        raise TypeError("adata.X does not have raw counts.")
 
     # Checking the adata object (Optional)
     # sc.pl.umap(adata, color = ["global_annotation", "timepoint"])
@@ -141,8 +148,8 @@ def compute_cluster_specific_GRNs(output_path, RNAdata_path, baseGRN_path,
     
     # Step 3-1. Add the scRNA-seq (adata) to the Oracle object
     oracle.import_anndata_as_raw_count(adata=adata,
-                                    cluster_column_name="global_annotation", # annotation
-                                    embedding_name="X_umap.atac") # X_umap.cellranger.arc"
+                                    cluster_column_name=annotation, # annotation
+                                    embedding_name=dim_reduce) # X_umap.cellranger.arc"
     
     # Step 3-2. Add the base GRN (TF info dataframe)
     oracle.import_TF_data(TF_info_matrix=baseGRN)
@@ -181,13 +188,13 @@ def compute_cluster_specific_GRNs(output_path, RNAdata_path, baseGRN_path,
     # Calculate GRN for each population in "predicted.id" clustering unit.
     # This step may take long time (~ 1hour)
     links = oracle.get_links(cluster_name_for_GRN_unit="global_annotation", alpha=10,
-                            verbose_level=10, test_mode=False, n_jobs=-1)
+                            verbose_level=10, test_mode=False, n_jobs=2)
     
     # filter the GRN (2000 edges)
     links.filter_links(p=0.001, weight="coef_abs", threshold_number=2000)
     
     # Calculate network scores. It takes several minutes.
-    links.get_score(n_jobs=-1)
+    links.get_score(n_jobs=2)
     
     # save the Links object (for all cell-types)
     links.to_hdf5(file_path=output_path + "08_"+ data_id + "_celltype_GRNs.celloracle.links")
