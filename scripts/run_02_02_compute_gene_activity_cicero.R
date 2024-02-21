@@ -1,6 +1,6 @@
 # An R script to compute "cicero gene activity"
-# This script is a part of the pipeline to analyze the multi-ome data from the Zebrafish project.
-# Last updated: 01/30/2024
+# This script is a part of the pipeline to analyze the multi-ome data from the zebrafish project.
+# Last updated: 02/20/2024
 
 # Load the Cicero library from the local installation (trapnell lab branch for Signac implementation)
 # library(remotes)
@@ -18,6 +18,8 @@ withr::with_libpaths(new = "/hpc/scratch/group.data.science/yangjoon.kim/.local/
 library(Signac)
 library(Seurat)
 library(SeuratWrappers)
+library(readr)
+# library(dplyr)
 
 # inputs:
 # 1) seurat_object: a seurat object
@@ -32,43 +34,32 @@ library(SeuratWrappers)
 # Parse command-line arguments
 args <- commandArgs(trailingOnly = TRUE)
 
-if (length(args) != 7) {
-  stop("Usage: Rscript run_02_compute_CCANS_cicero_parallelized.R seurat_object_path assay dim_reduced output_path data_id peaktype shell_script_dir")
+if (length(args) != 6) {
+  stop("Usage: Rscript run_02_02_compute_gene_activity_cicero.R seurat_object_path cicero_path gref_path assay data_id peaktype")
 }
-
 seurat_object_path <- args[1]
-assay <- args[2]
-dim_reduced <- args[3]
-output_path <- args[4] 
-data_id <- args[5] 
-peaktype <- args[6]
-shell_script_dir <- args[7]
+cicero_path <- args[2]
+gref_path <- args[3]
+assay <- args[3] # "peaks_merged" 
+data_id <- args[4] # "TDR118reseq"
+peaktype <- args[5] #"peaks_merged"
 
 # Example Input arguments:
-# seurat_object <- readRDS(seurat_object_path)
-# assay <- "ATAC"
-# dim.reduced <- "UMAP.ATAC"
-# output_path = "",
-# data_id="TDR118",
-# peaktype = "peaks_merged"
-# shell_script_dir = "/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/cicero_slurm_outputs/"
+# seurat_object_path <- "/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/01_Signac_processed/TDR118reseq/TDR118_processed.RDS" 
+# cicero_path <- "/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/02_cicero_processed/TDR118reseq_cicero/"
+# gref_path <- "/hpc/reference/sequencing_alignment/alignment_references/zebrafish_genome_GRCz11/genes/genes.gtf.gz"
+# assay <- "peaks_merged" 
+# data_id <- "TDR118reseq"
+# peaktype <- "peaks_merged"
 
-# Define the directory to save the shell scripts (for cicero parallelization)
-#shell_script_dir <- "/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/cicero_slurm_outputs/"
-script_dir <- shell_script_dir
-dir.create(script_dir, showWarnings = FALSE, recursive = TRUE)
-setwd(script_dir) # set as the temp working directory
 
-# Import the Seurat object
+# Description of "Gene.Activity" computation in Cicero:
+# requirements: (1) CDS object, (2) cicero connections, and (3) gene_annotation (GTF file)
+# (3) gene_annotation (GTF) is needed to map the first exon of each gene as the "promoter" to compute the sum of the chromatin accessibilities for each gene (with co-access scores as weights)
+# NOTE. CDS object is the Seurat object converted to the CellDataSet format
+
+# Step 1. import a seurat object and convert it to CDS object
 seurat_object <- readRDS(seurat_object_path)
-
-# print out the assays in the seurat object
-#print(seurat_object@assays) 
-
-# define the default assay
-# We will pick which peak profiles we will use.
-# ideally, we have defined the peak profiles 
-# (and corresponding count matrices of cells-by-peaks) from the previous steps.
 DefaultAssay(seurat_object) <- assay
 print(paste0("default assay is ", assay))
 
@@ -76,138 +67,130 @@ print(paste0("default assay is ", assay))
 seurat_object.cds <- as.cell_data_set(x=seurat_object) # a function from SeuratWrappers
 print("cds object created") 
 
-# make the cicero object
-# default: we will use the ATAC.UMAP here for the sampling of the neighborhoods - as we'll treat this dataset as if we only had scATAC-seq.
-# This is something we can ask Kenji Kamimoto/Samantha Morris later for their advice. (or compare the built GRNs from joint.UMAP vs ATAC.UMAP)
-seurat_object.cicero <- make_cicero_cds(seurat_object.cds, reduced_coordinates = reducedDims(seurat_object.cds)$UMAP.ATAC)
-print("cicero object created")
+# Reformat the CDS object with feature-level metadata
+# Step 1-1: Extract and process row names
+site_names <- rownames(seurat_object.cds)
+chr_bp_info <- strsplit(site_names, "-")
+chr <- sapply(chr_bp_info, function(x) x[1])
+bp1 <- sapply(chr_bp_info, function(x) x[2])
+bp2 <- sapply(chr_bp_info, function(x) x[3])
 
-# define the genomic length dataframe (chromosome number ; length)
-df_seqinfo <- as.data.frame(seurat_object@assays$ATAC@seqinfo)
-# zebrafish has 25 chromosomes
-seurat_object@assays$ATAC@annotation@seqinfo@seqlengths <- df_seqinfo$seqlengths[1:26] 
+# Step 1-2: Calculate num_cells_expressed
+# Assuming 'counts' assay is used to calculate expression
+counts_matrix <- counts(seurat_object.cds)
+num_cells_expressed <- rowSums(counts_matrix > 0)
 
-# # Perform CCAN computation
-# # get the chromosome sizes from the Seurat object
-# genome <- seqlengths(seurat_object@assays$ATAC@annotation)
+# Step 1-3: Update rowData
+rowData(seurat_object.cds)$site_name <- site_names
+rowData(seurat_object.cds)$chr <- chr
+rowData(seurat_object.cds)$bp1 <- as.numeric(bp1)
+rowData(seurat_object.cds)$bp2 <- as.numeric(bp2)
+rowData(seurat_object.cds)$num_cells_expressed <- num_cells_expressed
 
-# # convert chromosome sizes to a dataframe
-# genome.df <- data.frame("chr" = names(genome), "length" = genome)
-# saveRDS(genome.df, file = paste0(script_dir, "genome_df.rds"))
-# print(genome.df)
+# Verify the updated rowData
+head(fData(seurat_object.cds))
 
-# # run cicero (parallelized)
-# # conns <- run_cicero(seurat_object.cicero, genomic_coords = genome.df, sample_num = 100)
+# # define the genomic length dataframe (chromosome number ; length)
+# df_seqinfo <- as.data.frame(seurat_object@assays$ATAC@seqinfo)
+# # zebrafish has 25 chromosomes
+# seurat_object@assays$ATAC@annotation@seqinfo@seqlengths <- df_seqinfo$seqlengths[1:26] 
 
-# # Step 1: Estimate the distance parameter on the whole dataset
-# distance_param <- estimate_distance_parameter(seurat_object.cicero, 
-#                                               genomic_coords = genome.df)
+# Step 2. import the cicero connections (result of run_cicero)
+library(readr)
+conns_filepath = paste0(cicero_path, "02_", data_id, "_cicero_connections_",peaktype, "_peaks.csv")
+conns <- read_csv(conns_filepath, col_types = cols(.default = col_guess(), `...1` = col_skip()))
 
-# # averate the distance_param to get the final distance_param
-# mean_distance_param <- mean(distance_param)
-# print(paste0("mean distance parameter = ", mean_distance_param))
+# # Step 3. import the gene annotation
+# Step 3. import the gene annotation
+gene_anno <- rtracklayer::readGFF(gref_path)
+# check the gene_annotation dataframe
+head(gene_anno)
 
-# # Step 2: Generate Cicero models for each chromosome using Slurm
-# #chromosomes <- unique(seurat_object.cicero$chromosome)
-# chromosomes <- unique(genome.df$chr)
-# chromosomes <- chromosomes[chromosomes != "MT"] # Remove mitochondrial chromosome
-# print(chromosomes)
+# rename some columns to match requirements
+gene_anno$chromosome <- paste0("chr", gene_anno$seqid)
+gene_anno$gene <- gene_anno$gene_id
+# gene_anno$transcript_id <- gene_anno$gene_id # rename the transcript_id using the gene_id
+gene_anno$transcript <- gene_anno$transcript_id
+gene_anno$symbol <- gene_anno$gene_name
 
-
-# # Loop through each chromosome and create a Slurm job
-# for (current_chr in chromosomes) {
-#   # Subset cell_data_set by chromosome
-#   chr_dataset <- subset(seurat_object.cicero, subset = current_chr == rowData(seurat_object.cicero)$chr)  
-#   # chr_dataset <- subset(seurat_object.cicero, chromosome == chr)
-#   saveRDS(chr_dataset, file=paste0(script_dir, "/seurat_chr_", current_chr, ".rds"))
-
-#   # Create a shell script for the Slurm job
-#   script_name <- paste0(script_dir, "cicero_job_", current_chr, ".sh")
-#   script_content <- paste(
-#     "#!/bin/bash\n",
-#     "#SBATCH --output=", script_dir, "cicero_chr_", current_chr, "_%j.out\n",
-#     "#SBATCH --error=", script_dir, "cicero_chr_", current_chr, "_%j.err\n",
-#     "#SBATCH --time=24:00:00\n",
-#     "#SBATCH --mem=5G\n",
-#     "#SBATCH --mail-type=FAIL\n", # reporting only in case of failure
-#     "#SBATCH --mail-user=yang-joon.kim@czbiohub.org\n",
-#     "module load R/4.3\n",
-#     "Rscript ", script_dir, "run_cicero_chr_", current_chr, ".R\n",
-#     sep=""
-#   )
-#   writeLines(script_content, script_name)
-
-#     # Create an R script for this chromosome
-#   r_script_name <- paste0(script_dir, "run_cicero_chr_", current_chr, ".R")
-#   r_script_content <- paste(
-#     "library(monocle3)\n",
-#     "library(cicero)\n",
-#     "library(Seurat)\n",
-#     "genome.df <- readRDS('", script_dir, "/genome_df.rds')\n",
-#     "chr_dataset <- readRDS('", script_dir, "/seurat_chr_", current_chr, ".rds')\n",
-#     "cicero_model <- generate_cicero_models(chr_dataset, distance_parameter = ", mean_distance_param, ", genomic_coords = genome.df)\n",
-#     "saveRDS(cicero_model, file='", script_dir, "cicero_model_", current_chr, ".rds')\n",
-#     sep=""
-#   )
-#   writeLines(r_script_content, r_script_name)
-
-#   # Submit the job to Slurm
-#   system(paste("sbatch", script_name))
-# }
-
-# # Step 3: Collect the results from Slurm jobs (each chromosome)
-# # Assuming your RDS files are named in the format "cicero_model_<chromosome>.rds"
-# #chromosomes <- unique(seurat_object.cicero$chromosome) # List of chromosomes
-# model_files <- paste0(script_dir, "cicero_model_", chromosomes, ".rds")
-
-# # check if all 25 chromosomes are present (from individual slurm jobs)
-# existing_files <- sapply(model_files, file.exists)
-
-# if (sum(existing_files) != 25) {
-#     stop("Not all cicero_model files are present. Expected 25, found: ", sum(existing_files))
-# } else {
-#     print("All 25 cicero_model files are present. Proceeding to Step 3.")
-# }
-
-# # Read all the Cicero models
-# cicero_models <- lapply(model_files, function(file) {
-#   if (file.exists(file)) {
-#     readRDS(file)
-#   } else {
-#     warning(paste("File not found:", file))
-#     NULL
-#   }
-# })
-
-# # Filter out NULL values in case some files were not found
-# cicero_models <- Filter(Negate(is.null), cicero_models)
-
-# # Assemble connections from the per-chromosome models
-# all_connections <- do.call("rbind", lapply(cicero_models, assemble_connections))
-# # all_connections now contains the combined dataset of connections
-
-# # Note: This script will submit Slurm jobs and exit. The actual Cicero processing will happen in the Slurm jobs.
-# # You'll need to collect and process the results once all jobs are com
-# print("CCANs computed")
-
-# # Return the CCAN results
-# # return(all_connections)
-
-# saves the Cicero results 
-# (1.all peaks as well as 2. pairwise cicero result)
-all_peaks <- row.names(seurat_object@assays$peaks_merged@data)
-#output_path <- "/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data"
-write.csv(x = all_peaks, file = paste0(output_path, "01_", data_id, "_",peaktype, "_peaks.csv"))
-write.csv(x = all_connections, file = paste0(output_path, "02_", data_id, "_cicero_connections_",peaktype, "_peaks.csv"))
-
-# Step 4. compute "cicero gene activity scores"
-# Rationale (from the cicero webpage):  
-# We have found that often, accessibility at promoters is a poor predictor of gene expression. 
-# However, using Cicero links, we are able to get a better sense of the overall accessibility of a promoter and it's associated distal sites. 
-# This combined score of regional accessibility has a better concordance with gene expression. We call this score the Cicero gene activity score, and it is calculated using two functions.
-
-# First, compute the CCANs
+# Step 4. compute CCANs 
+#(CCANs: cis-Co-Accessibility Networks: a community/cluster of highly co-accessible peaks)
 CCAN_assigns <- generate_ccans(conns)
+
 head(CCAN_assigns)
 
-#
+# Step 5. compute the gene activity score using cicero results
+
+# Step 5-1. reformat the gene_anno to anntoate the CDS for each gene. 
+# If not annotated, we'll use the first exon
+
+# Add a column for the pData table indicating the gene if a peak is a promoter ####
+# Create a gene annotation set that only marks the transcription start sites of 
+# the genes. We use this as a proxy for promoters.
+# To do this we need the first exon of each transcript
+pos <- subset(gene_anno, strand == "+")
+pos <- pos[order(pos$start),] 
+# remove all but the first exons per transcript
+pos <- pos[!duplicated(pos$transcript),] 
+# make a 1 base pair marker of the TSS
+pos$end <- pos$start + 1 
+
+neg <- subset(gene_anno, strand == "-")
+neg <- neg[order(neg$start, decreasing = TRUE),] 
+# remove all but the first exons per transcript
+neg <- neg[!duplicated(neg$transcript),] 
+neg$start <- neg$end - 1
+
+gene_annotation_sub <- rbind(pos, neg)
+
+# Make a subset of the TSS annotation columns containing just the coordinates 
+# and the gene name
+gene_annotation_sub <- gene_annotation_sub[,c("chromosome", "start", "end", "symbol")]
+
+# Remove the 'chr' prefix from the 'chromosome' column in 'gene_annotation_sub'
+gene_annotation_sub$chromosome <- gsub("chr", "", gene_annotation_sub$chr)
+
+# Rename the gene symbol column to "gene"
+names(gene_annotation_sub)[4] <- "gene"
+
+# annotate the CDS object with the TSS/gene
+seurat_object.cds <- annotate_cds_by_site(seurat_object.cds, gene_annotation_sub)
+
+tail(fData(seurat_object.cds))
+
+# Step 5-2.Generate gene activity scores
+
+# Check if there are any NA values in the 'coaccess' column
+anyNA_conns <- any(is.na(conns$coaccess))
+print(paste("Are there any NA values in 'coaccess'? ", anyNA_conns))
+
+# Check if there are any infinite values in the 'coaccess' column
+anyInf_conns <- any(is.infinite(conns$coaccess))
+print(paste("Are there any infinite values in 'coaccess'? ", anyInf_conns))
+
+# Remove rows with NA or infinite values in 'coaccess'
+conns_clean <- conns[!is.na(conns$coaccess) & !is.infinite(conns$coaccess), ]
+
+# generate unnormalized gene activity matrix
+unnorm_ga <- build_gene_activity_matrix(seurat_object.cds, conns_clean)
+
+# remove any rows/columns with all zeroes
+unnorm_ga <- unnorm_ga[!Matrix::rowSums(unnorm_ga) == 0, 
+                       !Matrix::colSums(unnorm_ga) == 0]
+
+# make a list of num_genes_expressed
+num_genes <- pData(seurat_object.cds)$num_genes_expressed
+names(num_genes) <- row.names(pData(seurat_object.cds))
+
+# normalize
+cicero_gene_activities <- normalize_gene_activities(unnorm_ga, num_genes)
+
+# # if you had two datasets to normalize, you would pass both:
+# # num_genes should then include all cells from both sets
+# unnorm_ga2 <- unnorm_ga
+# cicero_gene_activities <- normalize_gene_activities(list(unnorm_ga, unnorm_ga2), 
+#                                                     num_genes)
+
+# save the normalized cicero_gene_activities
+gene.activity.path = paste0(cicero_path, "06_", data_id, "_gene_activities_",peaktype, "_peaks.csv")
+write.csv(cicero_gene_activities, gene.activity.path, row.names=TRUE, col.names=TRUE)

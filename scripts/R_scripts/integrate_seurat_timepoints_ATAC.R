@@ -1,6 +1,8 @@
-# ## Notebook to integrate multiome objects (Seurat/Signac)
+# ## Notebook to integrate multiome(ATAC) objects (Seurat/Signac)
+# reference: https://stuartlab.org/signac/0.2/articles/merging (note that this was from Signac 0.2.5, older version)
+# [To-Do] we might want to replace the script with the recent version of the vignette (https://stuartlab.org/signac/articles/merging)
 
-# - Last updated: 02/06/2024
+# - Last updated: 02/15/2024
 # - Author: Yang-Joon Kim
 
 # - Step 1. load the multiome objects from all timepoints (6 timepoints, 2 replicates from 15-somites)
@@ -160,7 +162,7 @@ TDR128 <- subset(combined, subset = dataset == "TDR128")
 # find integration anchors
 integration.anchors <- FindIntegrationAnchors(
   object.list = list(TDR118,TDR119,TDR124,TDR125,TDR126,TDR127,TDR128),
-  anchor.features = rownames(TDR118), # all features (combined.peaks)
+  anchor.features = rownames(TDR118), # all features/peaks (combined.peaks)
   reduction = "rlsi", # reciprocal LSI
   dims = 2:30
 )
