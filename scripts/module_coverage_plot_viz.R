@@ -163,6 +163,13 @@ coverage_plot <- function(object, gene,
       peaks=object@assays$peaks_celltype@ranges,
       color = "red")+ labs(y="cell-type")
 
+    # MACS2-cell-type-specific peaks
+    peak_plot_merged <- PeakPlot(
+      object = object,
+      region = genomic_region,
+      peaks=object@assays$peaks_merged@ranges,
+      color = "purple")+ labs(y="merged")
+
     # expression of RNA
     expr_plot <- ExpressionPlot(
       object = object,
@@ -172,10 +179,11 @@ coverage_plot <- function(object, gene,
 
     plot<-CombineTracks(
       plotlist = list(cov_plot_celltype, cov_plot_bulk, 
-                      peak_plot_CRG, peak_plot_bulk, peak_plot_celltype, 
+                      peak_plot_CRG, peak_plot_bulk, 
+                      peak_plot_celltype, peak_plot_merged, 
                       gene_plot),
       expression.plot = expr_plot,
-      heights = c(10,3,1,1,1,2),
+      heights = c(10,3,1,1,1,1,2),
       widths = c(10, 1)
     )
     
