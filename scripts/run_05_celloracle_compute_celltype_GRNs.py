@@ -194,7 +194,7 @@ def compute_cluster_specific_GRNs(output_path, RNAdata_path, baseGRN_path,
     links.filter_links(p=0.001, weight="coef_abs", threshold_number=2000)
     
     # Calculate network scores. It takes several minutes.
-    links.get_score(n_jobs=4)
+    links.get_score(n_jobs=2)
     
     # save the Links object (for all cell-types)
     links.to_hdf5(file_path=output_path + "08_"+ data_id + "_celltype_GRNs.celloracle.links")
