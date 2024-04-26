@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #SBATCH --job-name=cluster_specific_GRNs      # Job name
-#SBATCH --partition=cpu,gpu                       # Partition name
+#SBATCH --partition=cpu                       # Partition name
 #SBATCH --output=/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/slurm_logs/co_celltype_GRNs_%j.out # File to which STDOUT will be written, including job ID
 #SBATCH --error=/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/slurm_logs/co_celltype_GRNs_%j.err  # File to which STDERR will be written, including job ID
 #SBATCH --time=24:00:00                       # Runtime in HH:MM:SS
