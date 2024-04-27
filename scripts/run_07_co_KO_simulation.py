@@ -19,25 +19,21 @@
 
 ## Define the input arguments
 # Input Arguments:
-# 1) output_path: filepath for the output
-# 2) RNAdata_path: filepath for the adata (RNA)
-# 3) baseGRN_path: filepath for the base GRN (parquet)
-# 4) data_id: data_id
-# 5) annotation: annotation class (cell-type annotation)
-# 6) dim_reduce: dimensionality reduction embedding name
+# 1) oracle_path: filepath for the output
+# 2) data_id: data_id
+# 3) annotation: annotation class (cell-type annotation)
+# 4) figpath: filepath for the figures
+# 5) list_KO_genes: a comma-separated list of KO genes
 
 # Parse command-line argument
 import argparse
 # Create an ArgumentParser object
 parser = argparse.ArgumentParser(description="making Oracle/Gradients objects ready for in silico KO simulation")
-#output_path, RNAdata_path, baseGRN_path, data_id, annotation, dim_reduce
 # Add command-line arguments
 parser.add_argument('oracle_path', type=str, help="oracle filepath")
 parser.add_argument('data_id', type=str, help="data_id")
 parser.add_argument('annotation', type=str, help="celltype annotation class")
-# parser.add_argument('dim_reduce', type=str, help="dim.reduction embedding name")
 parser.add_argument('figpath', type=str, help="figure path")
-# parser.add_argument('list_KO_genes', type=list, help="a list of KO genes")
 parser.add_argument('list_KO_genes', type=str, help="a comma-separated list of KO genes")
 
 # Parse the command-line arguments
@@ -47,9 +43,7 @@ args = parser.parse_args()
 oracle_path = args.oracle_path
 data_id = args.data_id
 annotation = args.annotation
-# dim_reduce = args.dim_reduce
 figpath = args.figpath
-# list_KO_genes = args.list_KO_genes
 list_KO_genes = args.list_KO_genes.split(',')
 
 # input arguments
