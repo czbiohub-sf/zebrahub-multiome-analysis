@@ -80,7 +80,7 @@ def compute_cluster_specific_GRNs(output_path, RNAdata_path, baseGRN_path,
         RNAdata_path = "/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/annotated_data/ZF_atlas_v01/ZF_atlas_v01.h5ad"
         baseGRN_path = "/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/TDR118_cicero_output/05_TDR118_base_GRN_dataframe.parquet"
         data_id = "TDR118"
-        annotation: "global_annotation"
+        annotation: "global_annotation", or "manual_annotation"
         dim_reduce: "umap.joint"
     """
     # create a folder for figures (Optional)
@@ -101,7 +101,7 @@ def compute_cluster_specific_GRNs(output_path, RNAdata_path, baseGRN_path,
         raise TypeError("adata.X does not have raw counts.")
 
     # Checking the adata object (Optional)
-    # sc.pl.umap(adata, color = ["global_annotation", "timepoint"])
+    # sc.pl.umap(adata, color = [annotation, "timepoint"])
 
     # compute the highly variable genes to reduce the number of gene feature space (RNA feature space)
     if len(adata.var_names)>3000:
@@ -118,9 +118,9 @@ def compute_cluster_specific_GRNs(output_path, RNAdata_path, baseGRN_path,
     # show meta data name in anndata
     print("metadata columns :", list(adata.obs.columns))
 
-    # The annotation class - "global_annotation"
+    # The annotation class - "annotation" variable
     print("cell types are:")
-    print(adata.obs.global_annotation.unique())
+    print(adata.obs[annotation].unique())
 
 
 
@@ -185,16 +185,18 @@ def compute_cluster_specific_GRNs(output_path, RNAdata_path, baseGRN_path,
     # Start measuring time
     start_time = time.time()
 
-    # Calculate GRN for each population in "predicted.id" clustering unit.
+    # Calculate GRN for each population in "annotation" clustering unit.
     # This step may take long time (~ 1hour)
-    links = oracle.get_links(cluster_name_for_GRN_unit="global_annotation", alpha=10,
-                            verbose_level=10, test_mode=False, n_jobs=2)
+    links = oracle.get_links(cluster_name_for_GRN_unit=annotation, alpha=10,
+                            verbose_level=1, test_mode=False, n_jobs=2)
     
     # filter the GRN (2000 edges)
     links.filter_links(p=0.001, weight="coef_abs", threshold_number=2000)
     
     # Calculate network scores. It takes several minutes.
-    links.get_score(n_jobs=2)
+    # links.get_score(n_jobs=2) # this function is deprecated, so replacing this with the new one
+    # NOTE. this change will depreate the gene_cartography scores
+    links.get_network_score()
     
     # save the Links object (for all cell-types)
     links.to_hdf5(file_path=output_path + "08_"+ data_id + "_celltype_GRNs.celloracle.links")
