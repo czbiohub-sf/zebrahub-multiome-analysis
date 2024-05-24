@@ -1,9 +1,10 @@
-# A python script to compute pseudotime (pySlingshot) before in silico KO perturbation.
-# Modified from "08_chr_acc_dynamics/pyslingshot_pseudotime_example.ipynb" Jupyter notebook from CellOracle.
-# source: https://github.com/mossjacob/pyslingshot/blob/master/slingshot.ipynb
-# NOTE: Run this on "single-cell-base" conda environment.
+# A python script to compute pseudotime using Palantir (by Manuel Setty and Dana Pe'er)
+# Modified from "08_chr_acc_dynamics/palantir_pseudotime_example.ipynb" Jupyter notebook.
+# source: https://github.com/dpeerlab/Palantir/blob/master/notebooks/Palantir_sample_notebook.ipynb
+# NOTE: Run this on "seacells" conda environment.
+# NOTE: Palantir lives in the same ecosystem as scanpy, seacells, etc.
 
-## Assumptions:
+## Assumptions (to be revisited later):
 # 1) we will assume that the "NMPs" will be the root cells for the pseudotime calculation.
 # 2) we will assume the two lineages - mesodermal_lineages and neuroectodermal_lineages.
 # mesodermal_lineages: "NMPs", "PSM", "Somites", "Muscle"
@@ -18,12 +19,14 @@ import scanpy as sc
 import anndata as ad
 import argparse
 
+"""
 # Input arguments
 # 1) filepath: AnnData object with the preprocessed data.
 # 2) data_id: data identifier for the output files.
 # 3) annotation: annotation class for celltypes (clusters)
 # 4) progenitor_cluster: progenitor cluster to be used as the root for the pseudotime calculation.
 # 5) embedding_key: key for the embedding to be used for the pseudotime calculation.
+"""
 
 # Step 1. Set up argument parsing
 parser = argparse.ArgumentParser(description="Run pySlingshot to compute pseudotime before in silico KO perturbation.")
@@ -50,11 +53,16 @@ embedding_key = args.embedding_key
 # embedding_key = "X_umap_aligned"
 
 # Load the dataset
-adata = sc.read_h5ad(filepath + f"{data_id}.h5ad")
+# adata = sc.read_h5ad(filepath + f"{data_id}.h5ad")
+adata = sc.read_h5ad(filepath)
 adata
 
 # Assuming 'manual_annotation' contains the categories as shown
-categories = adata.obs[annotation].cat.categories
+try:
+    categories = adata.obs[annotation].cat.categories
+except:
+    categories = adata.obs[annotation].unique()
+
 # Create a dictionary mapping each category to an integer
 category_to_integer = {category: i for i, category in enumerate(categories)}
 # Print the mapping to verify
@@ -65,7 +73,10 @@ new_annotation = annotation + "_integer"
 adata.obs[new_annotation] = adata.obs[annotation].map(category_to_integer)
 
 # Convert categorical labels to integer codes
-adata.obs[new_annotation] = adata.obs[annotation].cat.codes
+try:
+    adata.obs[new_annotation] = adata.obs[annotation].cat.codes
+except:
+    adata.obs[new_annotation] = adata.obs[annotation].astype('category').cat.codes
 
 # Check the new column to ensure the mapping is correct and the datatype
 print(adata.obs[new_annotation].head())
@@ -128,4 +139,4 @@ adata.obs['Pseudotime_Lineage_NeuroEcto'] = adata.obs['Pseudotime'].where(adata.
 adata.obs.to_csv(filepath + f"{data_id}_slingshot.csv")
 
 # save the updated adata object
-adata.write_h5ad(filepath + f"{data_id}_pyslingshot.h5ad")
+# adata.write_h5ad(filepath + f"{data_id}_pyslingshot.h5ad")

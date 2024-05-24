@@ -36,8 +36,8 @@ use_pseudotime=$6 # whether to use pseudotime or not
 pseudotime_path=$7 # filepath for the pseudotime
 systematic_KO=$8 # whether to perform systematic KO or not
 
-# Create the output directory if it doesn't exist
-# mkdir -p "$oracle_path"
+# Create the figure directory if it doesn't exist
+mkdir -p "$figpath"
 
 # Load necessary modules
 module load anaconda
@@ -49,7 +49,7 @@ cd /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/zebrahub-multiome-a
 
 
 # Run the Python script with command-line arguments
-python run_07_co_KO_simulation.py $oracle_path $data_id $annotation $figpath $list_KO_genes $use_pseudotime $pseudotime_path $systematic_KO
+python run_07_co_KO_simulation.py $oracle_path $data_id $annotation $figpath $list_KO_genes --use_pseudotime=$use_pseudotime --pseudotime_path=$pseudotime_path --systematic_KO=$systematic_KO
 
 # Deactivate the conda environment
 conda deactivate
