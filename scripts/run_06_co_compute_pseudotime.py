@@ -50,8 +50,12 @@ parser = argparse.ArgumentParser(description="Filter and map data using CellOrac
 # Add command-line arguments
 parser.add_argument('input_path', type=str, help="input filepath")
 parser.add_argument('data_id', type=str, help="data_id")
+parser.add_argument('annotation', type=str, help="celltype annotation class")
 parser.add_argument('dim_reduce', type=str, help="dim.reduction embedding name")
 parser.add_argument('figpath', type=str, help="figure filepath")
+parser.add_argument('root_cells', type=str, help="root celltype for pseudotime calculation")
+# NOTE. To-Do: make the lineage information as an argument
+parser.add_argument('nmps', type=bool, help="is this an NMP subset, or whole embryo?")
 #parser.add_argument('annotation', type=str, help="celltype annotation class")
 #parser.add_argument('timepoints', type=list, help="a list of timepoints")
 
@@ -61,13 +65,17 @@ args = parser.parse_args()
 # Access the arguments as attributes of the 'args' object
 input_path = args.input_path
 data_id = args.data_id
+annotation = args.annotation
 dim_reduce = args.dim_reduce
 figpath = args.figpath
+root_cells = args.root_cells
+nmps = args.nmps
 #annotation = args.annotation
 #timepoints = args.timepoints
 
 # Define the function here
-def compute_pseudotime_oracle(input_path, data_id, dim_reduce, figpath):
+def compute_pseudotime_oracle(input_path, data_id, annotation, dim_reduce, 
+                              figpath=None, root_cells="NMPs", nmps=False):
     """
     A function to compute pseudotime for an Oracle object using DPT.
     
@@ -76,6 +84,8 @@ def compute_pseudotime_oracle(input_path, data_id, dim_reduce, figpath):
         data_id: identifier for the input/output Oracle file
         dim_reduce: dim.reduction name
         figpath: filepath to save the figures
+        root_cells: root celltype for pseudotime calculation
+        nmps: is this an NMP subset, or whole embryo?
 
     
     Returns: 
@@ -105,45 +115,66 @@ def compute_pseudotime_oracle(input_path, data_id, dim_reduce, figpath):
     print("Clustering name: ", pt.cluster_column_name)
     print("Cluster list", pt.cluster_list)
 
-    # Here, clusters can be classified into either mesoderm lineage or neuro-ectoderm lineage
-    clusters_in_meso_lineage = ["NMPs", "PSM", "Somites","Muscle"]
-    clusters_in_neuroecto_lineage = ["NMPs", "Neural_Posterior", "Neural_Anterior"]
+    if nmps:
+        print("NMPs subsetted datasets")
+        # Here, clusters can be classified into either mesoderm lineage or neuro-ectoderm lineage
+        clusters_in_meso_lineage = ["NMPs", "PSM", "Somites","Muscle"]
+        clusters_in_neuroecto_lineage = ["NMPs", "Neural_Posterior", "Neural_Anterior"]
 
-    # Make a dictionary
-    lineage_dictionary = {"Lineage_Meso": clusters_in_meso_lineage,
-            "Lineage_NeuroEcto": clusters_in_neuroecto_lineage}
+        # Make a dictionary
+        lineage_dictionary = {"Lineage_Meso": clusters_in_meso_lineage,
+                "Lineage_NeuroEcto": clusters_in_neuroecto_lineage}
 
-    # Input lineage information into pseudotime object
-    pt.set_lineage(lineage_dictionary=lineage_dictionary)
+        # Input lineage information into pseudotime object
+        pt.set_lineage(lineage_dictionary=lineage_dictionary)
 
-    # Visualize lineage information
-    pt.plot_lineages()
+        # Visualize lineage information
+        pt.plot_lineages()
+    else:
+        print("whole embryo datasets")
+        # NOTE. To-Do: Define the lineages based on the "standard" annotation
+        # # Here, clusters can be classified into either mesoderm lineage or neuro-ectoderm lineage
+        # clusters_in_meso_lineage = ["NMPs", "tail_bud", "PSM", "somites","muscle"]
+        # clusters_in_neuroecto_lineage = ["NMPs", "Neural_Posterior", "Neural_Anterior"]
+
+        # # Make a dictionary
+        # lineage_dictionary = {"Lineage_Meso": clusters_in_meso_lineage,
+        #         "Lineage_NeuroEcto": clusters_in_neuroecto_lineage}
+
+        # # Input lineage information into pseudotime object
+        # pt.set_lineage(lineage_dictionary=lineage_dictionary)
+
+        # Visualize lineage information
+        # pt.plot_lineages()
 
     # Step 1-2. define the root cells
     # extract the centroid cell, and define it as the "root cell" (this logic can be revisited with better workflow)
     adata = oracle.adata
     # subset the NMP population
-    adata_nmps = adata[adata.obs.manual_annotation=="NMPs"]
-    # extract the NMP UMAP coordinates
-    nmp_coords = pd.DataFrame(adata_nmps.obsm["X_umap_aligned"], columns=["UMAP_1","UMAP_2"], index=adata_nmps.obs_names)
+    adata_root = adata[adata.obs[annotation]==root_cells]
+    # extract the root_cell's UMAP coordinates
+    root_cell_coords = pd.DataFrame(adata_root.obsm[dim_reduce], columns=["UMAP_1","UMAP_2"], index=adata_root.obs_names)
 
     # calculate the centroid of the NMP population
-    centroid = nmp_coords[['UMAP_1', 'UMAP_2']].mean().values
+    centroid = root_cell_coords[['UMAP_1', 'UMAP_2']].mean().values
 
     # Find the closest cell to the centroid
-    nmp_coords['distance_to_centroid'] = np.sqrt((nmp_coords['UMAP_1'] - centroid[0]) ** 2 + (nmp_coords['UMAP_2'] - centroid[1]) ** 2)
-    closest_cell_index = nmp_coords['distance_to_centroid'].idxmin()
+    root_cell_coords['distance_to_centroid'] = np.sqrt((root_cell_coords['UMAP_1'] - centroid[0]) ** 2 + (root_cell_coords['UMAP_2'] - centroid[1]) ** 2)
+    closest_cell_index = root_cell_coords['distance_to_centroid'].idxmin()
 
     # Now you have the index of the closest cell to the centroid
     root_cell_id = closest_cell_index
     print(f"The root cell index for the NMP population is: {root_cell_id}")
 
     # Estimated root cell name for each lineage (AATGGCGCAGCTAACC-1)
-    root_cells = {"Lineage_Meso": root_cell_id, "Lineage_NeuroEcto": root_cell_id}
-    pt.set_root_cells(root_cells=root_cells)
+    if nmps:
+        root_cells = {"Lineage_Meso": root_cell_id, "Lineage_NeuroEcto": root_cell_id}
+        pt.set_root_cells(root_cells=root_cells)
 
-    # Check root cell and lineage
-    pt.plot_root_cells()
+        # Check root cell and lineage
+        pt.plot_root_cells()
+    else:
+        print("whole embryo datasets")
 
     # Step 1-3. compute the diffusion map
     if "X_diffmap" in pt.adata.obsm:
@@ -157,7 +188,7 @@ def compute_pseudotime_oracle(input_path, data_id, dim_reduce, figpath):
     pt.get_pseudotime_per_each_lineage()
 
     # Check results
-    pt.plot_pseudotime(cmap="rainbow")
+    pt.plot_pseudotime(cmap="viridis")
 
     # Add calculated pseudotime data to the oracle object
     oracle.adata.obs = pt.adata.obs
@@ -194,4 +225,5 @@ def compute_pseudotime_oracle(input_path, data_id, dim_reduce, figpath):
 
     return oracle
 ####### LINUX TERMINAL COMMANDS #######
-compute_pseudotime_oracle(input_path, data_id, dim_reduce, figpath)
+compute_pseudotime_oracle(input_path, data_id, annotation, dim_reduce, 
+                            figpath, root_cells, nmps=True)

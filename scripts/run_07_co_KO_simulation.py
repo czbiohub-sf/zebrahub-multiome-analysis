@@ -36,9 +36,13 @@ parser.add_argument('data_id', type=str, help="data_id")
 parser.add_argument('annotation', type=str, help="celltype annotation class")
 parser.add_argument('figpath', type=str, help="figure path")
 parser.add_argument('list_KO_genes', type=str, help="a comma-separated list of KO genes")
-parser.add_argument('use_pseudotime', type=bool, help="use different pseudotime method other than DPT")
-parser.add_argument('pseudotime_path', type=str, help="pseudotime df filepath")
-parser.add_argument('systematic_KO', type=bool, help="perform in silico KO for all TFs/genes")
+parser.add_argument('--use_pseudotime', type=lambda x: (str(x).lower() == 'true'), help="use different pseudotime method other than DPT")
+parser.add_argument('--pseudotime_path', type=str, default=None, help="pseudotime df filepath")
+parser.add_argument('--systematic_KO', type=lambda x: (str(x).lower() == 'true'), help="perform in silico KO for all TFs/genes")
+
+# parser.add_argument('use_pseudotime', type=bool, help="use different pseudotime method other than DPT")
+# parser.add_argument('pseudotime_path', type=str, help="pseudotime df filepath")
+# parser.add_argument('systematic_KO', type=bool, help="perform in silico KO for all TFs/genes")
 
 # Parse the command-line arguments
 args = parser.parse_args()
@@ -52,6 +56,20 @@ list_KO_genes = args.list_KO_genes.split(',')
 use_pseudotime = args.use_pseudotime
 pseudotime_path = args.pseudotime_path
 systematic_KO = args.systematic_KO
+
+# Verify the parsed arguments
+print("oracle_path:", oracle_path)
+print("data_id:", data_id)
+print("annotation:", annotation)
+print("figpath:", figpath)
+print("list_KO_genes:", list_KO_genes)
+print("use_pseudotime:", use_pseudotime)
+print("pseudotime_path:", pseudotime_path)
+print("systematic_KO:", systematic_KO)
+
+# Ensure pseudotime_path is provided if use_pseudotime is True
+if use_pseudotime and pseudotime_path is None:
+    raise ValueError("Pseudotime path must be provided if use_pseudotime is set to True.")
 
 # input arguments
 # oracle_path = "/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/08_NMPs_subsetted/"
@@ -286,6 +304,9 @@ def generate_colorandum(oracle, annotation, cell_types):
     custom_palette = {cell_type: color for cell_type, color in zip(cell_types, set3_palette)}
     # Change the color for 'NMPs' to a dark blue
     custom_palette['NMPs'] = (0.12941176470588237, 0.4, 0.6745098039215687)  # Dark blue color
+
+   # Manually add 'unassigned' with light grey color
+    custom_palette['unassigned'] = (0.827, 0.827, 0.827)  # Light grey color
 
     # Get the order of categories as they appear in the dataset
     categories_in_order = oracle.adata.obs[annotation].cat.categories
