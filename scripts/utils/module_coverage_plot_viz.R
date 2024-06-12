@@ -36,7 +36,7 @@ library(ggplot2)
 make_coverage_plots <- function(object=object,
                                 list_genes = c(), 
                                 output_path = ""){
-    object <- readRDS(object)
+    # object <- readRDS(object)
     # Create a list to store the plot objects
     plot_list <- list()
 
@@ -74,7 +74,9 @@ make_coverage_plots <- function(object=object,
 #' @param gene The name of the gene to generate the plot for.
 #' @param annotation_class A character vector for annotation class.
 #' @param peak_profiles A character vector for peak profiles.
-#' @param genomic_region genomic region ("chrX-start-end" format)
+#' @param genomic_region Genomic region in "chrX-start-end" format, or NULL if not provided.
+#' @param genomic_region_input Logical indicating whether genomic_region is provided.
+#' @param filepath The file path where the plot will be saved.
 #' @return A ggplot object representing the coverage plot for the specified gene or NULL if the gene is not found.
 #' @examples
 #' # Assume `object` is a preloaded Seurat object with necessary data
@@ -83,10 +85,10 @@ make_coverage_plots <- function(object=object,
 #'
 # a sub-function to generate a Coverage Plot (for one gene)
 coverage_plot <- function(object, gene, 
-                            annotation_class = c("global_annotaiton"),
+                            annotation_class = "global_annotation",
                             peak_profiles = c("peak"),
-                            genomic_region_input=False,
-                            genomic_region=None){
+                            genomic_region_input=FALSE,
+                            genomic_region=NULL, filepath=NULL){
       # Check if gene exists in GTF file
       if (!gene %in% object@assays$ATAC@annotation$gene_name) {
         cat("Gene", gene, "not found in GTF file. Skipping.\n")
@@ -106,7 +108,7 @@ coverage_plot <- function(object, gene,
     )
 
     # we have to manually change the basic identity for Seurat
-    Idents(object) <- annotation_class[1]
+    Idents(object) <- annotation_class
     
     # mapped-reads profile for the counts (cell-type, global_annotation)
     cov_plot_celltype <- CoveragePlot(
@@ -116,23 +118,21 @@ coverage_plot <- function(object, gene,
         peaks=FALSE
     )
     
-    # define the genomic region (either given by the user or automatically extracted from the gene name)
-    if (genomic_region_input==TRUE){
-        genomic_region = genomic_region
+    # Define the genomic region (either given by the user or automatically extracted from the gene name)
+    if (!genomic_region_input) {
+      # Lookup genomic coordinates for the gene
+      gene.coord <- LookupGeneCoords(object = object, gene = gene)
+      gene.coord.df <- as.data.frame(gene.coord)
+      
+      # Extract chromosome number, start position, and end position
+      chromosome <- gene.coord.df$seqnames
+      pos_start <- gene.coord.df$start
+      pos_end <- gene.coord.df$end
+      
+      # Compute the genomic region as "chromosome_number-start-end"
+      genomic_region <- paste(chromosome, pos_start, pos_end, sep = "-")
     }
-    else{
-        # for gene/peak plots, we need to find the genomic locations as the old Signac doesn't take the gene name as an input argument.
-        gene.coord <- LookupGeneCoords(object = object, gene = gene)
-        gene.coord.df <- as.data.frame(gene.coord)
-        
-        # extract the chromosome number, start position and end position
-        chromosome <- gene.coord.df$seqnames
-        pos_start <- gene.coord.df$start
-        pos_end <-gene.coord.df$end
-        
-        # compute the genomic region as "chromsome_number-start-end"
-        genomic_region <- paste(chromosome, pos_start, pos_end, sep="-")
-    }
+
     # gene annotation
     gene_plot <- AnnotationPlot(
       object = object,
@@ -188,6 +188,10 @@ coverage_plot <- function(object, gene,
     )
     
     options(repr.plot.width = 8, repr.plot.height = 12, repr.plot.res = 300)
-#     ggsave(paste0(filepath, "coverage_plot_", gene, "_allpeaks.png"), plot=plot, width=8, height=12)
+  # Save the plot if a filepath is provided
+  if (!is.null(filepath)) {
+    ggsave(paste0(filepath, "coverage_plot_", gene, "_allpeaks.pdf"), plot = plot, width = 8, height = 12)
+  }    
+  # return the combined plot
     return(plot)
 }
