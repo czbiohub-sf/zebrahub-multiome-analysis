@@ -4,36 +4,6 @@
 # module load anaconda
 # conda activate seacells
 
-# Input Arguments:
-# input_path: a filepath to an input anndata object with scATAC-seq data (h5ad format)
-# output_path: a filepath to save the output
-# filename: name of the file.
-# save_figure: an optional argument to save the EDA plot or not.
-# figpath: path for the plots/figures
-
-# examples:
-# input_path = "/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/01_Signac_processed/TDR118reseq/TDR118_processed_peaks_merged.h5ad" 
-# output_path = "/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/05_SEACells_processed/"
-# filename = "TDR118_ATAC_SEACells.h5ad"
-
-# Output(s): anndata object(s) with MetaCell scores (h5ad format)
-# NOTE. We currently use only the "adata" object for downstream analyses, not the rest.
-# 1) adata: original object with adata.obs["SEACell"] for SEACells assignments
-# 2) (Optional) SEACell_ad: an anndata object with aggregated counts over SEACells
-# 3) (Optional) SEACell_soft_ad: an anndata object with aggregated counts over soft SEACells
-
-# Parse command-line arguments
-args <- commandArgs(trailingOnly = TRUE)
-
-if (length(args) != 4) {
-  stop("Usage: python compute_seacells_atac.py input_path output_path filename figpath")
-}
-
-input_path <- args[1]  # a filepath to an input anndata object with scATAC-seq data (h5ad format)
-output_path <- args[2] # a filepath to save the output
-filename <- args[3] # name of the output file.
-figpath <- args[4] # path for the plots/figures
-
 # import libraries
 import numpy as np
 import scipy.sparse as sp
@@ -45,6 +15,53 @@ import SEACells
 import matplotlib
 import matplotlib.pyplot as plt
 import seaborn as sns
+from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+from mpl_toolkits.axes_grid1.inset_locator import InsetPosition
+
+import argparse
+
+## Input arguments
+# examples:
+# input_path = "/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/01_Signac_processed/TDR118reseq/TDR118_processed_peaks_merged.h5ad" 
+# output_path = "/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/05_SEACells_processed/"
+# data_id = "TDR118_ATAC" # filename = f"{data_id}_SEACells.h5ad"
+# annotation_class = "global_annotation"
+# figpath = ""
+
+# Output(s): anndata object(s) with MetaCell scores (h5ad format)
+# NOTE. We currently use only the "adata" object for downstream analyses, not the rest.
+# 1) adata: original object with adata.obs["SEACell"] for SEACells assignments
+# 2) (Optional) SEACell_ad: an anndata object with aggregated counts over SEACells
+# 3) (Optional) SEACell_soft_ad: an anndata object with aggregated counts over soft SEACells
+# 4) (Optional) SEACell_purity: a dataframe with celltype purity scores
+
+# Parse command-line arguments
+import argparse
+
+# a syntax for running the python script as the main program (not in a module)
+#if __name__ == "__main__":
+
+
+# Set up argument parser
+parser = argparse.ArgumentParser(description='Parse command-line arguments for the script.')
+
+# Define the command-line arguments
+parser.add_argument('input_path', type=str, help='A filepath to an input anndata object with scATAC-seq data (h5ad format)')
+parser.add_argument('output_path', type=str, help='A filepath to save the output')
+parser.add_argument('data_id', type=str, help='Name of the output file.')
+parser.add_argument('annotation_class', type=str, help='Annotation class for the cell type assignment')
+parser.add_argument('figpath', type=str, help='Path for the plots/figures')
+
+# Parse the arguments
+args = parser.parse_args()
+
+# Access the arguments
+input_path = args.input_path
+output_path = args.output_path
+data_id = args.data_id
+annotation_class = args.annotation_class
+figpath = args.figpath
+
 # Some plotting aesthetics
 sns.set_style('ticks')
 matplotlib.rcParams['figure.figsize'] = [4, 4]
@@ -54,8 +71,123 @@ matplotlib.rcParams['figure.dpi'] = 100
 # Initialize the figure and subplots
 fig, axs = plt.subplots(5, 2, figsize=(15, 20))  # Adjust the size as needed
 
+# define utility functions
+def assert_raw_counts(adata):
+    # Check if the data is stored in a sparse matrix format
+    if sp.issparse(adata.X):
+        # Convert to dense format to work with numpy
+        data = adata.X.todense()
+    else:
+        data = adata.X
+
+    # Check if all values in the data are integers
+    if not np.all(np.rint(data) == data):
+        raise ValueError("adata.X does not contain raw counts (integer values).")
+
+# SEACells.plot.plot_2D modified
+def plot_2D_modified(
+    ad,
+    ax,
+    key="X_umap",
+    colour_metacells=True,
+    title="Metacell Assignments",
+    palette="Set2",
+    SEACell_size=20,
+    cell_size=10,
+):
+    """Plot 2D visualization of metacells using the embedding provided in 'key'.
+
+    :param ad: annData containing 'Metacells' label in .obs
+    :param ax: Axes object where the plot will be drawn
+    :param key: (str) 2D embedding of data. Default: 'X_umap'
+    :param colour_metacells: (bool) whether to colour cells by metacell assignment. Default: True
+    :param title: (str) title for figure
+    :param palette: (str) matplotlib colormap for metacells. Default: 'Set2'
+    :param SEACell_size: (int) size of SEACell points
+    :param cell_size: (int) size of cell points
+    """
+    umap = pd.DataFrame(ad.obsm[key]).set_index(ad.obs_names).join(ad.obs["SEACell"])
+    umap["SEACell"] = umap["SEACell"].astype("category")
+    mcs = umap.groupby("SEACell").mean().reset_index()
+
+    if colour_metacells:
+        sns.scatterplot(
+            x=0, y=1, hue="SEACell", data=umap, s=cell_size, palette=sns.color_palette(palette), legend=None, ax=ax
+        )
+        sns.scatterplot(
+            x=0,
+            y=1,
+            s=SEACell_size,
+            hue="SEACell",
+            data=mcs,
+            palette=sns.color_palette(palette),
+            edgecolor="black",
+            linewidth=1.25,
+            legend=None,
+            ax=ax
+        )
+    else:
+        sns.scatterplot(
+            x=0, y=1, color="grey", data=umap, s=cell_size, legend=None, ax=ax
+        )
+        sns.scatterplot(
+            x=0,
+            y=1,
+            s=SEACell_size,
+            color="red",
+            data=mcs,
+            edgecolor="black",
+            linewidth=1.25,
+            legend=None,
+            ax=ax
+        )
+
+    ax.set_xlabel(f"{key}-0")
+    ax.set_ylabel(f"{key}-1")
+    ax.set_title(title)
+    ax.set_axis_off()
+
+# SEACells.plot.plot_SEACell_sizes modified
+def plot_SEACell_sizes_modified(
+    ad,
+    ax,
+    save_as=None,
+    show=True,
+    title="Distribution of Metacell Sizes",
+    bins=None,
+    figsize=(5, 5),
+):
+    """Plot distribution of number of cells contained per metacell.
+
+    :param ad: annData containing 'Metacells' label in .obs
+    :param ax: Axes object where the plot will be drawn
+    :param save_as: (str) path to which figure is saved. If None, figure is not saved.
+    :param show: (bool) whether to show the plot
+    :param title: (str) title of figure.
+    :param bins: (int) number of bins for histogram
+    :param figsize: (int,int) tuple of integers representing figure size
+    :return: None.
+    """
+    assert "SEACell" in ad.obs, 'AnnData must contain "SEACell" in obs DataFrame.'
+    label_df = ad.obs[["SEACell"]].reset_index()
+    
+    sns.histplot(label_df.groupby("SEACell").count().iloc[:, 0], bins=bins, ax=ax)
+    sns.despine()
+    ax.set_xlabel("Number of Cells per SEACell")
+    ax.set_title(title)
+
+    if save_as is not None:
+        plt.savefig(save_as)
+    if show:
+        plt.show()
+    plt.close()
+    return pd.DataFrame(label_df.groupby("SEACell").count().iloc[:, 0]).rename(
+        columns={"index": "size"}
+    )
+
 # Step 1. load the data
-adata = sc.read(input_path)
+dataset_name = data_id.replace("reseq", "")
+adata = sc.read_h5ad(input_path + f"{data_id}/{dataset_name}_processed_peaks_merged.h5ad")
 print(adata)
 
 # optional. cleaning up the adata.obs fields
@@ -103,7 +235,15 @@ model = SEACells.core.SEACells(adata,
 # run the model
 model.construct_kernel_matrix()
 M = model.kernel_matrix
-sns.clustermap(M.toarray()[:500,:500], ax=axs[0, 0])
+
+# plot the clustered heatmap of the kernel matrix
+# sns.clustermap(M.toarray()[:500,:500], ax=axs[0, 0])
+# Plot clustermap separately and extract the figure
+# clustermap = sns.clustermap(M.toarray()[:500,:500])
+# # Manually position the clustermap into the subplot layout
+# clustermap_ax = clustermap.ax_heatmap
+# clustermap_ax.set_position([axs[0, 0].get_position().x0, axs[0, 0].get_position().y0, axs[0, 0].get_position().width, axs[0, 0].get_position().height])
+# axs[0, 0].remove()  # Remove the placeholder subplot
 
 # Initialize archetypes
 model.initialize_archetypes()
@@ -116,87 +256,103 @@ model.fit(min_iter=10, max_iter=100)
 model.plot_convergence()
 
 # a histogram of the metacell sizes (number of cells per metacell)
-axs[1, 0].hist(adata.obs.SEACell.value_counts())
-axs[1, 0].xlabel("cell counts/metacell")
-axs[1, 0].ylabel("counts")
+axs[0, 1].hist(adata.obs.SEACell.value_counts())
+axs[0, 1].set_xlabel("cell counts/metacell")
+axs[0, 1].set_ylabel("counts")
 
 # SEACElls model QC metric
-plt.figure(figsize=(3,2))
-sns.distplot((model.A_.T > 0.1).sum(axis=1), kde=False, ax=axs[1, 1])
-axs[1, 1].set_title(f'Non-trivial (> 0.1) assignments per cell')
-axs[1, 1].set_xlabel('# Non-trivial SEACell Assignments')
-axs[1, 1].set_ylabel('# Cells')
+# plt.figure(figsize=(3,2))
+sns.distplot((model.A_.T > 0.1).sum(axis=1), kde=False, ax=axs[1, 0])
+axs[1, 0].set_title(f'Non-trivial (> 0.1) assignments per cell')
+axs[1, 0].set_xlabel('# Non-trivial SEACell Assignments')
+axs[1, 0].set_ylabel('# Cells')
 # plt.show()
 
-plt.figure(figsize=(3,2))
+# plt.figure(figsize=(3,2))
 b = np.partition(model.A_.T, -5)    
-sns.heatmap(np.sort(b[:, -5:])[:, ::-1], cmap='viridis', vmin=0, ax=axs[2, 0])
-axs[2, 0].set_title('Strength of top 5 strongest assignments')
-axs[2, 0].set_xlabel('$n^{th}$ strongest assignment')
+sns.heatmap(np.sort(b[:, -5:])[:, ::-1], cmap='viridis', vmin=0, ax=axs[1, 1])
+axs[1, 1].set_title('Strength of top 5 strongest assignments')
+axs[1, 1].set_xlabel('$n^{th}$ strongest assignment')
 # plt.show()
 
 # Step 4. Summarize the result (aggregating the count matrices by SEACells)
 # summarize the data by SEACell (aggregating the count matrices by SEACells)
-SEACell_ad = SEACells.core.summarize_by_SEACell(adata, SEACells_label='SEACell', summarize_layer='raw')
-SEACell_ad
+# SEACell_ad = SEACells.core.summarize_by_SEACell(adata, SEACells_label='SEACell', summarize_layer='raw')
+# SEACell_ad
 
-# (Alternative) summarize the data by soft SEACell (aggregating the count matrices by SEACells
-SEACell_soft_ad = SEACells.core.summarize_by_soft_SEACell(adata, model.A_, celltype_label='global_annotation',summarize_layer='raw', minimum_weight=0.05)
-SEACell_soft_ad
+# # (Alternative) summarize the data by soft SEACell (aggregating the count matrices by SEACells
+# SEACell_soft_ad = SEACells.core.summarize_by_soft_SEACell(adata, model.A_, celltype_label='global_annotation',summarize_layer='raw', minimum_weight=0.05)
+# SEACell_soft_ad
+
 
 # Step 5. visualize the results
-# Plot the metacell assignments
-SEACells.plot.plot_2D(adata, key='X_umap.atac', colour_metacells=False, ax=axs[2, 1])
-SEACells.plot.plot_2D(adata, key='X_umap.atac', colour_metacells=True, ax=axs[3, 0])
-
+# Plot the metacell assignments without coloring metacells
+plot_2D_modified(adata, ax=axs[2, 0], key='X_umap.atac', colour_metacells=False)
+# Plot the metacell assignments with coloring metacells
+plot_2D_modified(adata, ax=axs[2, 1], key='X_umap.atac', colour_metacells=True)
 # Plot the metacell sizes
-SEACells.plot.plot_SEACell_sizes(adata, bins=5, ax=axs[3, 1])
+plot_SEACell_sizes_modified(adata, ax=axs[3, 0], bins=5)
 
+
+# # Step 6. Quantifying the results (celltype_purity, compactness, etc.)
+# # Compute the celltype purity
+# SEACell_purity = SEACells.evaluate.compute_celltype_purity(adata, annotation_class)
+
+# #plt.figure(figsize=(4,4))
+# sns.boxplot(data=SEACell_purity, y='global_annotation_purity', ax=axs[3, 1])
+# axs[3, 1].set_title('Celltype Purity')
+# sns.despine(ax=axs[3, 1])
+# plt.show()
+# plt.close()
+
+# # compute the compactness
+# compactness = SEACells.evaluate.compactness(adata, 'X_lsi')
+
+# sns.boxplot(data=compactness, y='compactness', ax=axs[4, 0])
+# axs[4, 0].set_title('Compactness')
+# sns.despine(ax=axs[4, 0])
+# # plt.close()
+
+# # compute the separation
+# separation = SEACells.evaluate.separation(adata, 'X_lsi',nth_nbr=1)
+
+# # plt.figure(figsize=(4,4))
+# sns.boxplot(data=separation, y='separation', ax=axs[4, 1])
+# axs[4, 1].set_title('Separation')
+# sns.despine(ax=axs[4, 1])
 # Step 6. Quantifying the results (celltype_purity, compactness, etc.)
 # Compute the celltype purity
-SEACell_purity = SEACells.evaluate.compute_celltype_purity(adata, 'global_annotation')
+SEACell_purity = SEACells.evaluate.compute_celltype_purity(adata, annotation_class)
 
-#plt.figure(figsize=(4,4))
-sns.boxplot(data=SEACell_purity, y='global_annotation_purity', ax=axs[4, 0])
-axs[4, 0].set_title('Celltype Purity')
-sns.despine(ax=axs[4, 0])
-plt.show()
-plt.close()
+sns.boxplot(data=SEACell_purity, y='global_annotation_purity', ax=axs[3, 1])
+axs[3, 1].set_title('Celltype Purity')
+sns.despine(ax=axs[3, 1])
 
 # compute the compactness
 compactness = SEACells.evaluate.compactness(adata, 'X_lsi')
 
-sns.boxplot(data=compactness, y='compactness', ax=axs[4, 1])
-axs[4, 1].set_title('Compactness')
-sns.despine(ax=axs[4, 1])
-# plt.close()
+sns.boxplot(data=compactness, y='compactness', ax=axs[4, 0])
+axs[4, 0].set_title('Compactness')
+sns.despine(ax=axs[4, 0])
 
 # compute the separation
-separation = SEACells.evaluate.separation(adata, 'X_lsi',nth_nbr=1)
+separation = SEACells.evaluate.separation(adata, 'X_lsi', nth_nbr=1)
 
-# plt.figure(figsize=(4,4))
-sns.boxplot(data=separation, y='separation', ax=axs[4, 2])
+sns.boxplot(data=separation, y='separation', ax=axs[4, 1])
 axs[4, 1].set_title('Separation')
 sns.despine(ax=axs[4, 1])
 
+# Adjust spacing between plots using subplots_adjust
+# plt.subplots_adjust(wspace=0.3, hspace=0.5)
+
 # Adjust spacing between plots
-plt.tight_layout()
+fig.tight_layout()
 
 # Step 7. Save the results
-adata.write_h5ad(output_path + filename)
+adata.write_h5ad(output_path + f"{data_id}_seacells.h5ad")
+# export the adata.obs
+adata.obs.to_csv(output_path + f"{data_id}_seacells_obs.csv")
 
 # Save the entire figure
-plt.savefig(figpath + 'combined_plots.pdf')
-plt.savefig(figpath + 'combined_plots.png')
-
-def assert_raw_counts(adata):
-    # Check if the data is stored in a sparse matrix format
-    if sp.issparse(adata.X):
-        # Convert to dense format to work with numpy
-        data = adata.X.todense()
-    else:
-        data = adata.X
-
-    # Check if all values in the data are integers
-    if not np.all(np.rint(data) == data):
-        raise ValueError("adata.X does not contain raw counts (integer values).")
+fig.savefig(figpath + f"combined_plots_{data_id}.pdf")
+fig.savefig(figpath + f"combined_plots_{data_id}.png")
