@@ -122,7 +122,7 @@ filter_low_quality_cells <- function(object = multiome,
     DefaultAssay(multiome) <- "ATAC"
 
     multiome <- NucleosomeSignal(multiome)
-    multiome <- TSSEnrichment(multiome)
+    multiome <- TSSEnrichment(multiome, fast=FALSE) # fast=TRUE is faster but does not save the position enrichment matrix for TSSPlot later on
 
     # filter out low quality cells
     # NOTE that we're not being meticulous about the thresholds here, especially the lower limits for RNA/ATAC fragment counts.
@@ -504,7 +504,7 @@ print("gene activity computed, RDS object saved")
 
 # step 7. convert the RDS object to h5ad object (both RNA and ATAC)
 # TBD: "assays_save" parameter should be defined at the very top
-export_seurat_assays(object = multiome,666
+export_seurat_assays(object = multiome,
                     output_dir = output_filepath,
                     data_id = data_id,
                     assays_save= c("RNA", "peaks_merged"))
