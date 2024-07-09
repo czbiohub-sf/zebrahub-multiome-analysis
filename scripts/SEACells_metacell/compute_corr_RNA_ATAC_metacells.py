@@ -1,3 +1,4 @@
+# A python script to compute the correlation between RNA(gene) and ATAC (peak) correlation for a specific chromosome.
 import argparse
 import scanpy as sc
 import pandas as pd
