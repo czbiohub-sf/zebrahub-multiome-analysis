@@ -48,15 +48,23 @@ print(adata_ATAC)
 adata_ATAC.obs["annotation_ML_coarse"] = adata_RNA.obs["annotation_ML_coarse"]
 adata_ATAC.uns['annotation_ML_coarse_colors'] = adata_RNA.uns['annotation_ML_coarse_colors']
 
+# define the annotation_class (could be inputted as an argument)
+annotation_class = "annotation_ML_coarse"
+
 # Step 1. subset for individual dataset
 list_datasets = ['TDR126', 'TDR127', 'TDR128',
                 'TDR118reseq', 'TDR119reseq', 'TDR125reseq', 'TDR124reseq']
+# a test-run (smaller batch of the samples)
+# list_datasets = ['TDR126','TDR127']
 
 # define an empty dataframe to save the genes-by-corr.coeffs (for each dataset)
 combined_df = pd.DataFrame()
 
-# First, get the intersection of all genes across all datasets
-all_genes = set(adata_RNA.var_names).intersection(set(adata_ATAC.var_names))
+# # First, get the intersection of all genes across all datasets
+# all_genes = set(adata_RNA.var_names).intersection(set(adata_ATAC.var_names))
+
+# define a list to save the "correlaton_df" from each dataset
+correlation_df_list = []
 
 # A for loop to subset the RNA and ATAC objects for each dataset
 for data_id in list_datasets:
@@ -91,7 +99,7 @@ for data_id in list_datasets:
     # sample_id = data_id.replace("reseq","")
 
     # import the seacell metadata (dataframe)
-    df_seacells = pd.read_csv(seacellpath + f"{data_id}_seacells_obs.csv", index_col=0)
+    df_seacells = pd.read_csv(seacellpath + f"{data_id}_seacells_obs_{annotation_class}.csv", index_col=0)
     df_seacells
 
     # create a dictionary of {"cell_id":"SEACell"}
@@ -105,9 +113,15 @@ for data_id in list_datasets:
     # this is for SEACElls operations
     atac_ad.var["GC"] = 0.5
 
+    # Save the adata objects (rna_ad, and atac_ad) for the SEACells aggregation
+    # These can be used later for the plotting of the gene activity across metacells
+    rna_ad.write_h5ad(seacellpath + f"{data_id}/{sample_id}_RNA_seacells.h5ad")
+    atac_ad.write_h5ad(seacellpath + f"{data_id}/{sample_id}_ATAC_seacells.h5ad")
+
     # Aggregate the counts across SEACells
     # NOTE. the aggregated "raw" counts are saved in adata.raw slot, and the adata.X contains log-normalized counts
     # NOTE. the normalization was done using using sc.pp.normalize_total, which takes the median # of UMIs/cell across all cells in that dataset as the denominator
+    # NOTE. this step filters out genes whose values are all zeros (this was built-in in scanpy, probably)
     atac_meta_ad, rna_meta_ad = SEACells.genescores.prepare_multiome_anndata(atac_ad, rna_ad, SEACells_label='SEACell')
 
     # save the aggregated adata objects
@@ -129,17 +143,16 @@ for data_id in list_datasets:
     correlation_df, fig = compute_gene_correlations(rna_meta_ad, atac_meta_ad, data_id)
 
     # Concatenate the results into the combined DataFrame
-    if combined_df.empty:
-        combined_df = correlation_df
-    else:
-        # combined_df = pd.concat([combined_df, correlation_df], axis=1)
-        combined_df[data_id] = correlation_df[data_id]
-    # # Save the correlation DataFrame
-    combined_df.to_csv(f'{seacellpath}/gene_rna_gene_activity_corr_coeffs_alltimepoints.csv', index=False)
+    # append to the master list object
+    correlation_df_list.append(correlation_df)
 
     # Save the figure
     fig.savefig(f'{seacellpath}/{data_id}_correlation_histogram.png')
     plt.close(fig)
 
+combined_df = pd.concat(correlation_df_list, axis=1, join="inner")
+combined_df.to_csv(f'{seacellpath}/rna_gene_activity_corr_coeffs_per_gene.csv', index=True)
+
+print("Done!")
 # At the end of your script, shut down Ray gracefully
 ray.shutdown()
