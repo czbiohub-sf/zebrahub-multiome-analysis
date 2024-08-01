@@ -18,8 +18,6 @@ import seaborn as sns
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 from mpl_toolkits.axes_grid1.inset_locator import InsetPosition
 
-import argparse
-
 ## Input arguments
 # examples:
 # input_path = "/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/01_Signac_processed/TDR118reseq/TDR118_processed_peaks_merged.h5ad" 
@@ -27,6 +25,8 @@ import argparse
 # data_id = "TDR118_ATAC" # filename = f"{data_id}_SEACells.h5ad"
 # annotation_class = "global_annotation"
 # figpath = ""
+# metadata_path = "/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/01_Signac_processed/master_rna_atac_metadata.csv" 
+# NOTE. we'll filter out the "low_quality_cells" from each timepoint/dataset, as they will not be helpful for computing the metacells
 
 # Output(s): anndata object(s) with MetaCell scores (h5ad format)
 # NOTE. We currently use only the "adata" object for downstream analyses, not the rest.
@@ -51,6 +51,7 @@ parser.add_argument('output_path', type=str, help='A filepath to save the output
 parser.add_argument('data_id', type=str, help='Name of the output file.')
 parser.add_argument('annotation_class', type=str, help='Annotation class for the cell type assignment')
 parser.add_argument('figpath', type=str, help='Path for the plots/figures')
+#parser.add_argument('metadata_path', type=str, help='Path for the metadata file (adata.obs)')
 
 # Parse the arguments
 args = parser.parse_args()
@@ -61,6 +62,7 @@ output_path = args.output_path
 data_id = args.data_id
 annotation_class = args.annotation_class
 figpath = args.figpath
+#metadata_path = args.metadata_path
 
 # Some plotting aesthetics
 sns.set_style('ticks')
@@ -197,6 +199,32 @@ columns_to_keep = [col for col in adata.obs.columns if not col.startswith("predi
 # Subset the adata.obs with the columns to keep
 adata.obs = adata.obs[columns_to_keep]
 
+# import the master metadata (to transfer the celltype annotations, and also )
+metadata_all = pd.read_csv("/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/01_Signac_processed/master_rna_atac_metadata.csv", index_col=0)
+print(metadata_all.head())
+
+# subset the metadata for the current dataset
+sample_id = data_id.replace("reseq","")
+
+# subset for each "dataset"
+metadata = metadata_all[metadata_all.dataset==sample_id]
+
+# reformat the indices (to remove the additional index from f"XXXX_{index}")
+metadata.index = metadata.index.str.rsplit('_', n=1).str[0]
+metadata.index
+
+# filter out "low_quality_cells" by using the cell_id in metadata
+adata = adata[adata.obs_names.isin(metadata.index)]
+print(adata)
+
+cols_to_copy = ['annotation_ML', 'scANVI_zscape',
+       'annotation_ML_coarse', 'dev_stage']
+
+for col in cols_to_copy:
+    if col not in adata.obs.columns:
+        adata.obs[col] = metadata[col]
+print(adata)
+
 
 # Step 2. pre-proecessing
 # NOTE. Make sure that we have "raw" counts for SEACells (adata.X)
@@ -324,7 +352,7 @@ plot_SEACell_sizes_modified(adata, ax=axs[3, 0], bins=5)
 # Compute the celltype purity
 SEACell_purity = SEACells.evaluate.compute_celltype_purity(adata, annotation_class)
 
-sns.boxplot(data=SEACell_purity, y='global_annotation_purity', ax=axs[3, 1])
+sns.boxplot(data=SEACell_purity, y=f'{annotation_class}_purity', ax=axs[3, 1])
 axs[3, 1].set_title('Celltype Purity')
 sns.despine(ax=axs[3, 1])
 
@@ -349,10 +377,10 @@ sns.despine(ax=axs[4, 1])
 fig.tight_layout()
 
 # Step 7. Save the results
-adata.write_h5ad(output_path + f"{data_id}_seacells.h5ad")
+adata.write_h5ad(output_path + f"{data_id}_seacells_{annotation_class}.h5ad")
 # export the adata.obs
-adata.obs.to_csv(output_path + f"{data_id}_seacells_obs.csv")
+adata.obs.to_csv(output_path + f"{data_id}_seacells_obs_{annotation_class}.csv")
 
 # Save the entire figure
-fig.savefig(figpath + f"combined_plots_{data_id}.pdf")
-fig.savefig(figpath + f"combined_plots_{data_id}.png")
+fig.savefig(figpath + f"combined_plots_{data_id}_{annotation_class}.pdf")
+fig.savefig(figpath + f"combined_plots_{data_id}_{annotation_class}.png")

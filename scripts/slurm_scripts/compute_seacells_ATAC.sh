@@ -20,6 +20,7 @@ fi
 # 3) data_id: name of the output file.
 # 4) annotation_class: annotation class for the celltype assignment
 # 5) figpath: path for the plots/figures
+# 6) metadata_path: a filepath to the metadata file
 
 # Assign command-line arguments to variables
 # Define arguments for the first script
@@ -28,6 +29,7 @@ output_path=$2 # output filepath
 data_id=$3 # data_id
 annotation=$4 # annotation class
 figpath=$5 # output figure path
+# metadata_path=$6 # metadata path
 
 # Create the output directory if it doesn't exist
 # mkdir -p "$input_path"
