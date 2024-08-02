@@ -106,6 +106,71 @@ import celloracle as co
 from celloracle.applications import Oracle_development_module
 co.__version__
 
+# define the color palettes for the celltypes (oracle.adata)
+# a color palette for the "coarse" grained celltype annotation ("annotation_ML_coarse")
+cell_type_color_dict = {
+    'NMPs': '#8dd3c7',
+    'PSM': '#008080',
+    'differentiating_neurons': '#bebada',
+    'endocrine_pancreas': '#fb8072',
+    'endoderm': '#80b1d3',
+    'enteric_neurons': '#fdb462',
+    'epidermis': '#b3de69',
+    'fast_muscle': '#df4b9b',
+    'floor_plate': '#d9d9d9',
+    'hatching_gland': '#bc80bd',
+    'heart_myocardium': '#ccebc5',
+    'hemangioblasts': '#ffed6f',
+    'hematopoietic_vasculature': '#e41a1c',
+    'hindbrain': '#377eb8',
+    'lateral_plate_mesoderm': '#4daf4a',
+    'midbrain_hindbrain_boundary': '#984ea3',
+    'muscle': '#ff7f00',
+    'neural': '#e6ab02',
+    'neural_crest': '#a65628',
+    'neural_floor_plate': '#66a61e',
+    'neural_optic': '#999999',
+    'neural_posterior': '#393b7f',
+    'neural_telencephalon': '#fdcdac',
+    'neurons': '#cbd5e8',
+    'notochord': '#f4cae4',
+    'optic_cup': '#c0c000',
+    'pharyngeal_arches': '#fff2ae',
+    'primordial_germ_cells': '#f1e2cc',
+    'pronephros': '#cccccc',
+    'somites': '#1b9e77',
+    'spinal_cord': '#d95f02',
+    'tail_bud': '#7570b3'
+}
+
+# Define the function to generate the color palettes for the cell types
+def generate_colorandum(oracle, annotation):
+    """
+    Generate the colorandum for the cell types using a predefined color dictionary.
+    """
+    custom_palette = cell_type_color_dict.copy()
+    
+    categories_in_order = oracle.adata.obs[annotation].cat.categories
+    ordered_palette = {cat: custom_palette[cat] for cat in categories_in_order if cat in custom_palette}
+    annotation_color = annotation + "_color"
+    oracle.adata.uns[annotation_color] = ordered_palette
+
+    cell_types = oracle.adata.obs[annotation].values
+    colors_for_cells = np.array([custom_palette.get(cell_type, '#000000') for cell_type in cell_types])
+
+    oracle.colorandum = colors_for_cells
+
+    return oracle
+
+    # Map each cell type to its corresponding color
+    colors_for_cells = np.array([custom_palette.get(cell_type, '#000000') for cell_type in cell_types])  # Default to black if not found
+
+    # Replace the colorandum in the oracle object
+    oracle.colorandum = colors_for_cells
+
+    return oracle
+
+# define a function to compute in silico KO simulation (systematically)
 def compute_in_silico_KO(oracle_path, data_id, annotation, figpath, 
                         list_KO_genes="pax6a", 
                         use_pseudotime=False, pseudotime_path=None,
@@ -113,15 +178,20 @@ def compute_in_silico_KO(oracle_path, data_id, annotation, figpath,
 
     # Step 1. Load the data
     # 1.1. Load processed Oracle object
+    parent_dir = oracle_path
+    # define the oracle object specific sub-directory
     oracle_path = oracle_path + f"{data_id}/"
-    oracle = co.load_hdf5(oracle_path + f"10_{data_id}_pseudotime.celloracle.oracle")
-    oracle
+    # oracle = co.load_hdf5(oracle_path + f"10_{data_id}_pseudotime.celloracle.oracle")
+    oracle = co.load_hdf5(oracle_path + f"06_{data_id}.celloracle.oracle")
+    print(oracle)
+    print("oracle object imported")
+
 
     # Step 1-2. Load the pseudotime data (in case we use Slingshot/Palantir, other than DPT)
     # Load the pseudotime data
     if use_pseudotime:
-        print("Using Slingshot/Palantir pseudotime")
-        pseudotime_df = pd.read_csv(pseudotime_path, index_col=0)
+        print("Using the Slingshot pseudotime") # or Palantir (feature request)
+        pseudotime_df = pd.read_csv(parent_dir + pseudotime_path + f"{data_id}_slingshot.csv", index_col=0)
         oracle.adata.obs["Pseudotime"] = pseudotime_df["Pseudotime"]
         oracle.adata.obs["Pseudotime_Lineage_Meso"] = pseudotime_df["Pseudotime_Lineage_Meso"]
         oracle.adata.obs["Pseudotime_Lineage_NeuroEcto"] = pseudotime_df["Pseudotime_Lineage_NeuroEcto"]
@@ -130,13 +200,13 @@ def compute_in_silico_KO(oracle_path, data_id, annotation, figpath,
 
     # Optional: Change the color palette
     # Cell types
-    cell_types = [
-        'Epidermal', 'Lateral_Mesoderm', 'PSM', 'Neural_Posterior',
-        'Neural_Anterior', 'Neural_Crest', 'Differentiating_Neurons',
-        'Adaxial_Cells', 'Muscle', 'Somites', 'Endoderm', 'Notochord',
-        'NMPs'
-    ]
-    oracle = generate_colorandum(oracle, annotation, cell_types)
+    # cell_types = [
+    #     'Epidermal', 'Lateral_Mesoderm', 'PSM', 'Neural_Posterior',
+    #     'Neural_Anterior', 'Neural_Crest', 'Differentiating_Neurons',
+    #     'Adaxial_Cells', 'Muscle', 'Somites', 'Endoderm', 'Notochord',
+    #     'NMPs'
+    # ]
+    oracle = generate_colorandum(oracle, annotation)
 
     ## Step 1.2. Load inferred GRNs (Links object)
     links = co.load_hdf5(oracle_path + f"08_{data_id}_celltype_GRNs.celloracle.links")
@@ -253,10 +323,10 @@ def compute_in_silico_KO(oracle_path, data_id, annotation, figpath,
     # First, define the lineages
     # Get cell_idx for each lineage
     cell_idx_Lineage_mesoderm = np.where(oracle.adata.obs[annotation].isin([
-        'NMPs', 'PSM', 'Somites', 'Muscle']))[0]
+        'NMPs', 'tail_bud','PSM', 'somites', 'fast_muscle']))[0]
 
     cell_idx_Lineage_neuro_ectoderm = np.where(oracle.adata.obs[annotation].isin([
-        'NMPs', 'Neural_Posterior', 'Neural_Anterior']))[0]
+        'NMPs', 'spinal_cord', 'neural_posterior']))[0]
     
     # Make dictionary to store the cell index list
     index_dictionary = {"Whole_cells": None,
@@ -288,47 +358,47 @@ def compute_in_silico_KO(oracle_path, data_id, annotation, figpath,
 
 
 # define a function to generate the color palettes for the cell types
-def generate_colorandum(oracle, annotation, cell_types):
-    """
-    Generate the colorandum for the cell types
-    """
-    # Generate "Set3" color palette
-    set3_palette = sns.color_palette("Set3", n_colors=len(cell_types))
+# def generate_colorandum(oracle, annotation, cell_types):
+#     """
+#     Generate the colorandum for the cell types
+#     """
+#     # Generate "Set3" color palette
+#     set3_palette = sns.color_palette("Set3", n_colors=len(cell_types))
 
-    # Suppose the light yellow is the 10th color in the palette (9th index, as indexing is 0-based)
-    # and you want to replace it with teal color
-    teal_color = (0.0, 0.5019607843137255, 0.5019607843137255)  # RGB for teal
-    set3_palette[1] = teal_color  # Replace the light yellow with teal
+#     # Suppose the light yellow is the 10th color in the palette (9th index, as indexing is 0-based)
+#     # and you want to replace it with teal color
+#     teal_color = (0.0, 0.5019607843137255, 0.5019607843137255)  # RGB for teal
+#     set3_palette[1] = teal_color  # Replace the light yellow with teal
 
-    # Assign colors to cell types
-    custom_palette = {cell_type: color for cell_type, color in zip(cell_types, set3_palette)}
-    # Change the color for 'NMPs' to a dark blue
-    custom_palette['NMPs'] = (0.12941176470588237, 0.4, 0.6745098039215687)  # Dark blue color
+#     # Assign colors to cell types
+#     custom_palette = {cell_type: color for cell_type, color in zip(cell_types, set3_palette)}
+#     # Change the color for 'NMPs' to a dark blue
+#     custom_palette['NMPs'] = (0.12941176470588237, 0.4, 0.6745098039215687)  # Dark blue color
 
-   # Manually add 'unassigned' with light grey color
-    custom_palette['unassigned'] = (0.827, 0.827, 0.827)  # Light grey color
+#    # Manually add 'unassigned' with light grey color
+#     custom_palette['unassigned'] = (0.827, 0.827, 0.827)  # Light grey color
 
-    # Get the order of categories as they appear in the dataset
-    categories_in_order = oracle.adata.obs[annotation].cat.categories
+#     # Get the order of categories as they appear in the dataset
+#     categories_in_order = oracle.adata.obs[annotation].cat.categories
 
-    # Reorder your palette dictionary to match this order
-    ordered_palette = {cat: custom_palette[cat] for cat in categories_in_order if cat in custom_palette}
+#     # Reorder your palette dictionary to match this order
+#     ordered_palette = {cat: custom_palette[cat] for cat in categories_in_order if cat in custom_palette}
 
-    # Now assign this ordered palette back to the AnnData object
-    annotation_color = annotation + "_color"
-    oracle.adata.uns[annotation_color] = ordered_palette
+#     # Now assign this ordered palette back to the AnnData object
+#     annotation_color = annotation + "_color"
+#     oracle.adata.uns[annotation_color] = ordered_palette
 
-    # Change the color palette in the Oracle object
-    # Extract the cell type annotations from the AnnData object
-    cell_types = oracle.adata.obs[annotation].values
+#     # Change the color palette in the Oracle object
+#     # Extract the cell type annotations from the AnnData object
+#     cell_types = oracle.adata.obs[annotation].values
 
-    # Map each cell type to its corresponding color
-    colors_for_cells = np.array([custom_palette[cell_type] for cell_type in cell_types])
+#     # Map each cell type to its corresponding color
+#     colors_for_cells = np.array([custom_palette[cell_type] for cell_type in cell_types])
 
-    # Replace the colorandum in the oracle object
-    oracle.colorandum = colors_for_cells
+#     # Replace the colorandum in the oracle object
+#     oracle.colorandum = colors_for_cells
 
-    return oracle
+#     return oracle
 
 # Define a function to perform the in silico KO simulation
 def pipeline(oracle, gradient, gene_for_KO, index_dictionary=None, 
