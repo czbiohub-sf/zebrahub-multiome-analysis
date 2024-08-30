@@ -52,6 +52,8 @@ parser.add_argument('output_path', type=str, help='A filepath to save the output
 parser.add_argument('data_id', type=str, help='Name of the output file.')
 parser.add_argument('annotation_class', type=str, help='Annotation class for the cell type assignment')
 parser.add_argument('figpath', type=str, help='Path for the plots/figures')
+# add the n_cells (for the number of cells per SEACells)
+parser.add_argument('n_cells', type=int, help='Number of cells per SEACells')
 #parser.add_argument('metadata_path', type=str, help='Path for the metadata file (adata.obs)')
 
 # Parse the arguments
@@ -63,6 +65,7 @@ output_path = args.output_path
 data_id = args.data_id
 annotation_class = args.annotation_class
 figpath = args.figpath
+n_cells = args.n_cells
 #metadata_path = args.metadata_path
 
 # create the figpath if it doesn't exist yet
@@ -195,20 +198,42 @@ def plot_SEACell_sizes_modified(
 # NOTE. make sure to check this section before running the script (file formats)
 dataset_name = data_id.replace("reseq", "")
 
-# load the original adata ("X_lsi")
-# NOTE. The original adata object should contain the "X_lsi" embedding
-adata_orig = sc.read_h5ad("/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/01_Signac_processed/" + f"{data_id}/{dataset_name}_processed_peaks_merged.h5ad")
+# # NOTE. The original adata object should contain the "X_lsi" embedding
 # adata = sc.read_h5ad(input_path + f"{data_id}/{dataset_name}_processed_peaks_merged.h5ad")
 adata = sc.read_h5ad(input_path + f"{dataset_name}_nmps_manual_annotation.h5ad")
 print(adata)
 
+# load the original adata ("X_lsi_integrated")
+# import the master_metadata (cell annotations, cell_ids from the integrated object)
+master_metadata = pd.read_csv("/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/01_Signac_processed/master_rna_atac_metadata.csv", index_col=0)
+
+# import the "X_lsi_integrated" from the integrated object
+lsi_integrated = pd.read_csv("/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/01_Signac_processed/integrated_lsi.csv", index_col=0)
+
+# filter out the "low_quality_cells"
+lsi_integrated = lsi_integrated[lsi_integrated.index.isin(master_metadata.index)]
+
+# subset the metadata (per dataset)
+metadata_sub = master_metadata[master_metadata.dataset==dataset_name]
+
+# subset integrated_lsi (per dataset - using the indices from the above)
+lsi_integrated_sub = lsi_integrated[lsi_integrated.index.isin(metadata_sub.index)]
+lsi_integrated_sub = lsi_integrated_sub[lsi_integrated_sub.index.isin(adata.obs_names)]
+
+# drop the 1st LSI component
+lsi_integrated_sub_filtered = lsi_integrated_sub.drop("integratedlsi_1", axis=1)
+lsi_integrated_sub_filtered
+
+# Reorder lsi components to match adata.obs_names index
+lsi_integrated_sub_filtered = lsi_integrated_sub_filtered.reindex(adata.obs.index)
+lsi_integrated_sub_filtered.head()
+
 # reformatg the adata.obs_names to match the original adata object
-adata.obs_names = [s.split('_')[0] for s in adata.obs_names]
-adata.obs.head()
+# adata.obs_names = [s.split('_')[0] for s in adata.obs_names]
+# adata.obs.head()
 
 # copy the "X_lsi" embedding from the original adata object
-adata_orig = adata_orig[adata_orig.obs_names.isin(adata.obs_names)]
-adata.obsm["X_lsi"] = adata_orig.obsm["X_lsi"]
+adata.obsm["X_lsi_integrated"] = lsi_integrated_sub_filtered.iloc[:,0:39].to_numpy()
 
 # optional. cleaning up the adata.obs fields
 # List of columns to keep (those not starting with "prediction")
@@ -216,32 +241,6 @@ columns_to_keep = [col for col in adata.obs.columns if not col.startswith("predi
 
 # Subset the adata.obs with the columns to keep
 adata.obs = adata.obs[columns_to_keep]
-
-# NOTE. UNCOMMENT the following lines if you want to transfer the metadata from the master metadata file
-# # import the master metadata (to transfer the celltype annotations, and also )
-# metadata_all = pd.read_csv("/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/01_Signac_processed/master_rna_atac_metadata.csv", index_col=0)
-# print(metadata_all.head())
-
-# # subset the metadata for the current dataset
-# sample_id = data_id.replace("reseq","")
-
-# # subset for each "dataset"
-# metadata = metadata_all[metadata_all.dataset==sample_id]
-
-# # reformat the indices (to remove the additional index from f"XXXX_{index}")
-# metadata.index = metadata.index.str.rsplit('_', n=1).str[0]
-# metadata.index
-
-# # filter out "low_quality_cells" by using the cell_id in metadata
-# adata = adata[adata.obs_names.isin(metadata.index)]
-# print(adata)
-
-# cols_to_copy = ['annotation_ML', 'scANVI_zscape',
-#        'annotation_ML_coarse', 'dev_stage']
-
-# for col in cols_to_copy:
-#     if col not in adata.obs.columns:
-#         adata.obs[col] = metadata[col]
 print(adata)
 
 
@@ -271,8 +270,8 @@ except ValueError as e:
 ## User defined parameters
 
 ## Core parameters 
-n_SEACells = np.floor((adata.n_obs)/75)
-build_kernel_on = 'X_lsi' # key in ad.obsm to use for computing metacells
+n_SEACells = np.floor((adata.n_obs)/n_cells)
+build_kernel_on = 'X_lsi_integrated' # key in ad.obsm to use for computing metacells
                           # This would be replaced by 'X_pca' for RNA data
 
 ## Additional parameters
@@ -383,14 +382,14 @@ axs[3, 1].set_title('Celltype Purity')
 sns.despine(ax=axs[3, 1])
 
 # compute the compactness
-compactness = SEACells.evaluate.compactness(adata, 'X_lsi')
+compactness = SEACells.evaluate.compactness(adata, 'X_lsi_integrated')
 
 sns.boxplot(data=compactness, y='compactness', ax=axs[4, 0])
 axs[4, 0].set_title('Compactness')
 sns.despine(ax=axs[4, 0])
 
 # compute the separation
-separation = SEACells.evaluate.separation(adata, 'X_lsi', nth_nbr=1)
+separation = SEACells.evaluate.separation(adata, 'X_lsi_integrated', nth_nbr=1)
 
 sns.boxplot(data=separation, y='separation', ax=axs[4, 1])
 axs[4, 1].set_title('Separation')
@@ -403,10 +402,10 @@ sns.despine(ax=axs[4, 1])
 fig.tight_layout()
 
 # Step 7. Save the results
-adata.write_h5ad(output_path + f"{dataset_name}_seacells_{annotation_class}.h5ad")
+adata.write_h5ad(output_path + f"{dataset_name}_seacells_{annotation_class}_{n_cells}cells.h5ad")
 # export the adata.obs
-adata.obs.to_csv(output_path + f"{dataset_name}_seacells_obs_{annotation_class}.csv")
+adata.obs.to_csv(output_path + f"{dataset_name}_seacells_obs_{annotation_class}_{n_cells}cells.csv")
 
 # Save the entire figure
-fig.savefig(figpath + f"combined_plots_{dataset_name}_{annotation_class}.pdf")
-fig.savefig(figpath + f"combined_plots_{dataset_name}_{annotation_class}.png")
+fig.savefig(figpath + f"combined_plots_{dataset_name}_{annotation_class}_{n_cells}cells.pdf")
+fig.savefig(figpath + f"combined_plots_{dataset_name}_{annotation_class}_{n_cells}cells.png")
