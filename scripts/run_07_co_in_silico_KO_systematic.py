@@ -6,11 +6,10 @@ This script performs systematic in silico knock-out simulations for genes in a G
 computes cell-cell transition probabilities, and projects them into 2D space.
 
 Author: Yang-Joon Kim (yang-joon.kim@czbiohub.org)
-Last updated: 08/21/2024
+Last updated: 09/16/2024
 
 Usage:
     python script_name.py --oracle_path PATH1 --adata_path PATH2 --figpath PATH3 --data_id ID --list_KO_genes GENES
-
 Arguments:
 
 """
@@ -22,7 +21,6 @@ import pandas as pd
 import numpy as np
 import scanpy as sc
 from anndata import AnnData
-import glob
 import os
 import scipy as sp
 from scipy import sparse
