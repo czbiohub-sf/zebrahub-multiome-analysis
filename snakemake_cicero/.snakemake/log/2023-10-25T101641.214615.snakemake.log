@@ -1,4 +1,0 @@
-Building DAG of jobs...
-WildcardError in rule all in file /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/zebrahub-multiome-analysis/snakemake_cicero/Snakefile, line 7:
-Wildcards in input files cannot be determined from output files:
-'output_path'

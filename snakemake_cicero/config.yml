@@ -1,4 +1,0 @@
-cicero_script_path: /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/zebrahub-multiome-analysis/scripts/run_02_compute_CCANS_cicero.R
-assay: "peaks_merged"
-peaktype: "peaks_merged"
-dim_reduced: "UMAP.ATAC" # this should be capitalized
