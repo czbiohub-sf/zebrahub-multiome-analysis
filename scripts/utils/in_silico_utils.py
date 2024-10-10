@@ -35,36 +35,54 @@ cell_type_color_dict = {
 # computing the average of 2D transition vectors @Metacell level
 def average_2D_trans_vecs_metacells(adata, metacell_col="SEACell", 
                                     basis='umap_aligned',key_added='WT'):
+    
+    # # WT
+    # if key_added=="WT":
+    #     key_added = "WT_global_nmps_umap_aligned"
+    # else:
+    #     key_added = key_added
+    
     X_umap = adata.obsm[f'X_{basis}']
-    T_fwd = adata.obsm[f'{key_added}_{basis}']  # Your cell-level transition vectors
-    metacells = adata.obs[metacell_col].cat.codes
-    n_metacells = len(adata.obs[metacell_col].cat.categories)
+    # Your cell-level 2D transition vectors
+    # V_cell = adata.obsm[f'{key_added}_{basis}'] 
+    V_cell = adata.obsm[f"{key_added}_{basis}"]
+
+    # metacells = adata.obs[metacell_col].cat.codes
+    
+    # Convert metacell column to categorical if it's not already
+    if not pd.api.types.is_categorical_dtype(adata.obs[metacell_col]):
+        metacells = pd.Categorical(adata.obs[metacell_col])
+    else:
+        metacells = adata.obs[metacell_col]
+    # number of metacells    
+    n_metacells = len(metacells.categories)
     
     # X_metacell is the average UMAP position of the metacells
     # V_metacell is the average transition vector of the metacells
     X_metacell = np.zeros((n_metacells, 2))
     V_metacell = np.zeros((n_metacells, 2))
     
-    for i in range(n_metacells):
-        mask = metacells == i
+    for i, category in enumerate(metacells.categories):
+        mask = metacells == category
         X_metacell[i] = X_umap[mask].mean(axis=0)
-        V_metacell[i] = T_fwd[mask].mean(axis=0)
+        V_metacell[i] = V_cell[mask].mean(axis=0)
     
     return X_metacell, V_metacell
 
 # plotting function for the averaged trans_vectors
 # metacell_col = 'SEACell'  # Replace with your metacell column name
 # basis="umap_aligned"
-def plot_metacell_transitions(adata, figpath, data_id, X_metacell, V_metacell,
+def plot_metacell_transitions(adata, X_metacell, V_metacell, data_id,
+                                figpath=None,
                                 metacell_col="SEACell", 
                                 annotation_class="manual_annotation",
-                                basis='umap_aligned', 
+                                basis='umap_aligned', genotype="WT",
                                 cell_type_color_dict = cell_type_color_dict,
                                 cell_size=10, SEACell_size=20,
                                 scale=1, arrow_scale=15, arrow_width=0.002, dpi=120):
     
     # create a figure object (matplotlib)
-    fig, ax = plt.subplots(figsize=(8, 6), dpi=100)
+    fig, ax = plt.subplots(figsize=(8, 6), dpi=600)
 
     # Prepare data for plotting
     umap_coords = pd.DataFrame(adata.obsm[f'X_{basis}'], columns=[0, 1], index=adata.obs_names)
@@ -99,21 +117,114 @@ def plot_metacell_transitions(adata, figpath, data_id, X_metacell, V_metacell,
     # Customize the plot
     ax.set_xlabel('UMAP 1')
     ax.set_ylabel('UMAP 2')
+    # Remove x and y ticks
+    ax.set_xticks([])
+    ax.set_yticks([])
     ax.grid(False)
-
-    # Create custom legend
-    handles = [mpatches.Patch(color=color, label=label) 
-            for label, color in cell_type_color_dict.items() 
-            if label in umap_data['celltype'].unique()]
-    ax.legend(handles=handles, title='Cell Types', bbox_to_anchor=(1.05, 1), loc='upper left')
 
     plt.title(f'Metacell Transitions on {basis.upper()}')
     plt.tight_layout()
     plt.grid(False)
-    plt.savefig(figpath + f"umap_WT_metacell_aggre_trans_probs_{data_id}.png")
-    plt.savefig(figpath + f"umap_WT_metacell_aggre_trans_probs_{data_id}.pdf")
+    
+    if figpath:
+        plt.savefig(figpath + f"umap_{genotype}_metacell_aggre_trans_probs_{data_id}.png")
+        plt.savefig(figpath + f"umap_{genotype}_metacell_aggre_trans_probs_{data_id}.pdf")
     # plt.show()
     return fig
+
+# # Color palette for cell types
+# cell_type_color_dict = {
+#     'NMPs': '#8dd3c7',
+#     'PSM': '#008080',
+#     'fast_muscle': '#df4b9b',
+#     'neural_posterior': '#393b7f',
+#     'somites': '#1b9e77',
+#     'spinal_cord': '#d95f02',
+#     'tail_bud': '#7570b3'
+# }
+
+# # computing the average of 2D transition vectors @Metacell level
+# def average_2D_trans_vecs_metacells(adata, metacell_col="SEACell", 
+#                                     basis='umap_aligned',key_added='WT'):
+#     X_umap = adata.obsm[f'X_{basis}']
+#     T_fwd = adata.obsm[f'{key_added}_{basis}']  # Your cell-level transition vectors
+#     metacells = adata.obs[metacell_col].cat.codes
+#     n_metacells = len(adata.obs[metacell_col].cat.categories)
+    
+#     # X_metacell is the average UMAP position of the metacells
+#     # V_metacell is the average transition vector of the metacells
+#     X_metacell = np.zeros((n_metacells, 2))
+#     V_metacell = np.zeros((n_metacells, 2))
+    
+#     for i in range(n_metacells):
+#         mask = metacells == i
+#         X_metacell[i] = X_umap[mask].mean(axis=0)
+#         V_metacell[i] = T_fwd[mask].mean(axis=0)
+    
+#     return X_metacell, V_metacell
+
+# # plotting function for the averaged trans_vectors
+# # metacell_col = 'SEACell'  # Replace with your metacell column name
+# # basis="umap_aligned"
+# def plot_metacell_transitions(adata, figpath, data_id, X_metacell, V_metacell,
+#                                 metacell_col="SEACell", 
+#                                 annotation_class="manual_annotation",
+#                                 basis='umap_aligned', 
+#                                 cell_type_color_dict = cell_type_color_dict,
+#                                 cell_size=10, SEACell_size=20,
+#                                 scale=1, arrow_scale=15, arrow_width=0.002, dpi=120):
+    
+#     # create a figure object (matplotlib)
+#     fig, ax = plt.subplots(figsize=(8, 6), dpi=100)
+
+#     # Prepare data for plotting
+#     umap_coords = pd.DataFrame(adata.obsm[f'X_{basis}'], columns=[0, 1], index=adata.obs_names)
+#     umap_data = umap_coords.join(adata.obs[[metacell_col, annotation_class]])
+#     umap_data = umap_data.rename(columns={annotation_class: 'celltype'})
+
+#     # Plot single cells
+#     sns.scatterplot(
+#         x=0, y=1, hue='celltype', data=umap_data, s=cell_size, 
+#         palette=cell_type_color_dict, legend=None, ax=ax, alpha=0.7
+#     )
+
+#     # Calculate most prevalent cell type for each metacell
+#     most_prevalent = adata.obs.groupby(metacell_col)[annotation_class].agg(lambda x: x.value_counts().idxmax())
+
+#     # Prepare metacell data
+#     mcs = umap_data.groupby(metacell_col).mean().reset_index()
+#     mcs['celltype'] = most_prevalent.values
+
+#     # Plot metacells
+#     sns.scatterplot(
+#         x=0, y=1, s=SEACell_size, hue='celltype', data=mcs,
+#         palette=cell_type_color_dict, edgecolor='black', linewidth=1.25,
+#         legend=None, ax=ax
+#     )
+
+#     # Plot transition vectors
+#     Q = ax.quiver(X_metacell[:, 0], X_metacell[:, 1], V_metacell[:, 0], V_metacell[:, 1],
+#                 angles='xy', scale_units='xy', scale=1/arrow_scale, width=arrow_width,
+#                 color='black', alpha=0.8)
+
+#     # Customize the plot
+#     ax.set_xlabel('UMAP 1')
+#     ax.set_ylabel('UMAP 2')
+#     ax.grid(False)
+
+#     # Create custom legend
+#     handles = [mpatches.Patch(color=color, label=label) 
+#             for label, color in cell_type_color_dict.items() 
+#             if label in umap_data['celltype'].unique()]
+#     ax.legend(handles=handles, title='Cell Types', bbox_to_anchor=(1.05, 1), loc='upper left')
+
+#     plt.title(f'Metacell Transitions on {basis.upper()}')
+#     plt.tight_layout()
+#     plt.grid(False)
+#     plt.savefig(figpath + f"umap_WT_metacell_aggre_trans_probs_{data_id}.png")
+#     plt.savefig(figpath + f"umap_WT_metacell_aggre_trans_probs_{data_id}.pdf")
+#     # plt.show()
+#     return fig
 
 # # A function to compute the gaussian kernel
 # def gaussian_kernel(X: np.ndarray, mu: float=0, sigma: float=1) -> np.ndarray:
