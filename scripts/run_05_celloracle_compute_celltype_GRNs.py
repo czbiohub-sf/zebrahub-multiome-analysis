@@ -93,12 +93,19 @@ def compute_cluster_specific_GRNs(output_path, RNAdata_path, baseGRN_path,
     adata = sc.read_h5ad(RNAdata_path)
     adata
 
+    # if the annotation is "whole_embryo", we will create an adata.obs["whole_embryo"]="whole_embryo" for one cluster
+    if annotation=="whole_embryo":
+        adata.obs["whole_embryo"]="whole_embryo"
+
     # Check if adata.X has integer values (raw counts)
-    has_raw_counts = np.all(adata.X.data == adata.X.data.astype(int))
-    if has_raw_counts:
-        print(f"adata.X contains raw counts: {has_raw_counts}")
-    else:
-        raise TypeError("adata.X does not have raw counts.")
+    # recover the raw counts
+    adata.X = adata.layers["counts"].copy()
+    # # check if the adata.X has raw counts
+    # has_raw_counts = np.all(adata.X.data == adata.X.data.astype(int))
+    # if has_raw_counts:
+    #     print(f"adata.X contains raw counts: {has_raw_counts}")
+    # else:
+    #     raise TypeError("adata.X does not have raw counts.")
 
     # Checking the adata object (Optional)
     # sc.pl.umap(adata, color = [annotation, "timepoint"])

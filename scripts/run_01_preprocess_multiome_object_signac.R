@@ -371,7 +371,7 @@ compute_embeddings <- function(object=multiome)
 
     # joint
     # Then, let's compute the weighted nearest neighbors and a joint embedding (UMAP)
-    multiome <- FindMultiModalNeighbors(multiome,reduction.list = list("pca", "lsi"), dims.list = list(1:50, c(2:40)))
+    multiome <- FindMultiModalNeighbors(multiome, reduction.list = list("pca", "lsi"), dims.list = list(1:50, c(2:40)))
     multiome <- RunUMAP(multiome, nn.name = "weighted.nn", n.neighbors = 30, 
                         reduction.name = "umap.joint", reduction.key = "wnnUMAP_")
     # multiome <- FindClusters(multiome, graph.name = "wsnn", algorithm = 4, verbose = FALSE)
@@ -382,13 +382,13 @@ compute_embeddings <- function(object=multiome)
     }
 
 # Step 6 (Optional). Compute the Gene Activity (Signac)
+# reference: https://stuartlab.org/signac/articles/pbmc_vignette#create-a-gene-activity-matrix
 # Signac: quantify the activity of each gene in the genome by simply 
 # summing up the fragments intersecting the gene body and promoter region (2kb upstream)
 # Then, we sum up the fragments for each gene, at each cell to construct a new count matrix, "Gene.Activity".
 # This is all wrapped using "GeneActivity" in Signac
 # Note that Cicero also has its own way of computing the Gene Activity count matrix.
 compute_gene_activity <- function(object=multiome){
-    
     DefaultAssay(multiome) <-"peaks_merged"
     # we use the Signac function "GeneActivity"
     gene.activities <- GeneActivity(multiome)
