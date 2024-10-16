@@ -28,6 +28,7 @@ This directory contains various plots to make the main and supplementary figures
 This directory includes a series of Jupyter notebooks that were used to create each figure or figure panel. We provide a structured tree diagram (below) representing the organization of the notebooks directory. This diagram delineates the specific notebooks responsible for generating each panel of the figures.
 
 notebooks
+```
 |
 ├── 0.Set_timestamp.ipynb
 ├── enrichment
@@ -152,15 +153,20 @@ notebooks
     ├── Suppl_fig7
     │   └── panel_C
     │       └── Suppl_fig7_C_upset_plot.ipynb
-
+```
 scripts/
 
-These are Python modules that contain the bulk of the code used for data analysis and figure generation. They are used directly by the Jupyter notebooks discussed above. Please note that these scripts are explicitly written for, and specific to this project and/or the OpenCell project. They are not intended to form a stand-alone or general-purpose Python package.
+These are R/Python modules that contain the bulk of the code used for data processing. Please note that these scripts are explicitly written for, and specific to this project and/or the Zebrahub-Multiome project. They are not intended to form a stand-alone or general-purpose Python package.
 
 License
 
 This project is licensed under the BSD 3-Clause license - see the LICENSE file for details.
+
 ## Setting up the conda environments
-TBD
+We used three conda environments listed below.
+- 1) basic scanpy environment
+- 2) seacell environment
+- 3) celloracle environment
+  4) 
 ## Citation
 TBD
