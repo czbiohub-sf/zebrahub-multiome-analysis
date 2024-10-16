@@ -1,6 +1,11 @@
-# Zebrahub: single-cell Multiome analysis
+# Zebrahub-Multiome: a time-resolved single-cell multi-omic (RNA+ATAC) sequencing atlas of zebrafish development
 
-This repo contains scripts (Python/R) and Jupyter notebooks used for processing and analyzing single-cell Multiome datasets from early zebrafish embryos. This complements the multimodal atlas of zebrafish (scRNA-seq and imaging), Zebrahub (Lange et al., 2023) publication.
+## Summary
+
+This repo contains scripts (Python/R) and Jupyter notebooks used for processing and analyzing single-cell Multiome datasets from early zebrafish embryos. 
+The manuscript is published here: 
+Data is accessible through the Zebrahub portal: https://zebrahub.ds.czbiohub.org/ 
+
 
 ## Organization
 The structure of this repo is illustrated below.
@@ -13,7 +18,7 @@ The structure of this repo is illustrated below.
 ├── LICENSE
 └── README.md
 ```
-## Setting up a conda environment
+## Setting up the conda environments
 TBD
 ## Citation
 TBD
