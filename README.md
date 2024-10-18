@@ -46,11 +46,11 @@ notebooks
 ├── Fig4
 │   └── Fig4_in_silico_KO.ipynb
 ```
-scripts/
+### scripts/
 
 These are R/Python modules that contain the bulk of the code used for data processing. Please note that these scripts are explicitly written for, and specific to this project and/or the Zebrahub-Multiome project. They are not intended to form a stand-alone or general-purpose Python package.
 
-License
+## License
 
 This project is licensed under the BSD 3-Clause license - see the LICENSE file for details.
 
