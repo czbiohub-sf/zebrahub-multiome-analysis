@@ -30,129 +30,21 @@ This directory includes a series of Jupyter notebooks that were used to create e
 notebooks
 ```
 |
-├── 0.Set_timestamp.ipynb
-├── enrichment
-|   ├── 1.QC_filter_and_impute.ipynb
-|   ├── 2.Batch_selection.ipynb
-|   ├── 3.correlation_filter.ipynb
-|   ├── 4.NOC_processing.ipynb
-|   └── output
-|       ├── correlation_tables
-|       |   └── ..
-|       ├── enrichment_and_volcano_tables
-|       |   └── ..
-|       └── preprocessing
-|           └── ..
-├── Fig1
-│   └── panel_L
-│       ├── Fig1_L_enrichment_heatmap.ipynb
-│       └── output
-│           └── ..
-├── Fig2
-│   ├── panel_B
-│   │   ├── Fig2_B_heatmap.ipynb
-│   │   └── output
-│   │       └── ..
-│   ├── panel_C
-│   │   ├── Fig2_C_consensus_annotation.ipynb
-│   │   └── output
-│   │       └── ..
-│   └── panel_D
-│       ├── Fig2_D_umap.ipynb
-│       └── output
-│           └── ..
-├── Fig3
-│   ├── panels_A_B_F
-│   │   ├── Fig3_A_B_F_local_k-NN_network.ipynb
-│   │   └── output
-│   |       └── ..
-│   └── panels_C_D
-│       ├── Fig3_C_D_cluster_connectivity_and_Jaccard_coeff.ipynb
-│       └── output
-│           └── ..
+├── Fig1_atlas_QC
+│   └── Fig1_bcde_atlas_integrated.ipynb
+│   ├── Fig1_f_R_coverage_plot_optimization.ipynb
+│   ├── Fig1_gh_RNA_ATAC_whole_embryo.ipynb
+│
+├── Fig2_ATAC_RNA_correlation_metacells
+│   ├── Fig2_compute_RNA_ATAC_corr_seacells.ipynb 
+│   ├── FigSI_chromatin_coaccess_dynamics
+│
+├── Fig3_GRN_dynamics
+│   ├── Fig3_GRN_dynamics.ipynb 
+│   ├── SI_QC_GRN_network_comparison_TDR118_TDR119_reseq_v2.ipynb
+│
 ├── Fig4
-│   └── panel_D
-│       └── Please_read.txt
-├── Fig5
-│   ├── 0.Set_fig5_timestamp.ipynb
-│   ├── panel_A
-│   │   ├── 1.infected_enrichment
-│   │   │   ├── 1.QC_filter_and_impute.ipynb
-│   │   │   ├── 2.Batch_selection.ipynb
-│   │   │   ├── 3.correlation_filter.ipynb
-│   │   │   ├── 4.NOC_processing.ipynb
-│   │   │   └── output
-│   │   │       └── ..
-│   │   ├── 2.control_enrichment
-│   │   │   ├── 1.QC_filter_and_impute.ipynb
-│   │   │   ├── 2.Batch_selection.ipynb
-│   │   │   ├── 3.correlation_filter.ipynb
-│   │   │   ├── 4.NOC_processing.ipynb
-│   │   │   └── output
-│   │   │       └── ..
-│   │   └── 3.aligned_umap
-│   │       ├── Fig5_A_aligned_umap.ipynb
-│   │       └── output
-│   │           └── ..
-│   ├── panel_B
-│   │   ├── Fig5_B_remodeling_score.ipynb
-│   │   └── output
-│   │       └── ..
-│   ├── panel_C
-│   │   ├── Fig5_C_umap_with_leiden_labels.ipynb
-│   │   └── output
-│   │       └── ..
-│   ├── panel_D
-│   │   ├── Fig5_D_trajectory.ipynb
-│   │   └── output
-│   │       └── ..
-│   └── panel_E
-│       ├── Fig5_E_Sankey_plot.ipynb
-│       └── output
-│           └── ..
-└─── Supplementary_figures
-    ├── Suppl_fig1
-    │   ├── Suppl_fig1_marker_expression_in_cell_lines.ipynb
-    │   └── output
-    │       └── ..
-    ├── Suppl_fig2
-    │   └── README.md
-    ├── Suppl_fig3
-    │   ├── Suppl_fig3_faceted_volcano_plots.ipynb
-    │   └── output
-    │       └── ..
-    ├── Suppl_fig4
-    │   ├── Suppl_fig4_enrichment_heatmap_all_IPs.ipynb
-    │   └── output
-    │       └── ..
-    ├── Suppl_fig5
-    │   ├── panel_A
-    │   │   ├── Suppl_fig5_A_IP_correlation_vs_interaction_stoi.ipynb
-    │   │   └── output
-    │   │       └── ..
-    │   ├── panel_B
-    │   │   ├── Suppl_fig5_B_enrichment_entropy.ipynb
-    │   │   └── output
-    │   │       └── ..
-    │   └── panel_C
-    │       ├── Suppl_fig5_C_tenary_plots.ipynb
-    │       └── output
-    │           └── ..
-    ├── Suppl_fig6
-    │   ├── panel_B
-    │   │   └── README.md
-    │   ├── panel_C
-    │   │   ├── Suppl_fig6_C_XGBoost_classifier.ipynb
-    │   │   ├── environment.yml
-    │   │   └── output
-    │   │       └── ..
-    │   └── panel_F_G
-    │       ├── Suppl_fig6_F_G_sankey_and_confusion.ipynb
-    │       └── output
-    │           └── ..
-    ├── Suppl_fig7
-    │   └── panel_C
-    │       └── Suppl_fig7_C_upset_plot.ipynb
+│   └── Fig4_in_silico_KO.ipynb
 ```
 scripts/
 
@@ -164,9 +56,9 @@ This project is licensed under the BSD 3-Clause license - see the LICENSE file f
 
 ## Setting up the conda environments
 We used three conda environments listed below.
-- 1) basic scanpy environment
-- 2) seacell environment
-- 3) celloracle environment
-  4) 
+- 1) basic scanpy environment for Figure 1 (scanpy, matplotlib, numpy, and pandas)
+- 2) seacell environment for Figure 2 (see [SEACells](https://github.com/dpeerlab/SEACells) for how to set up the conda environments)
+- 3) celloracle environment for Figures 3 and 4 (see [CellOracle documentation](https://morris-lab.github.io/CellOracle.documentation/installation/index.html) for how to set up the conda environments)
+
 ## Citation
 TBD
