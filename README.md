@@ -14,7 +14,8 @@ The structure of this repo is illustrated below.
 ├── notebooks                 
 │   ├── 
 ├── scripts                 
-│   ├── 
+│   ├──
+├── environments
 ├── LICENSE
 └── README.md
 ```
@@ -50,15 +51,16 @@ notebooks
 
 These are R/Python modules that contain the bulk of the code used for data processing. Please note that these scripts are explicitly written for, and specific to this project and/or the Zebrahub-Multiome project. They are not intended to form a stand-alone or general-purpose Python package.
 
-## License
+## /environments: Setting up the conda environments
 
-This project is licensed under the BSD 3-Clause license - see the LICENSE file for details.
-
-## Setting up the conda environments (/environments)
 We used three conda environments listed below.
 - 1) single-cell-base: basic scanpy, numpy, pandas environment for Figure 1
 - 2) seacells: environment with SEACells for Figure 2 (see [SEACells](https://github.com/dpeerlab/SEACells) for troubleshooting)
 - 3) celloracle_env:  environment for Figures 3 and 4 (see [CellOracle documentation](https://morris-lab.github.io/CellOracle.documentation/installation/index.html) for troubleshooting)
+
+## License
+
+This project is licensed under the BSD 3-Clause license - see the LICENSE file for details.
 
 ## Citation
 [Zebrahub-Multiome: Uncovering Gene Regulatory Network Dynamics During Zebrafish Embryogenesis (biorxiv preprint)](https://www.biorxiv.org/content/10.1101/2024.10.18.618987v1)
