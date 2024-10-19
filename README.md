@@ -54,11 +54,11 @@ These are R/Python modules that contain the bulk of the code used for data proce
 
 This project is licensed under the BSD 3-Clause license - see the LICENSE file for details.
 
-## Setting up the conda environments
+## Setting up the conda environments (/environments)
 We used three conda environments listed below.
-- 1) basic scanpy environment for Figure 1 (scanpy, matplotlib, numpy, and pandas)
-- 2) seacell environment for Figure 2 (see [SEACells](https://github.com/dpeerlab/SEACells) for how to set up the conda environments)
-- 3) celloracle environment for Figures 3 and 4 (see [CellOracle documentation](https://morris-lab.github.io/CellOracle.documentation/installation/index.html) for how to set up the conda environments)
+- 1) single-cell-base: basic scanpy, numpy, pandas environment for Figure 1
+- 2) seacells: environment with SEACells for Figure 2 (see [SEACells](https://github.com/dpeerlab/SEACells) for troubleshooting)
+- 3) celloracle_env:  environment for Figures 3 and 4 (see [CellOracle documentation](https://morris-lab.github.io/CellOracle.documentation/installation/index.html) for troubleshooting)
 
 ## Citation
-TBD
+[Zebrahub-Multiome: Uncovering Gene Regulatory Network Dynamics During Zebrafish Embryogenesis (biorxiv preprint)](https://www.biorxiv.org/content/10.1101/2024.10.18.618987v1)
