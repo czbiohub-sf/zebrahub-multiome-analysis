@@ -5,8 +5,8 @@
 #SBATCH --output=/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/slurm_logs/link_peaks_to_genes_%j.out # File to which STDOUT will be written, including job ID
 #SBATCH --error=/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/slurm_logs/link_peaks_to_genes_%j.err  # File to which STDERR will be written, including job ID
 #SBATCH --time=48:00:00                     # Runtime in HH:MM:SS            
-#SBATCH --mem=512G                          # Memory total in GB (for all cores)
-#SBATCH --cpus-per-task=16                  # Number of CPU cores per task
+#SBATCH --mem=2048G                          # Memory total in GB (for all cores)
+#SBATCH --cpus-per-task=8                  # Number of CPU cores per task
 #SBATCH --mail-type=END,FAIL                # Type of email notification- BEGIN,END,FAIL,ALL
 #SBATCH --mail-user=yang-joon.kim@czbiohub.org  # Email to which notifications will be sent
 
