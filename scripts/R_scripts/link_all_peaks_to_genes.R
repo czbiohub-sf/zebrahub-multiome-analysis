@@ -28,9 +28,9 @@ print(packageVersion("Seurat"))
 # parallelization in Signac: https://stuartlab.org/signac/articles/future
 library(future)
 # plan("multicore", workers = 8)
-plan("multisession", workers = 16)
+plan("multisession", workers = 8)
 # set the max memory size for the future
-options(future.globals.maxSize = 512 * 1024 ^ 3) # for Gb RAM
+options(future.globals.maxSize = 2048 * 1024 ^ 3) # for Gb RAM
 
 # path to your custom genome
 custom_fa_path <- "/hpc/reference/sequencing_alignment/alignment_references/zebrafish_genome_GRCz11/fasta/genome.fa"
