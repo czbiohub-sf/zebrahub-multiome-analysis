@@ -19,6 +19,7 @@ withr::with_libpaths(new = "/hpc/scratch/group.data.science/yangjoon.kim/.local/
 library(Signac)
 library(Seurat)
 library(SeuratWrappers)
+library(GenomeInfoDb)
 
 # inputs:
 # 1) seurat_object: a seurat object
@@ -29,6 +30,7 @@ library(SeuratWrappers)
 # 5) data_id: ID for the dataset, i.e. TDR118
 # 6) peaktype: type of the peak profile. i.e. CRG_arc: Cellranger-arc peaks
 # (i.e. peaks_celltype, peaks_bulk, peaks_joint)
+# 7) shell_script_dir: path to save the shell scripts (for cicero parallelization)
 
 # Parse command-line arguments
 args <- commandArgs(trailingOnly = TRUE)
@@ -48,7 +50,7 @@ shell_script_dir <- args[7]
 # Example Input arguments:
 # seurat_object <- readRDS(seurat_object_path)
 # assay <- "ATAC"
-# dim.reduced <- "UMAP.ATAC"
+# dim.reduced <- "UMAP.ATAC" ("integrated_lsi")
 # output_path = "",
 # data_id="TDR118",
 # peaktype = "peaks_merged"
@@ -77,25 +79,97 @@ print(paste0("default assay is ", assay))
 seurat_object.cds <- as.cell_data_set(x=seurat_object) # a function from SeuratWrappers
 print("cds object created") 
 
+# print out the available reduced dimensions
+print("Available reduced dimensions:")
+print(names(reducedDims(seurat_object.cds)))
+
+# capitalize the dim_reduced, as the single.cell.experiment data format capitalizes all the fields
+dim_reduced <- toupper(dim_reduced)
+# Get the reduced coordinates
+reduced_coords <- reducedDims(seurat_object.cds)[[dim_reduced]]
+print("Class of reduced coordinates:")
+print(class(reduced_coords))
+print("Dimensions of reduced coordinates:")
+print(dim(reduced_coords))
+
+
 # create the cicero object
 # default: we will use the ATAC.UMAP here for the sampling of the neighborhoods - as we'll treat this dataset as if we only had scATAC-seq.
 # This is something we can ask Kenji Kamimoto/Samantha Morris later for their advice. (or compare the built GRNs from joint.UMAP vs ATAC.UMAP)
-seurat_object.cicero <- make_cicero_cds(seurat_object.cds, reduced_coordinates = reducedDims(seurat_object.cds)$UMAP.ATAC)
+seurat_object.cicero <- make_cicero_cds(seurat_object.cds, reduced_coordinates = reduced_coords)
+# seurat_object.cicero <- make_cicero_cds(seurat_object.cds, reduced_coordinates = reducedDims(seurat_object.cds)$UMAP.ATAC)
 print("cicero object created")
 
-# define the genomic length dataframe (chromosome number ; length)
-df_seqinfo <- as.data.frame(seurat_object@assays$ATAC@seqinfo)
-# zebrafish has 25 chromosomes
-seurat_object@assays$ATAC@annotation@seqinfo@seqlengths <- df_seqinfo$seqlengths[1:26] 
+# Define the genomic length dataframe (chromosome number ; length)
+# GRCz11 chromosome lengths
+chr_lengths <- c(
+    "1" = 59578282,
+    "2" = 59640629,
+    "3" = 62628489,
+    "4" = 78093715,
+    "5" = 72500376,
+    "6" = 60270060,
+    "7" = 74282399,
+    "8" = 54304671,
+    "9" = 56459846,
+    "10" = 45420867,
+    "11" = 45484837,
+    "12" = 49182954,
+    "13" = 52186027,
+    "14" = 52660232,
+    "15" = 48040578,
+    "16" = 55381981,
+    "17" = 53969382,
+    "18" = 51023478,
+    "19" = 48449771,
+    "20" = 55201332,
+    "21" = 45934066,
+    "22" = 39133080,
+    "23" = 46144548,
+    "24" = 42173229,
+    "25" = 37502051,
+    "MT" = 16596
+)
+
+# Convert values to integer while keeping names as strings
+chr_lengths <- as.integer(chr_lengths)  # This converts only the values to integer, keeps names as strings
+
+# Assign the chromosome lengths to the seqinfo object
+seurat_object@assays[[assay]]@annotation@seqinfo@seqlengths <- chr_lengths
+
+# Verify the assignment worked
+print(seurat_object@assays[[assay]]@annotation@seqinfo)
+
+# After assigning seqlengths
+if (any(is.na(seurat_object@assays[[assay]]@annotation@seqinfo@seqlengths))) {
+    stop("Seqlengths assignment failed - some lengths are NA")
+}
+print("Seqlengths successfully assigned:")
+print(seurat_object@assays[[assay]]@annotation@seqinfo)
+
+# After setting the seqlengths, create genome.df directly
+genome.df <- data.frame(
+    chr = names(chr_lengths),
+    length = as.numeric(chr_lengths)  # convert to numeric to avoid integer overflow
+)
+
+# Save for later use by parallel jobs
+saveRDS(genome.df, file = paste0(script_dir, "genome_df.rds"))
+print(genome.df)
 
 # Perform CCAN computation
 # get the chromosome sizes from the Seurat object
-genome <- seqlengths(seurat_object@assays$ATAC@annotation)
+# genome <- seqlengths(seurat_object@assays[[assay]]@annotation)
+# genome <- seqlengths(seurat_object@assays$ATAC@annotation)
 
 # convert chromosome sizes to a dataframe
-genome.df <- data.frame("chr" = names(genome), "length" = genome)
-saveRDS(genome.df, file = paste0(script_dir, "genome_df.rds"))
-print(genome.df)
+# genome.df <- data.frame("chr" = names(genome), "length" = genome)
+# saveRDS(genome.df, file = paste0(script_dir, "genome_df.rds"))
+# print(genome.df)
+
+# load the genome.df
+# genome.df <- readRDS(file = paste0("/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/cicero_slurm_outputs/", "genome_df.rds"))
+# print(genome.df)
 
 # run cicero (parallelized)
 # conns <- run_cicero(seurat_object.cicero, genomic_coords = genome.df, sample_num = 100)
@@ -111,7 +185,7 @@ print(paste0("mean distance parameter = ", mean_distance_param))
 # Step 2: Generate Cicero models for each chromosome using Slurm
 #chromosomes <- unique(seurat_object.cicero$chromosome)
 chromosomes <- unique(genome.df$chr)
-chromosomes <- chromosomes[chromosomes != "MT"] # Remove mitochondrial chromosome
+chromosomes <- chromosomes[chromosomes != "MT"]  # This should now work correctly
 print(chromosomes)
 
 
@@ -196,7 +270,8 @@ print("CCANs computed")
 
 # saves the Cicero results 
 # (1.all peaks as well as 2. pairwise cicero result)
-all_peaks <- row.names(seurat_object@assays$peaks_merged@data)
+# all_peaks <- row.names(seurat_object@assays$peaks_merged@data)
+all_peaks <- row.names(seurat_object@assays[[assay]]@data)
 #output_path <- "/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data"
 write.csv(x = all_peaks, file = paste0(output_path, "01_", data_id, "_",peaktype, "_peaks.csv"))
 write.csv(x = all_connections, file = paste0(output_path, "02_", data_id, "_cicero_connections_",peaktype, "_peaks.csv"))
