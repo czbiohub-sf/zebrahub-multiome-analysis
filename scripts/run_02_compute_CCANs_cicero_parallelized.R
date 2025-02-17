@@ -102,37 +102,48 @@ print("cicero object created")
 
 # Define the genomic length dataframe (chromosome number ; length)
 # GRCz11 chromosome lengths
-chr_lengths <- c(
-    "1" = 59578282,
-    "2" = 59640629,
-    "3" = 62628489,
-    "4" = 78093715,
-    "5" = 72500376,
-    "6" = 60270060,
-    "7" = 74282399,
-    "8" = 54304671,
-    "9" = 56459846,
-    "10" = 45420867,
-    "11" = 45484837,
-    "12" = 49182954,
-    "13" = 52186027,
-    "14" = 52660232,
-    "15" = 48040578,
-    "16" = 55381981,
-    "17" = 53969382,
-    "18" = 51023478,
-    "19" = 48449771,
-    "20" = 55201332,
-    "21" = 45934066,
-    "22" = 39133080,
-    "23" = 46144548,
-    "24" = 42173229,
-    "25" = 37502051,
-    "MT" = 16596
+chr_lengths <- setNames(
+    c(59578282, 59640629, 62628489, 78093715, 72500376, 60270060, 74282399,
+      54304671, 56459846, 45420867, 45484837, 49182954, 52186027, 52660232,
+      48040578, 55381981, 53969382, 51023478, 48449771, 55201332, 45934066,
+      39133080, 46144548, 42173229, 37502051, 16596),
+    c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10",
+      "11", "12", "13", "14", "15", "16", "17", "18", "19", "20",
+      "21", "22", "23", "24", "25", "MT")
 )
+print(names(chr_lengths))  # Should return "1" "2" "3" ... "25" "MT"
+# chr_lengths <- c(
+#     "1" = 59578282,
+#     "2" = 59640629,
+#     "3" = 62628489,
+#     "4" = 78093715,
+#     "5" = 72500376,
+#     "6" = 60270060,
+#     "7" = 74282399,
+#     "8" = 54304671,
+#     "9" = 56459846,
+#     "10" = 45420867,
+#     "11" = 45484837,
+#     "12" = 49182954,
+#     "13" = 52186027,
+#     "14" = 52660232,
+#     "15" = 48040578,
+#     "16" = 55381981,
+#     "17" = 53969382,
+#     "18" = 51023478,
+#     "19" = 48449771,
+#     "20" = 55201332,
+#     "21" = 45934066,
+#     "22" = 39133080,
+#     "23" = 46144548,
+#     "24" = 42173229,
+#     "25" = 37502051,
+#     "MT" = 16596
+# )
 
 # Convert values to integer while keeping names as strings
-chr_lengths <- as.integer(chr_lengths)  # This converts only the values to integer, keeps names as strings
+# chr_lengths <- as.integer(chr_lengths)  # This converts only the values to integer, keeps names as strings
+chr_lengths <- setNames(as.integer(chr_lengths), names(chr_lengths))
 
 # Assign the chromosome lengths to the seqinfo object
 seurat_object@assays[[assay]]@annotation@seqinfo@seqlengths <- chr_lengths
@@ -148,10 +159,19 @@ print("Seqlengths successfully assigned:")
 print(seurat_object@assays[[assay]]@annotation@seqinfo)
 
 # After setting the seqlengths, create genome.df directly
+# genome.df <- data.frame(
+#     chr = names(chr_lengths),
+#     length = as.numeric(chr_lengths)  # convert to numeric to avoid integer overflow
+# )
+print(chr_lengths)
+print(names(chr_lengths))
 genome.df <- data.frame(
     chr = names(chr_lengths),
-    length = as.numeric(chr_lengths)  # convert to numeric to avoid integer overflow
+    length = as.numeric(chr_lengths),  # Ensure numeric values
+    stringsAsFactors = FALSE  # Avoid factor conversion
 )
+# check the seqinfo
+print(seurat_object@assays[[assay]]@annotation@seqinfo)
 
 # Save for later use by parallel jobs
 saveRDS(genome.df, file = paste0(script_dir, "genome_df.rds"))
