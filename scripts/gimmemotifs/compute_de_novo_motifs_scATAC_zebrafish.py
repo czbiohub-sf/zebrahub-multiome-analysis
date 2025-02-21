@@ -1,4 +1,4 @@
-# A script for computing de novo motifs using gimmemotifs
+# [WORK IN PROGRESS] A script for computing de novo motifs using gimmemotifs
 # this script is submitted as a slurm job
 # reference: https://gimmemotifs.readthedocs.io/en/latest/
 # reference: https://github.com/morris-lab/CellOracle/blob/master/celloracle/motif_analysis/process_bed_file.py
