@@ -56,11 +56,10 @@ shell_script_dir <- args[7]
 # peaktype = "peaks_merged"
 # shell_script_dir = "/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/cicero_slurm_outputs/"
 
-# Define the directory to save the shell scripts (for cicero parallelization)
-#shell_script_dir <- "/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/cicero_slurm_outputs/"
-script_dir <- shell_script_dir
+# Update the script_dir to include the cicero_integrated_peaks subdirectory
+script_dir <- file.path(shell_script_dir, "cicero_integrated_peaks")
 dir.create(script_dir, showWarnings = FALSE, recursive = TRUE)
-setwd(script_dir) # set as the temp working directory
+setwd(script_dir)
 
 # Import the Seurat object
 seurat_object <- readRDS(seurat_object_path)
@@ -250,36 +249,68 @@ for (current_chr in chromosomes) {
   system(paste("sbatch", script_name))
 }
 
-# Step 3: Collect the results from Slurm jobs (each chromosome)
-# Assuming your RDS files are named in the format "cicero_model_<chromosome>.rds"
-#chromosomes <- unique(seurat_object.cicero$chromosome) # List of chromosomes
-model_files <- paste0(script_dir, "cicero_model_", chromosomes, ".rds")
-
-# check if all 25 chromosomes are present (from individual slurm jobs)
-existing_files <- sapply(model_files, file.exists)
-
-if (sum(existing_files) != 25) {
-    stop("Not all cicero_model files are present. Expected 25, found: ", sum(existing_files))
-} else {
-    print("All 25 cicero_model files are present. Proceeding to Step 3.")
+# After submitting all Slurm jobs, add this waiting mechanism
+# Step 3: Wait for all jobs to complete and collect results
+wait_for_jobs <- function(script_dir, chromosomes, max_wait_time = 7200) { # 2 hours max wait
+  start_time <- Sys.time()
+  all_files_present <- FALSE
+  
+  while (!all_files_present && (difftime(Sys.time(), start_time, units="secs") < max_wait_time)) {
+    # Check if all files exist
+    model_files <- file.path(script_dir, paste0("cicero_model_", chromosomes, ".rds"))
+    existing_files <- sapply(model_files, file.exists)
+    
+    # Add debugging information
+    print("Looking for files in:")
+    print(script_dir)
+    print("Files found:")
+    print(data.frame(
+      file = basename(model_files),  # Only show filename for cleaner output
+      exists = existing_files
+    ))
+    
+    if (sum(existing_files) == length(chromosomes)) {
+      all_files_present <- TRUE
+      print("All cicero model files are present!")
+      break
+    }
+    
+    print(paste("Waiting for jobs to complete... Found", sum(existing_files), "of", length(chromosomes), "files"))
+    Sys.sleep(60)  # Wait for 60 seconds before checking again
+  }
+  
+  if (!all_files_present) {
+    stop("Timeout waiting for cicero model files to be generated")
+  }
+  
+  return(model_files[existing_files])  # Return paths of successfully generated files
 }
 
-# Read all the Cicero models
-cicero_models <- lapply(model_files, function(file) {
-  if (file.exists(file)) {
-    readRDS(file)
-  } else {
-    warning(paste("File not found:", file))
-    NULL
-  }
-})
+# Call the wait function before proceeding to collect results
+chromosomes <- chromosomes[chromosomes != "MT"]  # Exclude MT as before
+model_files <- wait_for_jobs(script_dir, chromosomes)
 
-# Filter out NULL values in case some files were not found
-cicero_models <- Filter(Negate(is.null), cicero_models)
-
-# Assemble connections from the per-chromosome models
-all_connections <- do.call("rbind", lapply(cicero_models, assemble_connections))
-# all_connections now contains the combined dataset of connections
+# Now proceed with collecting results - use the files returned by wait_for_jobs
+if (length(model_files) > 0) {
+  # Read all the Cicero models
+  cicero_models <- lapply(model_files, function(file) {
+    tryCatch({
+      readRDS(file)
+    }, error = function(e) {
+      warning(paste("Error reading file:", file, "-", e))
+      NULL
+    })
+  })
+  
+  # Filter out NULL values in case some files couldn't be read
+  cicero_models <- Filter(Negate(is.null), cicero_models)
+  
+  # Assemble connections from the per-chromosome models
+  all_connections <- do.call("rbind", lapply(cicero_models, assemble_connections))
+  print(paste("Successfully assembled connections from", length(cicero_models), "chromosome models"))
+} else {
+  stop("No cicero model files were found")
+}
 
 # Note: This script will submit Slurm jobs and exit. The actual Cicero processing will happen in the Slurm jobs.
 # You'll need to collect and process the results once all jobs are com
