@@ -62,7 +62,7 @@ sc.settings.figdir = figpath
 
 # %%
 # import the object
-adata = sc.read_h5ad("/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/01_Signac_processed/integrated_RNA_ATAC_counts_RNA_leiden_filtered.h5ad")
+adata = sc.read_h5ad("/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/01_Signac_processed/integrated_RNA_ATAC_counts_RNA.h5ad")
 adata
 
 # %% Import the distances and connectivities from WNN (weighted nearest neighbors) - computed using Seurat
@@ -341,10 +341,6 @@ sc.pl.embedding(adata, basis="X_wnn.umap",
 plt.show()
 
 # %%
-# help(sankey)
-# adata.uns["leiden_0.01_merged_colors"]
-del colorDict
-# %%
 key1 = "wsnn_res.0.8"
 key2 = "leiden_0.8"
 
@@ -352,18 +348,11 @@ sankey(adata.obs[key1], adata.obs[key2])
 plt.show()
 
 # %%
-key1 = "leiden_0.01_merged"
-key2 = "leiden_0.1_merged"
-
-# Get the colors from adata.uns
-key1_colors = adata.uns[f"{key1}_colors"]  # This gets the color list
-categories = adata.obs[key1].unique()  # Get unique categories
-# Create the color dictionary mapping categories to their assigned colors
-colorDict = {cat: key1_colors[i] for i, cat in enumerate(categories)}
+key1 = "leiden_0.8"
+key2 = "leiden_1"
 
 sankey(adata.obs[key1], adata.obs[key2])
 plt.show()
-# %%
 
 # %%
 key1 = "leiden_1"
