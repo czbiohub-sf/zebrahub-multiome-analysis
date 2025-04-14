@@ -28,6 +28,9 @@ import sys
 sys.path.append("/hpc/projects/data.science/yangjoon.kim/excellxgene_tutorial_manuscript/celltype_annotation_tutorial/utilities/")
 from sankey import sankey
 # help(sankey)
+from IPython.core.interactiveshell import InteractiveShell
+
+InteractiveShell.ast_node_interactivity = "all"
 
 # %%
 # figure parameter setting
@@ -59,7 +62,7 @@ sc.settings.figdir = figpath
 
 # %%
 # import the object
-adata = sc.read_h5ad("/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/01_Signac_processed/integrated_RNA_ATAC_counts_RNA.h5ad")
+adata = sc.read_h5ad("/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/01_Signac_processed/integrated_RNA_ATAC_counts_RNA_leiden_filtered.h5ad")
 adata
 
 # %% Import the distances and connectivities from WNN (weighted nearest neighbors) - computed using Seurat
@@ -162,64 +165,6 @@ adata
 # save the adata object
 del adata.raw
 adata.write_h5ad("/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/01_Signac_processed/integrated_RNA_ATAC_counts_RNA_wnn.h5ad")
-
-# %%
-# # Get the existing cell ordering from your AnnData
-# existing_cells = adata.obs_names
-# print(f"Using existing ordering from AnnData with {len(existing_cells)} cells")
-
-# # Create a mapping from cell names to indices based on adata.obs_names
-# cell_to_idx = {cell: idx for idx, cell in enumerate(existing_cells)}
-
-# # Check if all cells in the WNN data exist in the AnnData object
-# wnn_cells = set(dist_df['cell_name'].unique()).union(set(dist_df['neighbor_name'].unique()))
-# missing_cells = wnn_cells - set(existing_cells)
-# if missing_cells:
-#     print(f"WARNING: {len(missing_cells)} cells in WNN data don't exist in AnnData")
-#     print(f"Example missing cells: {list(missing_cells)[:5]}")
-#     print("Will only include connections between cells present in AnnData")
-
-# # Initialize sparse matrices with dimensions matching your AnnData
-# n_cells = len(existing_cells)
-# distances = sp.lil_matrix((n_cells, n_cells), dtype=np.float32)
-# connectivities = sp.lil_matrix((n_cells, n_cells), dtype=np.float32)
-
-# # Fill the matrices, but only for cells that exist in the AnnData object
-# valid_pairs = 0
-# skipped_pairs = 0
-
-# # Process the data
-# for i, row in enumerate(dist_df.itertuples()):
-#     cell_name = row.cell_name
-#     neighbor_name = row.neighbor_name
-    
-#     # Skip if either cell is not in the AnnData object
-#     if cell_name not in cell_to_idx or neighbor_name not in cell_to_idx:
-#         skipped_pairs += 1
-#         continue
-    
-#     # Get indices based on AnnData cell ordering
-#     cell_idx = cell_to_idx[cell_name]
-#     neighbor_idx = cell_to_idx[neighbor_name]
-    
-#     # Set distance value
-#     distances[cell_idx, neighbor_idx] = row.distance
-    
-#     # Set connectivity value (1 - distance)
-#     connectivities[cell_idx, neighbor_idx] = 1.0 - row.distance
-    
-#     valid_pairs += 1
-    
-#     # Print progress for large datasets
-#     if i % 1000000 == 0 and i > 0:
-#         print(f"Processed {i:,} / {len(dist_df):,} entries")
-
-# print(f"\nAdded {valid_pairs:,} valid pairs to matrices")
-# print(f"Skipped {skipped_pairs:,} pairs with cells not in AnnData")
-
-# # Convert to CSR format for efficient operations
-# distances = distances.tocsr()
-# connectivities = connectivities.tocsr()
 
 # %% [markdown]
 # ## re-compute the leiden clustering
@@ -396,6 +341,10 @@ sc.pl.embedding(adata, basis="X_wnn.umap",
 plt.show()
 
 # %%
+# help(sankey)
+# adata.uns["leiden_0.01_merged_colors"]
+del colorDict
+# %%
 key1 = "wsnn_res.0.8"
 key2 = "leiden_0.8"
 
@@ -403,11 +352,18 @@ sankey(adata.obs[key1], adata.obs[key2])
 plt.show()
 
 # %%
-key1 = "leiden_0.8"
-key2 = "leiden_1"
+key1 = "leiden_0.01_merged"
+key2 = "leiden_0.1_merged"
+
+# Get the colors from adata.uns
+key1_colors = adata.uns[f"{key1}_colors"]  # This gets the color list
+categories = adata.obs[key1].unique()  # Get unique categories
+# Create the color dictionary mapping categories to their assigned colors
+colorDict = {cat: key1_colors[i] for i, cat in enumerate(categories)}
 
 sankey(adata.obs[key1], adata.obs[key2])
 plt.show()
+# %%
 
 # %%
 key1 = "leiden_1"
