@@ -88,53 +88,122 @@ def add_peak_annotations_to_adata(adata, annotated_peaks):
     adata.obs['peak_end'] = annotated_peaks['End']
     adata.obs['peak_type'] = annotated_peaks['peak_type']
     
-def plot_chromosome_umaps(adata, output_path=None, figsize=(20, 20)):
+# associate peaks to genes based on genomic proximity
+def associate_peaks_to_genes(adata_peaks, gtf_file, max_distance=50000, chunk_size=1000):
     """
-    Create a multi-panel UMAP plot colored by chromosomes.
+    Associate peaks with genes using chunked processing to reduce memory usage
     
     Parameters:
     -----------
-    adata : anndata.AnnData
-        AnnData object with UMAP coordinates and chromosome annotations
-    output_path : str, optional
-        Path to save the figure
-    figsize : tuple, optional
-        Figure size (width, height) in inches
+    adata_peaks : AnnData
+        AnnData object containing peak information
+    gtf_file : str
+        Path to GTF file
+    max_distance : int
+        Maximum distance to consider for nearest gene association
+    chunk_size : int
+        Number of peaks to process in each chunk
+        
+    Returns:
+    --------
+    pandas.DataFrame
+        DataFrame with gene associations
     """
-    # Get unique chromosomes
-    chromosomes = sorted(adata.obs['chromosome'].unique())
-    n_chroms = len(chromosomes)
+    import pyranges as pr
+    import pandas as pd
+    import numpy as np
+    from tqdm import tqdm
     
-    # Calculate grid dimensions (5x5 or adjust based on number of chromosomes)
-    n_rows = int(np.ceil(np.sqrt(n_chroms)))
-    n_cols = n_rows
+    # Create DataFrame from obs_names (which contain the coordinates)
+    print("Preparing peak coordinates...")
+    coords = [x.split('-') for x in adata_peaks.obs.index]
+    peaks_df = pd.DataFrame(coords, columns=['Chromosome', 'Start', 'End'])
     
-    # Create figure
-    fig, axes = plt.subplots(n_rows, n_cols, figsize=figsize)
-    axes = axes.flatten()
+    # Convert Start and End to integers
+    peaks_df['Start'] = peaks_df['Start'].astype(int)
+    peaks_df['End'] = peaks_df['End'].astype(int)
     
-    # Plot each chromosome
-    for idx, chrom in enumerate(chromosomes):
-        ax = axes[idx]
-        mask = adata.obs['chromosome'] == chrom
+    # Add peak_type from obs if it exists
+    if 'peak_type' in adata_peaks.obs:
+        peaks_df['peak_type'] = adata_peaks.obs['peak_type']
+    
+    # Create PyRanges object for peaks
+    print("Initializing PyRanges...")
+    peaks_gr = pr.PyRanges(peaks_df)
+    
+    # Read GTF file and get genes
+    print("Reading GTF file...")
+    gtf = pr.read_gtf(gtf_file)
+    genes = gtf[gtf.Feature == 'gene']
+    
+    print("Processing TSS coordinates...")
+    # Create TSS coordinates for + and - strands separately
+    plus_tss = genes[genes.Strand == '+'].copy()
+    plus_tss.End = plus_tss.Start + 1
+    
+    minus_tss = genes[genes.Strand == '-'].copy()
+    minus_tss.Start = minus_tss.End - 1
+    
+    # Combine TSS coordinates
+    tss = pr.concat([plus_tss, minus_tss])
+    
+    # Initialize results DataFrame
+    result_df = peaks_df.copy()
+    result_df['gene_body_overlaps'] = ''
+    result_df['nearest_gene'] = ''
+    result_df['distance_to_tss'] = np.nan
+    
+    # Process in chunks
+    total_chunks = len(peaks_df) // chunk_size + (1 if len(peaks_df) % chunk_size else 0)
+    
+    for chunk_idx in tqdm(range(total_chunks), desc="Processing peaks in chunks"):
+        start_idx = chunk_idx * chunk_size
+        end_idx = min((chunk_idx + 1) * chunk_size, len(peaks_df))
         
-        # Plot UMAP
-        sc.pl.umap(
-            adata[mask], 
-            show=False, 
-            ax=ax, 
-            size=1,
-            title=f'Chromosome {chrom}'
-        )
+        # Get chunk of peaks
+        chunk_peaks = peaks_df.iloc[start_idx:end_idx]
+        chunk_gr = pr.PyRanges(chunk_peaks)
         
-    # Remove empty subplots
-    for idx in range(len(chromosomes), len(axes)):
-        fig.delaxes(axes[idx])
+        # Find overlaps for this chunk
+        gene_overlaps = chunk_gr.join(genes, suffix='_gene', apply_strand_suffix=False)
+        nearest_tss = chunk_gr.nearest(tss, suffix='_tss', apply_strand_suffix=False)
+        
+        # Process gene body overlaps
+        if not gene_overlaps.empty:
+            overlaps_df = gene_overlaps.as_df()
+            overlaps_df['gene_name'] = overlaps_df['gene_name'].astype(str)
+            
+            # Group by peak coordinates
+            for _, peak_group in overlaps_df.groupby(['Chromosome', 'Start', 'End']):
+                peak_genes = ','.join(set(peak_group['gene_name']))
+                idx = result_df[
+                    (result_df['Chromosome'] == peak_group['Chromosome'].iloc[0]) &
+                    (result_df['Start'] == peak_group['Start'].iloc[0]) &
+                    (result_df['End'] == peak_group['End'].iloc[0])
+                ].index
+                result_df.loc[idx, 'gene_body_overlaps'] = peak_genes
+        
+        # Process nearest TSS
+        if not nearest_tss.empty:
+            nearest_df = nearest_tss.as_df()
+            nearest_df['gene_name'] = nearest_df['gene_name'].astype(str)
+            
+            for _, row in nearest_df.iterrows():
+                peak_center = (row['Start'] + row['End']) // 2
+                # Use the regular Strand column instead of Strand_tss
+                tss_pos = row['Start_tss'] if row['Strand_tss'] == '+' else row['End_tss']
+                distance = abs(peak_center - tss_pos)
+                
+                if distance <= max_distance:
+                    idx = result_df[
+                        (result_df['Chromosome'] == row['Chromosome']) &
+                        (result_df['Start'] == row['Start']) &
+                        (result_df['End'] == row['End'])
+                    ].index
+                    result_df.loc[idx, 'nearest_gene'] = row['gene_name_tss']
+                    result_df.loc[idx, 'distance_to_tss'] = distance
     
-    plt.tight_layout()
+    # Reset the index to match the original AnnData
+    result_df.index = adata_peaks.obs_names
     
-    if output_path:
-        plt.savefig(output_path, dpi=300, bbox_inches='tight')
-        plt.close()
-    else:
-        plt.show()
+    return result_df
