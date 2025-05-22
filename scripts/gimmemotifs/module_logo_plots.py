@@ -30,6 +30,34 @@ class LogoPlot:
         ic_matrix = np.nan_to_num(ic_matrix)  # Replace NaNs with 0
         return ic_matrix
 
+    # define the information content using Schneider-Stephens/column-KL style
+    def pwm_to_information_matrix(pwm):
+        """
+        Convert a probability PWM (rows = positions, cols = A,C,G,T) to the
+        Schneider–Stephens / KL-divergence information matrix that Logomaker
+        expects for a classic sequence logo.
+
+        Returns
+        -------
+        ic_mat : ndarray  (same shape as pwm, all entries ≥ 0)
+        """
+        # define the base parameters
+        background = np.array([0.30, 0.20, 0.20, 0.30])   # A, C, G, T   (zebrafish genome-wide)
+        eps     = 1e-6           # tiny value to avoid log(0)
+        # protect zeros
+        pwm = np.clip(np.asarray(pwm, dtype=float), eps, 1.0)
+        bg  = np.clip(np.asarray(background, dtype=float), eps, 1.0)
+
+        # per-cell KL term   p * (log2 p – log2 q)
+        kl_cell   = pwm * (np.log2(pwm) - np.log2(bg))
+
+        # total information per position (column height)
+        ic_col    = kl_cell.sum(axis=1)                                # shape (L,)
+
+        # final letter heights  P_ib  ×  IC_i
+        ic_matrix = pwm * ic_col[:, None]                              # shape (L,4)
+        return ic_matrix
+
     def generate_logo_plot(self, motif_name, output_dir=None, figsize=(12, 4)):
         """
         Generate an information content-based sequence logo plot
