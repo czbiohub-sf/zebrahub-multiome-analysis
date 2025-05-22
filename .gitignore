@@ -1,5 +1,6 @@
 .idea
 .vscode
-scripts/utils/__pycache__/pseudobulk_utils.cpython-310.pyc
-scripts/utils/__pycache__
+scripts/utils/*.pyc
+scripts/*/__pycache__
 figures/peak_umap_annotated/peak_umaps_chroms_each.pdf
+notebooks/*/__pycache__
