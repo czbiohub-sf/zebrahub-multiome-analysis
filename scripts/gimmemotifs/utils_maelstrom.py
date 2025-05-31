@@ -4,7 +4,7 @@ import os
 import pandas as pd
 
 # export peaks for GimmeMotifs maelstrom
-def export_peaks_for_gimmemotifs(adata_peaks, cluster="leiden", out_dir=None):
+def export_peaks_for_gimmemotifs(adata_peaks, cluster="leiden", out_dir=None, out_name=None):
     """
     Export peaks in a format suitable for GimmeMotifs.
 
@@ -16,6 +16,8 @@ def export_peaks_for_gimmemotifs(adata_peaks, cluster="leiden", out_dir=None):
         Column in `adata_peaks.obs` specifying cluster labels.
     out_dir : str or None, default=None
         Directory where the output file will be saved. If None, the file will not be saved.
+    out_name : str or None, default=None
+        Name of the output file. If None, the file will not be saved.
 
     Returns:
     --------
@@ -34,7 +36,7 @@ def export_peaks_for_gimmemotifs(adata_peaks, cluster="leiden", out_dir=None):
     # Save file only if out_dir is specified
     if out_dir is not None:
         os.makedirs(out_dir, exist_ok=True)
-        output_file = os.path.join(out_dir, f'peaks_{len(export_df)}_{cluster}.txt')
+        output_file = os.path.join(out_dir, f'peaks_{out_name}.txt')
         export_df.to_csv(output_file, sep='\t', index=False)
         print(f"Exported {len(export_df)} peaks to {output_file}")
         print("Clusters present:", export_df['cluster'].unique())
