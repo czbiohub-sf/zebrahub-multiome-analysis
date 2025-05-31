@@ -32,10 +32,10 @@ echo "Using XDG_CACHE_HOME=$XDG_CACHE_HOME"
 
 # input arguments (input, ref_genome, output_dir, and optionally pfmfile)
 #input="/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/annotated_data/objects_v2/motif_enrich_analysis_leiden_1.5/peaks_640830_leiden_1.5.txt"
-input="/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/annotated_data/objects_v2/motif_enrich_analysis_leiden_coarse/peaks_640830_leiden_coarse.txt"
+input="/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/13_peak_umap_analysis/maelstrom_640K_leiden_coarse_fine_cisBP_v2_danio_rerio_output/peaks_leiden_coarse_fine_unified.txt"
 # ref_genome="/hpc/mydata/yang-joon.kim/genomes/danRer11/danRer11.fa"
 ref_genome="danRer11"
-output_dir="/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/13_peak_umap_analysis/maelstrom_640K_leiden_coarse_cisBP_v2_danio_rerio_output"
+output_dir="/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/13_peak_umap_analysis/maelstrom_640K_leiden_coarse_fine_cisBP_v2_danio_rerio_output"
 #output_dir="/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/13_peak_umap_analysis/maelstrom_640K_leiden1.5_GM.vertebrate.v5_output"
 mkdir -p $output_dir
 pfmfile="CisBP_ver2_Danio_rerio"
