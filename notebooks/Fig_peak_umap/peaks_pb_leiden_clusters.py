@@ -823,53 +823,6 @@ for res in list_res_leiden:
 # peaks_norm_dict['leiden_0.5_merged']
 
 # %%
-# Create a figure with 3x4 subplots
-fig, axes = plt.subplots(1, 3, figsize=(15, 5))
-fig.subplots_adjust(hspace=0.3, wspace=0.3)
-
-# Flatten the axes array for easier iteration
-axes = axes.flatten()
-
-# Iterate through the resolutions and plot UMAPs
-for i, res in enumerate(list_res_leiden):
-    # Get the corresponding peaks_norm object
-    peaks_norm = peaks_norm_dict[f'leiden_{res}_merged']
-    # transfer the annotations from the peaks_norm_ref object to the peaks_norm object
-    peaks_norm.obs["celltype"] = peaks_norm_ref.obs["celltype"]
-    peaks_norm.obs["timepoint"] = peaks_norm_ref.obs["timepoint"]
-    
-    # Get the number of unique clusters for the title
-    n_clusters = len(adata_peaks.obs[f"leiden_{res}_merged"].unique())
-    
-    # # Plot UMAP on the corresponding subplot
-    # sc.pl.umap(peaks_norm, 
-    #            ax=axes[i],
-    #            show=False,
-    #            title=f'Resolution {res}\n({n_clusters} clusters)',
-    #            frameon=False)
-    # Plot with corrected contrast scores
-    sc.pl.umap(peaks_norm, 
-               color='celltype',
-               palette=cell_type_color_dict,
-               ax=axes[i],
-               show=False,
-               title=f'Resolution {res}\n({n_clusters} clusters)',
-               frameon=False, legend_loc=None)
-    # Remove axis labels for cleaner look
-    axes[i].set_xlabel('')
-    axes[i].set_ylabel('')
-
-# Remove any unused subplots
-for j in range(i+1, len(axes)):
-    fig.delaxes(axes[j])
-
-# Add a main title
-fig.suptitle('UMAP of Peak Accessibility by Leiden Resolution', y=1.02, fontsize=16)
-
-plt.tight_layout()
-plt.show()
-
-# %%
 res = 10
 adata_pseudo = create_normalized_peak_pseudobulk(
         adata_peaks,
