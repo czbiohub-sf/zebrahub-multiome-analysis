@@ -3,7 +3,7 @@
 #SBATCH --partition=cpu
 #SBATCH --output=/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/slurm_logs/gimme_maelstrom_%j.out
 #SBATCH --error=/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/slurm_logs/gimme_maelstrom_%j.err
-#SBATCH --time=24:00:00
+#SBATCH --time=48:00:00
 #SBATCH --mem=256G
 #SBATCH --cpus-per-task=12
 #SBATCH --mail-type=END,FAIL
@@ -13,7 +13,7 @@
 #                               CLI handling                                  #
 ###############################################################################
 usage () {
-    echo "Usage: sbatch gimme_maelstrom.sh [--input PATH] [--ref_genome STR] [--output_dir DIR] [--pfmfile STR]"
+    echo "Usage: sbatch gimme_maelstrom_modular.sh [--input PATH] [--ref_genome STR] [--output_dir DIR] [--pfmfile STR]"
     echo
     echo "  --input        Path to the peaks/regions text file            (required)"
     echo "  --ref_genome   Reference genome name or FASTA path            (required)"
