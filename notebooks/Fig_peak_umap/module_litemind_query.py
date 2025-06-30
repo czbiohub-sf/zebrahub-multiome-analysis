@@ -191,6 +191,47 @@ def convert_clusters_genes_to_lists(df_clusters_genes: pd.DataFrame,
     return cluster_gene_lists
 
 
+def get_common_cluster_ids(df_clusters_groups: pd.DataFrame,
+                          cluster_genes_dict: Dict[int, List[str]],
+                          df_clusters_motifs: pd.DataFrame) -> List:
+    """
+    Get cluster IDs that are present in all DataFrames.
+    
+    Parameters:
+    -----------
+    df_clusters_groups : pd.DataFrame
+        DataFrame with cluster expression across groups
+    cluster_genes_dict : Dict[int, List[str]]
+        Dictionary mapping cluster IDs to gene lists
+    df_clusters_motifs : pd.DataFrame
+        DataFrame with cluster motif enrichment
+    
+    Returns:
+    --------
+    List : List of cluster IDs present in all DataFrames
+    """
+    groups_clusters = set(df_clusters_groups.index)
+    genes_clusters = set(cluster_genes_dict.keys())
+    motifs_clusters = set(df_clusters_motifs.index)
+    
+    common_clusters = groups_clusters.intersection(genes_clusters).intersection(motifs_clusters)
+    
+    print(f"Clusters in df_clusters_groups: {len(groups_clusters)}")
+    print(f"Clusters in cluster_genes_dict: {len(genes_clusters)}")
+    print(f"Clusters in df_clusters_motifs: {len(motifs_clusters)}")
+    print(f"Common clusters across all DataFrames: {len(common_clusters)}")
+    
+    if len(common_clusters) < len(groups_clusters):
+        missing_in_genes = groups_clusters - genes_clusters
+        missing_in_motifs = groups_clusters - motifs_clusters
+        if missing_in_genes:
+            print(f"Missing in genes dict: {sorted(list(missing_in_genes))[:10]}...")
+        if missing_in_motifs:
+            print(f"Missing in motifs: {sorted(list(missing_in_motifs))[:10]}...")
+    
+    return sorted(list(common_clusters))
+
+
 def process_cluster_data(cluster_id, 
                         df_clusters_groups: pd.DataFrame,
                         cluster_genes_dict: Dict[int, List[str]],
@@ -215,7 +256,23 @@ def process_cluster_data(cluster_id,
     Returns:
     --------
     tuple : (cluster_groups_data, genes_text, cluster_motifs_data, estimated_tokens)
+    
+    Raises:
+    -------
+    KeyError : If cluster_id is not found in required DataFrames
     """
+    # Check if cluster_id exists in all required DataFrames
+    missing_from = []
+    if cluster_id not in df_clusters_groups.index:
+        missing_from.append("df_clusters_groups")
+    if cluster_id not in cluster_genes_dict:
+        missing_from.append("cluster_genes_dict")
+    if cluster_id not in df_clusters_motifs.index:
+        missing_from.append("df_clusters_motifs")
+    
+    if missing_from:
+        raise KeyError(f"Cluster ID '{cluster_id}' not found in: {', '.join(missing_from)}")
+    
     # Subset the dataframes for the current cluster
     df_clusters_groups_cluster = df_clusters_groups.loc[cluster_id].to_frame().T
     df_clusters_genes_cluster = cluster_genes_dict[cluster_id]
@@ -230,7 +287,7 @@ def process_cluster_data(cluster_id,
                      estimate_tokens(df_clusters_motifs_cluster.to_string()) + 
                      estimate_tokens(df_motif_info.to_string()))
     
-    return df_clusters_groups_cluster, genes_text, df_clusters_motifs_cluster, cluster_tokens 
+    return df_clusters_groups_cluster, genes_text, df_clusters_motifs_cluster, cluster_tokens
 
 
 def check_model_feature(api, model_name: str, feature: ModelFeatures) -> bool:
