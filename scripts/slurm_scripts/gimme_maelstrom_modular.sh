@@ -4,7 +4,7 @@
 #SBATCH --output=/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/slurm_logs/gimme_maelstrom_%j.out
 #SBATCH --error=/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/slurm_logs/gimme_maelstrom_%j.err
 #SBATCH --time=48:00:00
-#SBATCH --mem=256G
+#SBATCH --mem=512G
 #SBATCH --cpus-per-task=12
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=yang-joon.kim@czbiohub.org
