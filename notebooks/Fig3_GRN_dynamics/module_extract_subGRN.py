@@ -14,16 +14,48 @@ import numpy as np
 # STEP 1: Create clusters-by-motifs dict
 # =============================================================================
 
-def get_top_motifs_per_cluster(clusters_motifs_df, percentile_threshold=99):
+# def get_top_motifs_per_cluster(clusters_motifs_df, percentile_threshold=99):
+#     """
+#     Step 1: Extract top motifs for each cluster above percentile threshold.
+    
+#     Parameters:
+#     -----------
+#     clusters_motifs_df : pd.DataFrame
+#         Clusters x motifs with enrichment scores
+#     percentile_threshold : float
+#         Percentile threshold (e.g., 99 for 99th percentile)
+        
+#     Returns:
+#     --------
+#     clusters_motifs_dict : dict
+#         {cluster_id: [list_of_top_motifs]}
+#     """
+    
+#     clusters_motifs_dict = {}
+    
+#     for cluster_id in clusters_motifs_df.index:
+#         scores = clusters_motifs_df.loc[cluster_id]
+#         threshold = np.percentile(scores, percentile_threshold)
+        
+#         top_motifs = scores[scores >= threshold].sort_values(ascending=False)
+#         clusters_motifs_dict[cluster_id] = top_motifs.index.tolist()
+        
+#         # print(f"Cluster {cluster_id}: {len(top_motifs)} motifs above {threshold:.3f}")
+    
+#     return clusters_motifs_dict
+def get_top_motifs_per_cluster(clusters_motifs_df, method="threshold", threshold_value=2):
     """
-    Step 1: Extract top motifs for each cluster above percentile threshold.
+    Step 1: Extract top motifs for each cluster using percentile or z-score threshold.
     
     Parameters:
     -----------
     clusters_motifs_df : pd.DataFrame
         Clusters x motifs with enrichment scores
-    percentile_threshold : float
-        Percentile threshold (e.g., 99 for 99th percentile)
+    method : str
+        Either "percentile" or "threshold" (z-score)
+    threshold_value : float
+        - If method="percentile": percentile threshold (e.g., 99 for 99th percentile)
+        - If method="threshold": z-score threshold (e.g., 2.0 for z > 2.0)
         
     Returns:
     --------
@@ -33,13 +65,27 @@ def get_top_motifs_per_cluster(clusters_motifs_df, percentile_threshold=99):
     
     clusters_motifs_dict = {}
     
+    print(f"Using {method} method with threshold: {threshold_value}")
+    
     for cluster_id in clusters_motifs_df.index:
         scores = clusters_motifs_df.loc[cluster_id]
-        threshold = np.percentile(scores, percentile_threshold)
         
-        top_motifs = scores[scores >= threshold].sort_values(ascending=False)
+        # default is "threshold" using z-score values
+        if method == "threshold":
+            # Use direct z-score threshold
+            threshold = threshold_value
+            top_motifs = scores[scores >= threshold].sort_values(ascending=False)
+        elif method == "percentile":
+            # Use percentile-based threshold
+            threshold = np.percentile(scores, threshold_value)
+            top_motifs = scores[scores >= threshold].sort_values(ascending=False)
+            
+        else:
+            raise ValueError("method must be either 'percentile' or 'threshold'")
+        
         clusters_motifs_dict[cluster_id] = top_motifs.index.tolist()
         
+        # Optional: print details for verification
         # print(f"Cluster {cluster_id}: {len(top_motifs)} motifs above {threshold:.3f}")
     
     return clusters_motifs_dict
