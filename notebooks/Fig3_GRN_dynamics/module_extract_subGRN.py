@@ -227,6 +227,54 @@ def create_tf_gene_matrix_per_cluster(clusters_tfs_dict, clusters_genes_dict):
     
     return cluster_tf_gene_matrices
 
+# Step 5: extract the subGRN for a given GRN[celltype, timepoint] and a peak cluster
+def extract_subGRN_from_cluster(grn_df, cluster_tf_gene_matrix, cluster_id):
+    """
+    Extract subGRN based on TF-gene relationships from peak cluster
+    
+    Parameters:
+    - grn_df: GRN dataframe with 'source', 'target', coefficients, etc.
+    - cluster_tf_gene_matrix: TF-by-genes binarized matrix (pandas DataFrame)
+    - cluster_id: identifier for the cluster
+    
+    Returns:
+    - filtered GRN dataframe containing only edges predicted by the cluster
+    """
+    
+    # Get all TF-target pairs where matrix = 1
+    tf_target_pairs = []
+    for tf in cluster_tf_gene_matrix.index:
+        for gene in cluster_tf_gene_matrix.columns:
+            if cluster_tf_gene_matrix.loc[tf, gene] == 1:
+                tf_target_pairs.append((tf, gene))
+    
+    # Convert to set for faster lookup
+    predicted_pairs = set(tf_target_pairs)
+    
+    # Filter GRN to only include predicted pairs
+    mask = grn_df.apply(lambda row: (row['source'], row['target']) in predicted_pairs, axis=1)
+    subgrn = grn_df[mask].copy()
+    
+    # Add cluster information
+    subgrn['cluster_id'] = cluster_id
+    
+    return subgrn
+
+# Apply to all clusters
+def extract_all_cluster_subGRNs(grn_df, cluster_dict):
+    """
+    Extract subGRNs for all clusters
+    """
+    all_subgrns = []
+    
+    for cluster_id, tf_gene_matrix in cluster_dict.items():
+        subgrn = extract_subGRN_from_cluster(grn_df, tf_gene_matrix, cluster_id)
+        if len(subgrn) > 0:  # Only keep non-empty subGRNs
+            all_subgrns.append(subgrn)
+            print(f"Cluster {cluster_id}: {len(subgrn)} edges found")
+    
+    return all_subgrns
+
 # =============================================================================
 # COMBINED FUNCTION: Run all 4 steps
 # =============================================================================

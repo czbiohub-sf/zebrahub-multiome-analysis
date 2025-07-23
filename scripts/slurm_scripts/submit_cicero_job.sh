@@ -31,4 +31,4 @@ mkdir -p "$SHELL_SCRIPT_DIR"
 module load R/4.3
 
 # Run the R script
-Rscript /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/zebrahub-multiome-analysis/scripts/run_02_compute_CCANs_cicero_parallelized.R $SEURAT_OBJ_PATH $ASSAY $DIM_REDUCED $OUTPUT_PATH $DATA_ID $PEAKTYPE $SHELL_SCRIPT_DIR
+Rscript /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/zebrahub-multiome-analysis/scripts/run_02_compute_CCANs_cicero_parallelized_improved.R $SEURAT_OBJ_PATH $ASSAY $DIM_REDUCED $OUTPUT_PATH $DATA_ID $PEAKTYPE $SHELL_SCRIPT_DIR
