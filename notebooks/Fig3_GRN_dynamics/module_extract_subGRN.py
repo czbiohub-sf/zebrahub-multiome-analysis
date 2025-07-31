@@ -1,48 +1,15 @@
-# import pandas as pd
-# import numpy as np
-# import networkx as nx
-# import matplotlib.pyplot as plt
-# import seaborn as sns
-# from typing import Dict, List, Tuple
-# import pickle
-# import os
-
 import pandas as pd
 import numpy as np
+import networkx as nx
+import matplotlib.pyplot as plt
+import seaborn as sns
+from typing import Dict, List, Tuple
+import pickle
+import os
+from pathlib import Path
 
-# =============================================================================
-# STEP 1: Create clusters-by-motifs dict
-# =============================================================================
-
-# def get_top_motifs_per_cluster(clusters_motifs_df, percentile_threshold=99):
-#     """
-#     Step 1: Extract top motifs for each cluster above percentile threshold.
-    
-#     Parameters:
-#     -----------
-#     clusters_motifs_df : pd.DataFrame
-#         Clusters x motifs with enrichment scores
-#     percentile_threshold : float
-#         Percentile threshold (e.g., 99 for 99th percentile)
-        
-#     Returns:
-#     --------
-#     clusters_motifs_dict : dict
-#         {cluster_id: [list_of_top_motifs]}
-#     """
-    
-#     clusters_motifs_dict = {}
-    
-#     for cluster_id in clusters_motifs_df.index:
-#         scores = clusters_motifs_df.loc[cluster_id]
-#         threshold = np.percentile(scores, percentile_threshold)
-        
-#         top_motifs = scores[scores >= threshold].sort_values(ascending=False)
-#         clusters_motifs_dict[cluster_id] = top_motifs.index.tolist()
-        
-#         # print(f"Cluster {cluster_id}: {len(top_motifs)} motifs above {threshold:.3f}")
-    
-#     return clusters_motifs_dict
+# create cluster-by-motifs
+# extract the top motifs per each cluster: use threshold for z-scored enrichment scores or percentile (default is the threshold)
 def get_top_motifs_per_cluster(clusters_motifs_df, method="threshold", threshold_value=2):
     """
     Step 1: Extract top motifs for each cluster using percentile or z-score threshold.
@@ -90,10 +57,7 @@ def get_top_motifs_per_cluster(clusters_motifs_df, method="threshold", threshold
     
     return clusters_motifs_dict
 
-# =============================================================================
-# STEP 2: Create clusters-by-TFs using info_motifs
-# =============================================================================
-
+# create cluster-by-TFs by using motif:TF dataframes
 def get_tfs_from_motifs(clusters_motifs_dict, info_motifs_df):
     """
     Step 2: Map motifs to TFs for each cluster using info_motifs DataFrame.
@@ -130,15 +94,12 @@ def get_tfs_from_motifs(clusters_motifs_dict, info_motifs_df):
         unique_tfs = list(dict.fromkeys(cluster_tfs))
         clusters_tfs_dict[cluster_id] = unique_tfs
         
-        print(f"Cluster {cluster_id}: {len(motifs)} motifs → {len(unique_tfs)} unique TFs")
+        # print(f"Cluster {cluster_id}: {len(motifs)} motifs → {len(unique_tfs)} unique TFs")
     
     return clusters_tfs_dict
 
-# =============================================================================
-# STEP 3: Get associated genes per cluster
-# =============================================================================
-
-def get_associated_genes_per_cluster(adata_peaks, cluster_col="leiden_unified", gene_col="associated_gene"):
+# create clusters-by-genes (linked_genes or associated_genes)
+def get_associated_genes_per_cluster(adata_peaks, cluster_col="leiden_unified", gene_col="linked_gene"):
     """
     Step 3: Extract associated genes for each cluster from adata_peaks.
     
@@ -149,12 +110,12 @@ def get_associated_genes_per_cluster(adata_peaks, cluster_col="leiden_unified", 
     cluster_col : str
         Column name in adata_peaks.obs containing cluster labels (default: "leiden_unified")
     gene_col : str
-        Column name in adata_peaks.obs containing gene names associated with each peak (default: "associated_gene")
+        Column name in adata_peaks.obs containing gene names associated with each peak (default: "linked_gene")
         
     Returns:
     --------
     clusters_genes_dict : dict
-        {cluster_id: [list_of_associated_genes]}
+        {cluster_id: [list_of_linked_genes]}
     """
     
     clusters_genes_dict = {}
@@ -179,14 +140,11 @@ def get_associated_genes_per_cluster(adata_peaks, cluster_col="leiden_unified", 
         
         clusters_genes_dict[cluster_id] = cluster_genes_clean
         
-        print(f"Cluster {cluster_id}: {len(cluster_genes_clean)} associated genes")
+        # print(f"Cluster {cluster_id}: {len(cluster_genes_clean)} associated genes")
     
     return clusters_genes_dict
 
-# =============================================================================
-# STEP 4: Create TFs-by-genes matrix for each cluster
-# =============================================================================
-
+# create TFs-by-genes (meshes) for all clusters (dict)
 def create_tf_gene_matrix_per_cluster(clusters_tfs_dict, clusters_genes_dict):
     """
     Step 4: Create binary TFs x genes matrix for each cluster.
@@ -221,9 +179,9 @@ def create_tf_gene_matrix_per_cluster(clusters_tfs_dict, clusters_genes_dict):
                 )
                 cluster_tf_gene_matrices[cluster_id] = tf_gene_matrix
                 
-                print(f"Cluster {cluster_id}: {len(tfs)} TFs x {len(genes)} genes = {len(tfs) * len(genes)} potential edges")
-            else:
-                print(f"Cluster {cluster_id}: Skipped (no TFs or genes)")
+            #     # print(f"Cluster {cluster_id}: {len(tfs)} TFs x {len(genes)} genes = {len(tfs) * len(genes)} potential edges")
+            # else:
+            #     # print(f"Cluster {cluster_id}: Skipped (no TFs or genes)")
     
     return cluster_tf_gene_matrices
 
@@ -275,68 +233,8 @@ def extract_all_cluster_subGRNs(grn_df, cluster_dict):
     
     return all_subgrns
 
-# =============================================================================
-# COMBINED FUNCTION: Run all 4 steps
-# =============================================================================
 
-def run_core_pipeline(clusters_motifs_df, info_motifs_df, adata_peaks, 
-                     motif_percentile=99, cluster_col="leiden_unified", gene_col="associated_gene"):
-    """
-    Run all 4 core steps in sequence.
-    
-    Parameters:
-    -----------
-    clusters_motifs_df : pd.DataFrame
-        Clusters x motifs with scores
-    info_motifs_df : pd.DataFrame  
-        Motif info with 'indirect' TF column
-    adata_peaks : AnnData
-        AnnData object with peaks data
-    motif_percentile : float
-        Percentile threshold for motifs (default 99)
-    cluster_col : str
-        Column name in adata_peaks.obs containing cluster labels (default: "leiden_unified")
-    gene_col : str
-        Column name in adata_peaks.obs containing gene names associated with each peak (default: "associated_gene")
-        
-    Returns:
-    --------
-    results : dict
-        All results from the 4 steps
-    """
-    
-    print("RUNNING CORE 4-STEP PIPELINE")
-    print("="*50)
-    
-    # Step 1: Get top motifs per cluster
-    print("\nSTEP 1: Getting top motifs per cluster...")
-    clusters_motifs_dict = get_top_motifs_per_cluster(clusters_motifs_df, motif_percentile)
-    
-    # Step 2: Map motifs to TFs
-    print("\nSTEP 2: Mapping motifs to TFs...")
-    clusters_tfs_dict = get_tfs_from_motifs(clusters_motifs_dict, info_motifs_df)
-    
-    # Step 3: Get associated genes
-    print("\nSTEP 3: Getting associated genes per cluster...")
-    clusters_genes_dict = get_associated_genes_per_cluster(adata_peaks, cluster_col, gene_col)
-    
-    # Step 4: Create TF-gene matrices
-    print("\nSTEP 4: Creating TF-gene matrices...")
-    cluster_tf_gene_matrices = create_tf_gene_matrix_per_cluster(clusters_tfs_dict, clusters_genes_dict)
-    
-    print(f"\nCOMPLETE! Created matrices for {len(cluster_tf_gene_matrices)} clusters")
-    
-    return {
-        'clusters_motifs_dict': clusters_motifs_dict,
-        'clusters_tfs_dict': clusters_tfs_dict, 
-        'clusters_genes_dict': clusters_genes_dict,
-        'cluster_tf_gene_matrices': cluster_tf_gene_matrices
-    }
-
-# =============================================================================
-# HELPER FUNCTIONS: Inspect results
-# =============================================================================
-
+# helper function: inspect the result
 def inspect_cluster_results(results, cluster_id):
     """
     Inspect results for a specific cluster.
@@ -625,6 +523,51 @@ def get_top_regulators_per_cluster(active_subgrns, top_n=10):
     
     return top_regulators
 
+# =============================================================================
+# GRN DATA LOADING UTILITIES
+# =============================================================================
+
+def load_grn_dict_pathlib(base_dir="grn_exports", grn_type="filtered"):
+    """
+    Load GRN dictionary using pathlib (more robust)
+    
+    Parameters:
+    -----------
+    base_dir : str
+        Base directory containing GRN exports
+    grn_type : str
+        Type of GRN data to load (e.g., "filtered")
+        
+    Returns:
+    --------
+    grn_dict : dict
+        Dictionary mapping (celltype, timepoint) -> GRN DataFrame
+    """
+    grn_dict = {}
+    base_path = Path(base_dir) / grn_type
+    
+    # Find all CSV files recursively
+    csv_files = list(base_path.glob("*/*.csv"))
+    
+    for csv_file in csv_files:
+        # Extract timepoint from parent directory
+        timepoint_dir = csv_file.parent.name
+        timepoint = timepoint_dir.split('_')[1] if 'timepoint_' in timepoint_dir else timepoint_dir
+        
+        # Extract celltype from filename
+        celltype = csv_file.stem  # filename without extension
+        
+        # Load GRN
+        grn_df = pd.read_csv(csv_file)
+        grn_dict[(celltype, timepoint)] = grn_df
+    
+    print(f"Loaded {len(grn_dict)} GRNs from {base_path}")
+    print(f"Available (celltype, timepoint) combinations:")
+    for key in sorted(grn_dict.keys()):
+        print(f"  {key}")
+    
+    return grn_dict
+
 # # =============================================================================
 # # EXTENDED PIPELINE: Include CellOracle filtering
 # # =============================================================================
@@ -787,50 +730,3 @@ for condition, subgrns in all_subgrns.items():
 # print("\nExtended pipeline with CellOracle filtering ready!")
 # print("Use: run_extended_pipeline(clusters_motifs_df, info_motifs, adata_peaks, celloracle_grn_df)")
 # print("Or step-by-step: filter_with_celloracle_grn(cluster_tf_gene_matrices, celloracle_grn_df)")
-
-def extract_subGRN_from_cluster(grn_df, cluster_tf_gene_matrix, cluster_id):
-    """
-    Extract subGRN based on TF-gene relationships from peak cluster
-    
-    Parameters:
-    - grn_df: GRN dataframe with 'source', 'target', coefficients, etc.
-    - cluster_tf_gene_matrix: TF-by-genes binarized matrix (pandas DataFrame)
-    - cluster_id: identifier for the cluster
-    
-    Returns:
-    - filtered GRN dataframe containing only edges predicted by the cluster
-    """
-    
-    # Get all TF-target pairs where matrix = 1
-    tf_target_pairs = []
-    for tf in cluster_tf_gene_matrix.index:
-        for gene in cluster_tf_gene_matrix.columns:
-            if cluster_tf_gene_matrix.loc[tf, gene] == 1:
-                tf_target_pairs.append((tf, gene))
-    
-    # Convert to set for faster lookup
-    predicted_pairs = set(tf_target_pairs)
-    
-    # Filter GRN to only include predicted pairs
-    mask = grn_df.apply(lambda row: (row['source'], row['target']) in predicted_pairs, axis=1)
-    subgrn = grn_df[mask].copy()
-    
-    # Add cluster information
-    subgrn['cluster_id'] = cluster_id
-    
-    return subgrn
-
-# Apply to all clusters
-def extract_all_cluster_subGRNs(grn_df, cluster_dict):
-    """
-    Extract subGRNs for all clusters
-    """
-    all_subgrns = []
-    
-    for cluster_id, tf_gene_matrix in cluster_dict.items():
-        subgrn = extract_subGRN_from_cluster(grn_df, tf_gene_matrix, cluster_id)
-        if len(subgrn) > 0:  # Only keep non-empty subGRNs
-            all_subgrns.append(subgrn)
-            print(f"Cluster {cluster_id}: {len(subgrn)} edges found")
-    
-    return all_subgrns
