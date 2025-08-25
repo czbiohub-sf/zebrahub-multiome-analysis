@@ -178,11 +178,17 @@ def create_summary_statistics(presence_data, analysis_type='timepoint'):
     for key, data in presence_data.items():
         fractions = list(data['presence_fractions'].values())
         if fractions:
+            n_fractions = len(fractions)
+            mean_presence = np.mean(fractions)
+            std_presence = np.std(fractions)
+            sem_presence = std_presence / np.sqrt(n_fractions) if n_fractions > 0 else 0
+            
             summary.append({
                 analysis_type: key,
-                'mean_presence': np.mean(fractions),
+                'mean_presence': mean_presence,
                 'median_presence': np.median(fractions),
-                'std_presence': np.std(fractions),
+                'std_presence': std_presence,
+                'sem_presence': sem_presence,  # Add SEM
                 'total_pairs': len(fractions),
                 'pairs_50pct': sum(1 for f in fractions if f >= 0.5),
                 'pairs_80pct': sum(1 for f in fractions if f >= 0.8),
@@ -457,7 +463,7 @@ def plot_grn_overlap_analysis(analysis_results, save_path=None, show_plot=True):
                 y=tp_summary_df['mean_presence'],
                 name='Timepoint Means',
                 marker_color='lightblue',
-                error_y=dict(type='data', array=tp_summary_df['std_presence'])
+                error_y=dict(type='data', array=tp_summary_df['sem_presence'])  # Use SEM instead of std
             ),
             row=3, col=1
         )
@@ -470,9 +476,9 @@ def plot_grn_overlap_analysis(analysis_results, save_path=None, show_plot=True):
                 y=ct_summary_df['mean_presence'],
                 name='Celltype Means',
                 marker_color='lightcoral',
-                error_y=dict(type='data', array=ct_summary_df['std_presence']),
+                error_y=dict(type='data', array=ct_summary_df['sem_presence']),  # Use SEM instead of std
                 text=ct_summary_df['celltype'],
-                hovertemplate='%{text}<br>Mean: %{y:.3f}<extra></extra>'
+                hovertemplate='%{text}<br>Mean: %{y:.3f} ± %{error_y.array:.4f}<extra></extra>'
             ),
             row=3, col=2
         )
@@ -495,7 +501,7 @@ def plot_grn_overlap_analysis(analysis_results, save_path=None, show_plot=True):
     fig.update_layout(
         height=1200,
         width=1400,
-        title_text="TF-Gene Pair Presence Fraction Analysis",
+        title_text="TF-Gene Pair Presence Fraction Analysis<br><sub>Error bars show Standard Error of the Mean (SEM)</sub>",
         showlegend=False
     )
     
