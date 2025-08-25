@@ -1,15 +1,26 @@
 """
 Enhanced Peak Cluster Annotation Module
 
-This module provides entropy-based methods for annotating peak clusters based on 
-accessibility patterns across categorical variables (celltype, timepoint, lineage, peak_type).
-Unlike Fisher's exact test approaches, this module can properly detect:
-- Broadly accessible peaks (high entropy)
-- Specifically accessible peaks (low entropy, high dominance) 
-- Intermediate accessibility patterns
-- Broadly inaccessible peaks (separate analysis)
+This module provides comprehensive methods for annotating peak clusters using appropriate
+statistical approaches for different data types:
 
-Author: Yang-Joon Kim
+CONTINUOUS DATA (accessibility values):
+- Uses entropy-based analysis to detect accessibility patterns
+- Detects broadly accessible, specifically accessible, and intermediate patterns
+- Direct analysis of mean accessibility profiles per cluster
+
+CATEGORICAL DATA (peak_type, gene_type, etc.):
+- Uses Fisher's exact test for enrichment analysis  
+- Detects highly enriched, enriched, evenly distributed patterns
+- Proper statistical testing for categorical assignments
+
+MAIN FUNCTIONS:
+- run_unified_cluster_analysis(): Unified interface that routes data types automatically
+- compute_simple_cluster_accessibility_entropy(): Direct entropy analysis of accessibility
+- analyze_categorical_fisher_enrichment(): Fisher's exact test for categorical data
+- analyze_mixed_data_types(): Original mixed analysis interface
+
+Author: Yang-Joon Kim  
 Date: 2025-08-14
 """
 import scanpy as sc
@@ -17,6 +28,7 @@ import pandas as pd
 import numpy as np
 from typing import Dict, List, Tuple, Optional, Union
 from scipy import stats
+from scipy.stats import fisher_exact
 
 
 def create_cluster_pseudobulk_profiles(adata, 
@@ -101,7 +113,7 @@ def compute_cluster_entropy_by_metadata(pseudobulk_profiles: pd.DataFrame,
     metadata_df = pd.DataFrame(pseudobulk_profiles.values, 
                               index=pseudobulk_profiles.index,
                               columns=metadata_labels)
-    aggregated_profiles = metadata_df.groupby(metadata_df.columns, axis=1).sum()
+    aggregated_profiles = metadata_df.groupby(metadata_df.columns, axis=1).mean()
     
     # Compute entropy for each cluster
     entropy_values = []
@@ -741,6 +753,485 @@ def compare_methods(adata, entropy_results, fisher_results, category_name: str =
     
     for pattern, count in entropy_patterns.items():
         print(f"  {pattern:20s}: {count:2d} clusters (entropy method only)")
+
+
+def analyze_mixed_data_types(adata, cluster_col='leiden_coarse'):
+    """
+    Analyze both continuous accessibility and categorical metadata.
+    """
+    
+    # Continuous accessibility data → Entropy analysis
+    continuous_results = run_simple_cluster_entropy_analysis(adata, cluster_col)
+    
+    # Categorical metadata → Fisher's exact test
+    categorical_results = {}
+    
+    if 'peak_type' in adata.obs.columns:
+        categorical_results['peak_type'] = analyze_categorical_fisher_enrichment(
+            adata, cluster_col, 'peak_type', 'peak_type'
+        )
+    
+    return {
+        'continuous': continuous_results,
+        'categorical': categorical_results
+    }
+
+
+def analyze_categorical_fisher_enrichment(adata, cluster_col, category_col, category_name,
+                                        min_peaks_per_cluster=100,
+                                        # Fisher's test thresholds (reuse our calibrated values)
+                                        high_or_threshold=5.0,
+                                        medium_or_threshold=2.0,
+                                        high_representation_threshold=30.0,
+                                        medium_representation_threshold=15.0,
+                                        verbose=True):
+    """
+    Analyze categorical enrichment using Fisher's exact test (our original approach).
+    
+    This is perfect for peak_type, where each peak has a definitive categorical label.
+    """
+    
+    # Input validation
+    if cluster_col not in adata.obs.columns:
+        raise ValueError(f"Cluster column '{cluster_col}' not found in adata.obs")
+    
+    if category_col not in adata.obs.columns:
+        raise ValueError(f"Category column '{category_col}' not found in adata.obs")
+    
+    if len(adata.obs) == 0:
+        raise ValueError("Empty adata object - no peaks found")
+    
+    if verbose:
+        print(f"="*80)
+        print(f"CATEGORICAL ENRICHMENT ANALYSIS: {category_name.upper()}")
+        print(f"Using Fisher's exact test for categorical data")
+        print(f"="*80)
+    
+    clusters = adata.obs[cluster_col].astype(str)
+    categories = adata.obs[category_col].astype(str)
+    
+    # Check for missing values
+    if clusters.isna().sum() > 0:
+        if verbose:
+            print(f"Warning: {clusters.isna().sum()} missing cluster assignments")
+        clusters = clusters.fillna('unknown')
+    
+    if categories.isna().sum() > 0:
+        if verbose:
+            print(f"Warning: {categories.isna().sum()} missing category assignments") 
+        categories = categories.fillna('unknown')
+    
+    # Get global distribution
+    global_dist = categories.value_counts()
+    
+    cluster_results = []
+    
+    for cluster in sorted(set(clusters), key=lambda x: int(x) if x.isdigit() else float('inf')):
+        cluster_mask = clusters == cluster
+        cluster_size = cluster_mask.sum()
+        
+        if cluster_size < min_peaks_per_cluster:
+            continue
+            
+        if verbose:
+            print(f"\n=== CLUSTER {cluster} ===")
+            print(f"Cluster size: {cluster_size} peaks")
+        
+        cluster_categories = categories[cluster_mask].value_counts()
+        
+        # Test each category for enrichment
+        enrichment_scores = []
+        
+        for category, count_in_cluster in cluster_categories.items():
+            if count_in_cluster < 5:  # Skip small counts
+                continue
+                
+            category_mask = categories == category
+            
+            # Fisher's exact test (our proven approach)
+            a = count_in_cluster
+            b = category_mask.sum() - a  
+            c = cluster_size - a
+            d = len(adata.obs) - cluster_size - b
+            
+            # Ensure non-negative values for Fisher's test
+            if any(x < 0 for x in [a, b, c, d]):
+                if verbose:
+                    print(f"    Warning: Invalid Fisher's test values for {category}: a={a}, b={b}, c={c}, d={d}")
+                continue
+            
+            try:
+                odds_ratio, p_value = fisher_exact([[a, b], [c, d]])
+            except ValueError as e:
+                if verbose:
+                    print(f"    Warning: Fisher's test failed for {category}: {e}")
+                odds_ratio, p_value = 1.0, 1.0  # Neutral values as fallback
+            
+            pct_cluster = (a / cluster_size) * 100
+            expected_count = (cluster_size * category_mask.sum()) / len(adata.obs)
+            fold_enrichment = a / expected_count if expected_count > 0 else np.inf
+            
+            enrichment_scores.append({
+                'category': category,
+                'count': count_in_cluster,
+                'odds_ratio': odds_ratio,
+                'p_value': p_value,
+                'pct_of_cluster': pct_cluster,
+                'fold_enrichment': fold_enrichment
+            })
+            
+            if verbose:
+                print(f"  {category:15s}: {count_in_cluster:4d} ({pct_cluster:5.1f}%) "
+                      f"OR={odds_ratio:5.2f} FE={fold_enrichment:4.1f}x p={p_value:.2e}")
+        
+        # Sort by odds ratio
+        enrichment_scores.sort(key=lambda x: -x['odds_ratio'])
+        
+        if enrichment_scores:
+            top_category = enrichment_scores[0]
+            
+            # Apply our calibrated Fisher's thresholds
+            if (top_category['odds_ratio'] >= high_or_threshold and 
+                top_category['pct_of_cluster'] >= high_representation_threshold):
+                pattern = f"highly_enriched_{top_category['category']}"
+                confidence = "high"
+                
+            elif (top_category['odds_ratio'] >= medium_or_threshold and 
+                  top_category['pct_of_cluster'] >= medium_representation_threshold):
+                pattern = f"enriched_{top_category['category']}"
+                confidence = "medium"
+                
+            elif len(enrichment_scores) >= 3 and top_category['odds_ratio'] < medium_or_threshold:
+                # Multiple categories, none strongly enriched = evenly distributed
+                pattern = "evenly_distributed"
+                confidence = "medium"
+                
+            else:
+                pattern = "mixed_categorical"
+                confidence = "low"
+            
+            if verbose:
+                print(f"→ PATTERN: {pattern} ({confidence} confidence)")
+        
+        else:
+            pattern = "unclear"
+            confidence = "none"
+        
+        cluster_results.append({
+            'cluster': cluster,
+            'cluster_size': cluster_size,
+            'pattern': pattern,
+            'confidence': confidence,
+            'top_category': top_category['category'] if enrichment_scores else None,
+            'top_odds_ratio': top_category['odds_ratio'] if enrichment_scores else None,
+            'top_pct_cluster': top_category['pct_of_cluster'] if enrichment_scores else None,
+            'n_categories': len(cluster_categories)
+        })
+    
+    return pd.DataFrame(cluster_results)
+
+
+def compute_simple_cluster_accessibility_entropy(adata, 
+                                               cluster_col='leiden_coarse',
+                                               accessibility_cols=None,
+                                               min_peaks_per_cluster=100,
+                                               verbose=True):
+    """
+    SIMPLE approach: Compute entropy from mean accessibility profile per cluster.
+    
+    This function computes entropy directly from the accessibility values in the data matrix,
+    treating accessibility as continuous values rather than categorical assignments.
+    
+    Parameters:
+    -----------
+    adata : AnnData
+        Annotated data object with accessibility data
+    cluster_col : str
+        Column name for peak cluster assignments
+    accessibility_cols : list or None
+        List of accessibility column names. If None, auto-detects.
+    min_peaks_per_cluster : int
+        Minimum peaks required per cluster for analysis
+    verbose : bool
+        Whether to print detailed results
+        
+    Returns:
+    --------
+    pd.DataFrame
+        Results with cluster patterns and metrics
+    """
+    
+    # Input validation
+    if cluster_col not in adata.obs.columns:
+        raise ValueError(f"Cluster column '{cluster_col}' not found in adata.obs")
+    
+    if adata.X is None:
+        raise ValueError("adata.X is None - no data matrix found")
+    
+    if len(adata.obs) == 0:
+        raise ValueError("Empty adata object - no peaks found")
+    
+    # Auto-detect accessibility columns
+    if accessibility_cols is None:
+        accessibility_cols = [col for col in adata.var.index if 'accessibility' in col.lower()]
+        
+    if len(accessibility_cols) == 0:
+        if verbose:
+            print("Warning: No accessibility columns found. Using all columns.")
+        accessibility_cols = list(adata.var.index)
+        if len(accessibility_cols) == 0:
+            raise ValueError("No columns found in adata.var.index")
+    
+    # Validate accessibility columns exist
+    missing_cols = [col for col in accessibility_cols if col not in adata.var.index]
+    if missing_cols:
+        if verbose:
+            print(f"Warning: {len(missing_cols)} accessibility columns not found: {missing_cols[:3]}...")
+        accessibility_cols = [col for col in accessibility_cols if col in adata.var.index]
+        
+    if len(accessibility_cols) == 0:
+        raise ValueError("No valid accessibility columns found after filtering")
+    
+    clusters = adata.obs[cluster_col].astype(str)
+    cluster_results = []
+    
+    if verbose:
+        print(f"Computing simple accessibility entropy for {len(set(clusters))} clusters")
+        print(f"Using {len(accessibility_cols)} accessibility columns")
+    
+    for cluster in sorted(set(clusters), key=lambda x: int(x) if x.isdigit() else float('inf')):
+        cluster_mask = clusters == cluster
+        cluster_size = cluster_mask.sum()
+        
+        if cluster_size < min_peaks_per_cluster:
+            continue
+            
+        # Get mean accessibility profile for this cluster  
+        if hasattr(adata.X, 'toarray'):
+            cluster_data = adata.X[cluster_mask, :].toarray()
+        else:
+            cluster_data = adata.X[cluster_mask, :]
+            
+        cluster_accessibility = cluster_data.mean(axis=0)
+        
+        # Create accessibility series
+        accessibility_profile = pd.Series(
+            cluster_accessibility,
+            index=adata.var.index
+        )
+        
+        # Filter to accessibility columns only
+        if accessibility_cols:
+            accessibility_profile = accessibility_profile[accessibility_cols]
+        
+        # Remove very low values to focus on meaningful accessibility
+        accessibility_profile = accessibility_profile[accessibility_profile >= 0.1]
+        
+        if len(accessibility_profile) == 0:
+            if verbose:
+                print(f"Cluster {cluster}: No significant accessibility values found (all < 0.1)")
+            continue
+        
+        # Safety check for edge cases
+        if accessibility_profile.sum() == 0:
+            if verbose:
+                print(f"Cluster {cluster}: Sum of accessibility is zero")
+            continue
+        
+        # Compute entropy and other metrics with error handling
+        try:
+            entropy = compute_accessibility_entropy(accessibility_profile, normalize=True)
+            dominance = accessibility_profile.max() / accessibility_profile.sum()
+            dominant_category = accessibility_profile.idxmax()
+        except Exception as e:
+            if verbose:
+                print(f"Cluster {cluster}: Error computing metrics: {e}")
+            continue
+        
+        # Validate computed values
+        if not np.isfinite(entropy) or not np.isfinite(dominance):
+            if verbose:
+                print(f"Cluster {cluster}: Invalid entropy ({entropy}) or dominance ({dominance})")
+            continue
+        
+        # Classify pattern based on entropy and dominance
+        if entropy >= 0.75 and len(accessibility_profile) >= 4:
+            pattern = "broadly_accessible"
+            confidence = "high"
+        elif dominance >= 0.6 and entropy <= 0.4:
+            pattern = f"specific_{dominant_category}"
+            confidence = "high"
+        elif dominance >= 0.4 and entropy <= 0.6:
+            pattern = f"enriched_{dominant_category}"
+            confidence = "medium"
+        else:
+            pattern = f"intermediate_{dominant_category}"
+            confidence = "low"
+        
+        cluster_results.append({
+            'cluster': cluster,
+            'pattern': pattern,
+            'confidence': confidence,
+            'entropy': entropy,
+            'dominance': dominance,
+            'dominant_category': dominant_category,
+            'cluster_size': cluster_size,
+            'n_accessible_categories': len(accessibility_profile)
+        })
+        
+        if verbose:
+            print(f"Cluster {cluster}: {pattern} (entropy={entropy:.3f}, dominance={dominance:.3f})")
+    
+    return pd.DataFrame(cluster_results)
+
+
+def run_simple_cluster_entropy_analysis(adata, cluster_col='leiden_coarse'):
+    """
+    Simple wrapper for continuous entropy analysis that matches the expected interface.
+    
+    This function provides a simplified interface to the new simple entropy analysis functionality
+    for use in mixed data type analysis.
+    """
+    return compute_simple_cluster_accessibility_entropy(
+        adata=adata,
+        cluster_col=cluster_col,
+        accessibility_cols=None,  # Auto-detect
+        verbose=False
+    )
+
+
+def run_unified_cluster_analysis(adata, cluster_col='leiden_coarse', verbose=True):
+    """
+    Run appropriate analysis for each data type:
+    - Continuous accessibility → Simple entropy
+    - Categorical metadata → Fisher's exact test
+    
+    This is the main entry point for comprehensive cluster analysis that automatically
+    routes different data types to their most appropriate analysis methods.
+    
+    Parameters:
+    -----------
+    adata : AnnData
+        Annotated data object with cluster assignments and various data types
+    cluster_col : str
+        Column name for peak cluster assignments
+    verbose : bool
+        Whether to print detailed analysis results
+        
+    Returns:
+    --------
+    dict
+        Results dictionary with analysis results for each data type
+    """
+    
+    results = {}
+    
+    # 1. Continuous accessibility data (celltype, timepoint, lineage)
+    if verbose:
+        print("="*80)
+        print("CONTINUOUS ACCESSIBILITY ANALYSIS")
+        print("="*80)
+    
+    # Detect available accessibility data types
+    all_cols = list(adata.var.index)
+    
+    for metadata_type in ['celltype', 'timepoint', 'lineage']:
+        accessibility_cols = None
+        
+        if metadata_type == 'celltype':
+            # Look for general accessibility columns (not timepoint or lineage specific)
+            # More flexible patterns: accessibility_*, acc_*, *accessibility*
+            accessibility_cols = [col for col in all_cols 
+                                 if (('accessibility' in col.lower() or col.lower().startswith('acc_')) and 
+                                     'somites' not in col.lower() and 
+                                     'timepoint' not in col.lower() and
+                                     'lineage' not in col.lower())]
+        elif metadata_type == 'timepoint':
+            # Look for timepoint-specific columns  
+            # Patterns: *somites*, *timepoint*, *tp*, *time*
+            accessibility_cols = [col for col in all_cols 
+                                 if (('accessibility' in col.lower() or col.lower().startswith('acc_')) and 
+                                     ('somites' in col.lower() or 'timepoint' in col.lower() or 
+                                      '_tp' in col.lower() or 'time' in col.lower()))]
+        elif metadata_type == 'lineage':
+            # Look for lineage-specific columns
+            # Patterns: *lineage*, *lin*, *linage*  
+            accessibility_cols = [col for col in all_cols 
+                                 if (('accessibility' in col.lower() or col.lower().startswith('acc_')) and 
+                                     ('lineage' in col.lower() or '_lin' in col.lower() or 
+                                      'linage' in col.lower()))]
+        
+        if accessibility_cols and len(accessibility_cols) > 0:
+            if verbose:
+                print(f"\n--- {metadata_type.upper()} ANALYSIS ---")
+                print(f"Found {len(accessibility_cols)} accessibility columns")
+            
+            try:
+                result_df = compute_simple_cluster_accessibility_entropy(
+                    adata, cluster_col, accessibility_cols, verbose=verbose
+                )
+                if len(result_df) > 0:
+                    results[metadata_type] = result_df
+                else:
+                    if verbose:
+                        print(f"No clusters met minimum requirements for {metadata_type} analysis")
+            except Exception as e:
+                if verbose:
+                    print(f"Error in {metadata_type} analysis: {e}")
+                continue
+        else:
+            if verbose:
+                print(f"\n--- {metadata_type.upper()} ANALYSIS ---")
+                print(f"No accessibility columns found for {metadata_type}")
+    
+    # 2. Categorical data (peak_type and other categorical columns)
+    if verbose:
+        print("\n" + "="*80)
+        print("CATEGORICAL DATA ANALYSIS")
+        print("="*80)
+    
+    categorical_columns = ['peak_type', 'gene_type', 'regulatory_element']
+    
+    for col_name in categorical_columns:
+        if col_name in adata.obs.columns:
+            if verbose:
+                print(f"\n--- {col_name.upper()} ANALYSIS ---")
+            
+            try:
+                result_df = analyze_categorical_fisher_enrichment(
+                    adata, cluster_col, col_name, col_name, verbose=verbose
+                )
+                if len(result_df) > 0:
+                    results[col_name] = result_df
+                else:
+                    if verbose:
+                        print(f"No clusters met minimum requirements for {col_name} analysis")
+            except Exception as e:
+                if verbose:
+                    print(f"Error in {col_name} analysis: {e}")
+                continue
+        else:
+            if verbose:
+                print(f"\n--- {col_name.upper()} ANALYSIS ---")
+                print(f"Column '{col_name}' not found in adata.obs")
+    
+    # Summary
+    if verbose:
+        print("\n" + "="*80)
+        print("UNIFIED ANALYSIS SUMMARY")
+        print("="*80)
+        
+        for data_type, result_df in results.items():
+            if len(result_df) > 0:
+                print(f"\n{data_type.capitalize()}:")
+                if 'pattern' in result_df.columns:
+                    pattern_counts = result_df['pattern'].value_counts()
+                    for pattern, count in pattern_counts.head(5).items():
+                        print(f"  {pattern:30s}: {count:2d} clusters")
+                else:
+                    print(f"  Analyzed {len(result_df)} clusters")
+    
+    return results
 
 
 # =============================================================================
