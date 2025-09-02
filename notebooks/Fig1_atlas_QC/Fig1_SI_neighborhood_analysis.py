@@ -16,7 +16,7 @@
 # %% [markdown]
 # # Neighborhood Purity and Cross-Modality Integration Quality Assessment
 # 
-# **Zebrahub-Multiome Analysis Pipeline**
+# **Zebrahub-Multiome Analysis Pipeline - Updated for Zebrahub Data Structure**
 # 
 # This notebook demonstrates comprehensive evaluation of multimodal integration quality using three complementary approaches:
 # 
@@ -68,10 +68,11 @@ print(f"✓ scIB package available: {SCIB_AVAILABLE}")
 # 
 # **Note**: Replace the file path below with your actual multiome data file.
 # 
-# The data should contain:
-# - **Connectivity matrices** in `adata.obsp`: 'connectivities_RNA', 'connectivities_ATAC', 'connectivities_wnn'
-# - **Embeddings** in `adata.obsm`: RNA PCA, ATAC LSI, WNN PCA coordinates  
-# - **Metadata** in `adata.obs`: cell types, timepoints, etc.
+# The data should contain (Zebrahub multiome structure):
+# - **Connectivity matrices** in `adata.obsp`: 'RNA_connectivities', 'ATAC_connectivities', 'connectivities_wnn'
+# - **Embeddings** in `adata.obsm`: 'X_pca', 'X_lsi', 'X_wnn.umap'
+# - **Cluster labels** in `adata.obs`: 'RNA_leiden_08', 'ATAC_leiden_08', 'wsnn_res.0.8'  
+# - **Metadata** in `adata.obs`: 'global_annotation', timepoints, etc.
 
 # %%
 # CONFIGURE YOUR DATA PATHS AND KEYS HERE
@@ -81,22 +82,29 @@ print(f"✓ scIB package available: {SCIB_AVAILABLE}")
 # data_path = "/path/to/your/multiome_data.h5ad" 
 data_path = "your_multiome_data.h5ad"  # Update this path
 
-# Define connectivity matrices (for neighborhood purity analysis)
+# Define connectivity matrices (for neighborhood purity analysis) - Updated for Zebrahub data
 connectivity_keys = {
-    'RNA': 'connectivities_RNA',      # RNA neighborhood graph
-    'ATAC': 'connectivities_ATAC',    # ATAC neighborhood graph  
+    'RNA': 'RNA_connectivities',      # RNA neighborhood graph
+    'ATAC': 'ATAC_connectivities',    # ATAC neighborhood graph  
     'WNN': 'connectivities_wnn'       # Weighted nearest neighbor graph
 }
 
-# Define embedding keys (for clustering and scIB metrics)
+# Define embedding keys (for clustering and scIB metrics) - Updated for Zebrahub data
 embedding_keys = {
-    'RNA': 'X_pca_rna',      # RNA PCA embedding
-    'ATAC': 'X_lsi_atac',    # ATAC LSI embedding  
-    'WNN': 'X_pca_wnn'       # Weighted nearest neighbor embedding
+    'RNA': 'X_pca',          # RNA PCA embedding
+    'ATAC': 'X_lsi',         # ATAC LSI embedding  
+    'WNN': 'X_wnn.umap'      # WNN embedding
+}
+
+# Define cluster label keys (for cross-modality validation) - Updated for Zebrahub data
+cluster_keys = {
+    'RNA': 'RNA_leiden_08',      # RNA leiden clusters at resolution 0.8
+    'ATAC': 'ATAC_leiden_08',    # ATAC leiden clusters at resolution 0.8
+    'WNN': 'wsnn_res.0.8'        # WNN clusters at resolution 0.8
 }
 
 # Metadata key for biological validation
-metadata_key = 'celltype'  # or 'annotation_ML_coarse', 'leiden', etc.
+metadata_key = 'global_annotation'  # or other metadata in adata.obs
 
 # Analysis parameters
 leiden_resolution = 0.5    # Resolution for leiden clustering
@@ -129,8 +137,13 @@ try:
         for key in adata.obsm.keys():
             print(f"  - {key}: {adata.obsm[key].shape}")
                 
-        # Display metadata columns
-        print(f"\nMetadata columns: {list(adata.obs.columns)}")
+        # Display metadata columns (showing key ones for Zebrahub data)
+        key_metadata = ['global_annotation', 'RNA_leiden_08', 'ATAC_leiden_08', 'wsnn_res.0.8']
+        print(f"\nKey metadata columns:")
+        for col in key_metadata:
+            if col in adata.obs.columns:
+                n_unique = adata.obs[col].nunique()
+                print(f"  - {col}: {n_unique} unique values")
         
         if metadata_key in adata.obs.columns:
             print(f"\n{metadata_key} categories: {adata.obs[metadata_key].value_counts().head()}")
@@ -158,12 +171,18 @@ except Exception as e:
     adata.obs[metadata_key] = np.random.choice(cell_types, n_cells)
     adata.obs['timepoint'] = np.random.choice(['6hpf', '12hpf', '18hpf', '24hpf'], n_cells)
     
-    # Generate synthetic embeddings
-    adata.obsm['X_pca_rna'] = np.random.randn(n_cells, 50) 
-    adata.obsm['X_lsi_atac'] = np.random.randn(n_cells, 50)
-    adata.obsm['X_pca_wnn'] = np.random.randn(n_cells, 50)
+    # Generate synthetic embeddings (matching Zebrahub structure)
+    adata.obsm['X_pca'] = np.random.randn(n_cells, 50) 
+    adata.obsm['X_lsi'] = np.random.randn(n_cells, 50)
+    adata.obsm['X_wnn.umap'] = np.random.randn(n_cells, 50)
     
-    # Generate synthetic connectivity matrices
+    # Add synthetic cluster labels (matching Zebrahub structure)
+    adata.obs['global_annotation'] = adata.obs[metadata_key]
+    adata.obs['RNA_leiden_08'] = np.random.randint(0, 15, n_cells).astype(str)
+    adata.obs['ATAC_leiden_08'] = np.random.randint(0, 12, n_cells).astype(str)
+    adata.obs['wsnn_res.0.8'] = np.random.randint(0, 18, n_cells).astype(str)
+    
+    # Generate synthetic connectivity matrices (matching Zebrahub structure)
     from scipy.sparse import csr_matrix
     for modality, conn_key in connectivity_keys.items():
         # Simple synthetic connectivity (normally this would be from sc.pp.neighbors)
@@ -176,9 +195,38 @@ except Exception as e:
     print(f"✓ Cell types: {adata.obs[metadata_key].value_counts()}")
 
 # %% [markdown]
+# ### Option: Use Convenience Function for Complete Analysis
+# 
+# **For quick analysis with Zebrahub data structure, you can use the convenience function:**
+
+# %%
+# OPTIONAL: Use convenience function for complete analysis in one step
+USE_CONVENIENCE_FUNCTION = False  # Set to True to use the one-step analysis
+
+if USE_CONVENIENCE_FUNCTION:
+    print("🚀 Using convenience function for complete analysis...")
+    
+    purity_summary, validation_summary, all_results = analyze_zebrahub_multiome_neighborhoods(
+        adata=adata,
+        metadata_key=metadata_key,
+        k=k_neighbors,
+        save_plots=True,
+        output_dir='../figures/integration_quality/'
+    )
+    
+    print("✅ Complete analysis finished!")
+    print("Check the output directory for all results and plots.")
+    print("\n" + "="*60)
+    print("ANALYSIS COMPLETE - You can stop here if using the convenience function")
+    print("="*60)
+    
+else:
+    print("📝 Using step-by-step analysis approach...")
+
+# %% [markdown]
 # ---
 # 
-# # 1. Neighborhood Purity Analysis
+# # 1. Neighborhood Purity Analysis (Step-by-Step)
 # 
 # **Objective**: Measure how well cells of the same biological type cluster together in their k-nearest neighborhood.
 # 
@@ -187,41 +235,46 @@ except Exception as e:
 # **Expected Results**: WNN (joint) embedding should show higher purity scores than individual RNA or ATAC modalities.
 
 # %%
-print("=" * 60)
-print("1. NEIGHBORHOOD PURITY ANALYSIS")
-print("=" * 60)
+# Skip step-by-step analysis if convenience function was used
+if not USE_CONVENIENCE_FUNCTION:
+    print("=" * 60)
+    print("1. NEIGHBORHOOD PURITY ANALYSIS")
+    print("=" * 60)
 
-# Compute purity scores using pre-computed connectivities
-purity_results = compute_multimodal_knn_purity(
-    adata=adata,
-    connectivity_keys=connectivity_keys,
-    metadata_key=metadata_key,
-    k=k_neighbors
-)
+    # Compute purity scores using pre-computed connectivities
+    purity_results = compute_multimodal_knn_purity(
+        adata=adata,
+        connectivity_keys=connectivity_keys,
+        metadata_key=metadata_key,
+        k=k_neighbors
+    )
 
-# Summarize purity results
-print(f"\n📊 Purity Analysis Summary ({metadata_key}):")
-summary_purity = summarize_purity_scores(purity_results, adata, metadata_key)
-print(summary_purity[summary_purity['Metadata'] == 'Overall'][['Modality', 'Mean_Purity', 'Std_Purity']])
+    # Summarize purity results
+    print(f"\n📊 Purity Analysis Summary ({metadata_key}):")
+    summary_purity = summarize_purity_scores(purity_results, adata, metadata_key)
+    print(summary_purity[summary_purity['Metadata'] == 'Overall'][['Modality', 'Mean_Purity', 'Std_Purity']])
+else:
+    print("Skipping step-by-step analysis since convenience function was used.")
 
 # %% [markdown]
 # ### Visualize Neighborhood Purity Results
 
 # %%
-# Create comprehensive purity comparison plots
-fig_purity = plot_purity_comparison(
-    purity_results, 
-    adata, 
-    metadata_key,
-    figsize=(15, 5)
-)
+if not USE_CONVENIENCE_FUNCTION:
+    # Create comprehensive purity comparison plots
+    fig_purity = plot_purity_comparison(
+        purity_results, 
+        adata, 
+        metadata_key,
+        figsize=(15, 5)
+    )
 
-plt.suptitle(f'Neighborhood Purity Analysis - {metadata_key.upper()}', fontsize=16, y=1.02)
-plt.tight_layout()
-plt.show()
+    plt.suptitle(f'Neighborhood Purity Analysis - {metadata_key.upper()}', fontsize=16, y=1.02)
+    plt.tight_layout()
+    plt.show()
 
-# Add purity scores to AnnData for later analysis
-add_purity_to_adata(adata, purity_results, metadata_key)
+    # Add purity scores to AnnData for later analysis
+    add_purity_to_adata(adata, purity_results, metadata_key)
 
 # %% [markdown]
 # ### Interpretation: Neighborhood Purity
@@ -251,39 +304,39 @@ add_purity_to_adata(adata, purity_results, metadata_key)
 # **Key Insight**: Good joint embeddings should preserve structure from both individual modalities.
 
 # %%
-print("=" * 60)
-print("2. CROSS-MODALITY VALIDATION")
-print("=" * 60)
+if not USE_CONVENIENCE_FUNCTION:
+    print("=" * 60)
+    print("2. CROSS-MODALITY VALIDATION")
+    print("=" * 60)
 
-# Perform bidirectional cross-modality validation
-validation_df = compute_bidirectional_cross_modality_validation(
-    adata=adata,
-    embedding_keys=embedding_keys,
-    leiden_resolution=leiden_resolution,
-    clustering_method='leiden'
-)
+    # Perform bidirectional cross-modality validation using existing cluster labels
+    validation_df = compute_bidirectional_cross_modality_validation(
+        adata=adata,
+        cluster_keys=cluster_keys
+    )
 
-print(f"\n📊 Cross-Modality Validation Results:")
-print(validation_df[['Reference_Modality', 'Target_Modality', 'ARI', 'NMI']].round(3))
+    print(f"\n📊 Cross-Modality Validation Results:")
+    print(validation_df[['Reference_Modality', 'Target_Modality', 'ARI', 'NMI']].round(3))
 
 # %% [markdown]
 # ### Visualize Cross-Modality Validation
 
 # %%
-# Create cross-modality validation plots
-fig_cross = plot_cross_modality_validation(
-    validation_df,
-    figsize=(12, 5) 
-)
+if not USE_CONVENIENCE_FUNCTION:
+    # Create cross-modality validation plots
+    fig_cross = plot_cross_modality_validation(
+        validation_df,
+        figsize=(12, 5) 
+    )
 
-plt.suptitle('Cross-Modality Cluster Preservation', fontsize=16, y=1.02)
-plt.tight_layout()
-plt.show()
+    plt.suptitle('Cross-Modality Cluster Preservation', fontsize=16, y=1.02)
+    plt.tight_layout()
+    plt.show()
 
-# Summarize cross-modality results
-summary_cross = summarize_cross_modality_validation(validation_df)
-print(f"\n📈 Cross-Modality Summary:")
-print(summary_cross[summary_cross['Category'] == 'Overall'][['Metric', 'Mean', 'Std']].round(3))
+    # Summarize cross-modality results
+    summary_cross = summarize_cross_modality_validation(validation_df)
+    print(f"\n📈 Cross-Modality Summary:")
+    print(summary_cross[summary_cross['Category'] == 'Overall'][['Metric', 'Mean', 'Std']].round(3))
 
 # %% [markdown]
 # ### Interpretation: Cross-Modality Validation
