@@ -541,34 +541,25 @@ def perform_modality_specific_clustering(
 
 def compute_cross_modality_preservation(
     adata: sc.AnnData,
-    embedding_keys: Dict[str, str],
-    reference_modality: str,
-    n_clusters: int = None,
-    leiden_resolution: float = 0.5,
-    clustering_method: str = 'leiden'
+    cluster_keys: Dict[str, str],
+    reference_modality: str
 ) -> Dict[str, Dict[str, float]]:
     """
-    Compute cross-modality cluster preservation using ARI and NMI.
+    Compute cross-modality cluster preservation using ARI and NMI with pre-computed clusters.
     
     This function:
-    1. Clusters cells using the reference modality
+    1. Uses existing cluster labels for the reference modality
     2. Measures how well these clusters are preserved in other modalities
     
     Parameters:
     -----------
     adata : sc.AnnData
         Annotated data object
-    embedding_keys : Dict[str, str]
-        Dictionary mapping modality names to embedding keys
-        e.g., {'RNA': 'X_pca_rna', 'ATAC': 'X_lsi_atac', 'WNN': 'X_pca_wnn'}
+    cluster_keys : Dict[str, str]
+        Dictionary mapping modality names to cluster label keys in adata.obs
+        e.g., {'RNA': 'RNA_leiden_08', 'ATAC': 'ATAC_leiden_08', 'WNN': 'wsnn_res.0.8'}
     reference_modality : str
-        Modality to use for reference clustering (key in embedding_keys)
-    n_clusters : int, optional
-        Number of clusters (for K-means only)
-    leiden_resolution : float, default=0.5
-        Resolution for leiden clustering
-    clustering_method : str, default='leiden'
-        Clustering method: 'leiden' or 'kmeans'
+        Modality to use for reference clustering (key in cluster_keys)
         
     Returns:
     --------
@@ -576,45 +567,45 @@ def compute_cross_modality_preservation(
         Nested dictionary with modality names and metrics (ARI, NMI)
     """
     
-    if reference_modality not in embedding_keys:
-        raise ValueError(f"Reference modality {reference_modality} not found in embedding_keys")
+    if reference_modality not in cluster_keys:
+        raise ValueError(f"Reference modality {reference_modality} not found in cluster_keys")
     
-    # Perform reference clustering
-    print(f"Clustering reference modality: {reference_modality}")
-    reference_clusters = perform_modality_specific_clustering(
-        adata, 
-        embedding_keys[reference_modality], 
-        n_clusters=n_clusters,
-        leiden_resolution=leiden_resolution,
-        method=clustering_method
-    )
+    # Get reference clustering labels
+    reference_cluster_key = cluster_keys[reference_modality]
+    if reference_cluster_key not in adata.obs.columns:
+        raise ValueError(f"Reference cluster key {reference_cluster_key} not found in adata.obs")
+    
+    reference_clusters = adata.obs[reference_cluster_key].astype(str).values
+    print(f"Using reference clusters from {reference_modality}: {reference_cluster_key}")
+    print(f"Found {len(np.unique(reference_clusters))} unique clusters")
     
     preservation_scores = {}
     
     # Test preservation in other modalities
-    for modality_name, embedding_key in embedding_keys.items():
+    for modality_name, target_cluster_key in cluster_keys.items():
         if modality_name == reference_modality:
             # Perfect preservation of self
             preservation_scores[modality_name] = {'ARI': 1.0, 'NMI': 1.0}
             continue
         
-        print(f"Testing preservation in {modality_name} modality")
+        print(f"Testing preservation in {modality_name} modality using {target_cluster_key}")
         
         try:
-            # Cluster target modality
-            target_clusters = perform_modality_specific_clustering(
-                adata,
-                embedding_key,
-                n_clusters=n_clusters,
-                leiden_resolution=leiden_resolution,
-                method=clustering_method
-            )
+            # Get target clustering labels
+            if target_cluster_key not in adata.obs.columns:
+                print(f"✗ Target cluster key {target_cluster_key} not found in adata.obs")
+                preservation_scores[modality_name] = {'ARI': np.nan, 'NMI': np.nan}
+                continue
+            
+            target_clusters = adata.obs[target_cluster_key].astype(str).values
+            print(f"Found {len(np.unique(target_clusters))} unique clusters in {modality_name}")
             
             # Compute preservation metrics
             ari = adjusted_rand_score(reference_clusters, target_clusters)
             nmi = normalized_mutual_info_score(reference_clusters, target_clusters)
             
             preservation_scores[modality_name] = {'ARI': ari, 'NMI': nmi}
+            print(f"  ARI: {ari:.3f}, NMI: {nmi:.3f}")
             
         except Exception as e:
             print(f"✗ Failed to compute preservation for {modality_name}: {str(e)}")
@@ -625,13 +616,10 @@ def compute_cross_modality_preservation(
 
 def compute_bidirectional_cross_modality_validation(
     adata: sc.AnnData,
-    embedding_keys: Dict[str, str],
-    n_clusters: int = None,
-    leiden_resolution: float = 0.5,
-    clustering_method: str = 'leiden'
+    cluster_keys: Dict[str, str]
 ) -> pd.DataFrame:
     """
-    Perform bidirectional cross-modality validation.
+    Perform bidirectional cross-modality validation using pre-computed clusters.
     
     Tests cluster preservation in both directions:
     - RNA → ATAC, WNN
@@ -642,14 +630,9 @@ def compute_bidirectional_cross_modality_validation(
     -----------
     adata : sc.AnnData
         Annotated data object
-    embedding_keys : Dict[str, str]
-        Dictionary mapping modality names to embedding keys
-    n_clusters : int, optional
-        Number of clusters (for K-means only)
-    leiden_resolution : float, default=0.5
-        Resolution for leiden clustering
-    clustering_method : str, default='leiden'
-        Clustering method: 'leiden' or 'kmeans'
+    cluster_keys : Dict[str, str]
+        Dictionary mapping modality names to cluster label keys in adata.obs
+        e.g., {'RNA': 'RNA_leiden_08', 'ATAC': 'ATAC_leiden_08', 'WNN': 'wsnn_res.0.8'}
         
     Returns:
     --------
@@ -659,14 +642,11 @@ def compute_bidirectional_cross_modality_validation(
     
     all_results = []
     
-    for reference_modality in embedding_keys.keys():
+    for reference_modality in cluster_keys.keys():
         print(f"\n=== Using {reference_modality} as reference modality ===")
         
         preservation_scores = compute_cross_modality_preservation(
-            adata, embedding_keys, reference_modality,
-            n_clusters=n_clusters,
-            leiden_resolution=leiden_resolution,
-            clustering_method=clustering_method
+            adata, cluster_keys, reference_modality
         )
         
         # Convert to DataFrame format
@@ -862,6 +842,130 @@ def summarize_cross_modality_validation(
     return pd.DataFrame(summary_stats)
 
 
+# Convenience function for specific data structure
+def analyze_zebrahub_multiome_neighborhoods(
+    adata: sc.AnnData,
+    metadata_key: str = 'global_annotation',
+    k: Optional[int] = 30,
+    figsize: Tuple[int, int] = (15, 8),
+    save_plots: bool = False,
+    output_dir: str = './figures/'
+) -> Tuple[pd.DataFrame, pd.DataFrame, Dict]:
+    """
+    Complete neighborhood purity and cross-modality analysis for Zebrahub multiome data.
+    
+    This is a convenience function tailored to the specific data structure described.
+    
+    Parameters:
+    -----------
+    adata : sc.AnnData
+        Zebrahub multiome AnnData object
+    metadata_key : str, default='global_annotation'
+        Metadata category for purity analysis
+    k : int, optional, default=30
+        Number of neighbors for purity calculation
+    figsize : Tuple[int, int]
+        Figure size for plots
+    save_plots : bool, default=False
+        Whether to save plots to disk
+    output_dir : str, default='./figures/'
+        Directory for saved plots
+        
+    Returns:
+    --------
+    purity_summary : pd.DataFrame
+        Neighborhood purity analysis summary
+    validation_summary : pd.DataFrame
+        Cross-modality validation summary
+    all_results : Dict
+        Dictionary containing all results and intermediate data
+    """
+    
+    print("🔬 Starting Zebrahub Multiome Neighborhood Analysis")
+    print(f"Data shape: {adata.shape}")
+    print(f"Analyzing purity for: {metadata_key}")
+    
+    # Define connectivity matrices matching the data structure
+    connectivity_keys = {
+        'RNA': 'RNA_connectivities',
+        'ATAC': 'ATAC_connectivities', 
+        'WNN': 'connectivities_wnn'
+    }
+    
+    # Define cluster labels matching the data structure
+    cluster_keys = {
+        'RNA': 'RNA_leiden_08',
+        'ATAC': 'ATAC_leiden_08',
+        'WNN': 'wsnn_res.0.8'
+    }
+    
+    all_results = {}
+    
+    # 1. NEIGHBORHOOD PURITY ANALYSIS
+    print("\n📊 Computing neighborhood purity scores...")
+    purity_results = compute_multimodal_knn_purity(
+        adata=adata,
+        connectivity_keys=connectivity_keys,
+        metadata_key=metadata_key,
+        k=k
+    )
+    
+    purity_summary = summarize_purity_scores(purity_results, adata, metadata_key)
+    all_results['purity_results'] = purity_results
+    all_results['purity_summary'] = purity_summary
+    
+    # Add purity scores to AnnData
+    add_purity_to_adata(adata, purity_results, metadata_key)
+    
+    # Plot purity comparison
+    fig_purity = plot_purity_comparison(
+        purity_results, adata, metadata_key, figsize=figsize
+    )
+    if save_plots:
+        fig_purity.savefig(f"{output_dir}neighborhood_purity_{metadata_key}.pdf")
+        fig_purity.savefig(f"{output_dir}neighborhood_purity_{metadata_key}.png", dpi=300)
+    
+    all_results['purity_plot'] = fig_purity
+    
+    # 2. CROSS-MODALITY VALIDATION
+    print("\n🔄 Computing cross-modality cluster preservation...")
+    validation_df = compute_bidirectional_cross_modality_validation(
+        adata=adata,
+        cluster_keys=cluster_keys
+    )
+    
+    validation_summary = summarize_cross_modality_validation(validation_df)
+    all_results['validation_results'] = validation_df
+    all_results['validation_summary'] = validation_summary
+    
+    # Plot cross-modality validation
+    fig_cross = plot_cross_modality_validation(
+        validation_df, figsize=(12, 5)
+    )
+    if save_plots:
+        fig_cross.savefig(f"{output_dir}cross_modality_validation.pdf")
+        fig_cross.savefig(f"{output_dir}cross_modality_validation.png", dpi=300)
+    
+    all_results['cross_validation_plot'] = fig_cross
+    
+    # 3. SUMMARY REPORT
+    print("\n📋 Analysis Summary:")
+    print("=" * 50)
+    print("\n🎯 Neighborhood Purity (Higher = Better):")
+    overall_purity = purity_summary[purity_summary['Metadata'] == 'Overall']
+    for _, row in overall_purity.iterrows():
+        print(f"  {row['Modality']}: {row['Mean_Purity']:.3f} ± {row['Std_Purity']:.3f}")
+    
+    print("\n🔄 Cross-Modality Validation (ARI/NMI, Higher = Better):")
+    overall_cross = validation_summary[validation_summary['Category'] == 'Overall']
+    for _, row in overall_cross.iterrows():
+        print(f"  {row['Metric']}: {row['Mean']:.3f} ± {row['Std']:.3f}")
+    
+    print("\n✅ Analysis complete!")
+    
+    return purity_summary, validation_summary, all_results
+
+
 # Updated example usage
 def example_neighborhood_purity_analysis():
     """
@@ -875,10 +979,10 @@ def example_neighborhood_purity_analysis():
     # Load your AnnData object
     adata = sc.read_h5ad('your_multiome_data.h5ad')
     
-    # Define connectivity matrices (preferred method)
+    # Define connectivity matrices (matching your data structure)
     connectivity_keys = {
-        'RNA': 'connectivities_RNA',      # RNA neighborhood graph
-        'ATAC': 'connectivities_ATAC',    # ATAC neighborhood graph  
+        'RNA': 'RNA_connectivities',      # RNA neighborhood graph
+        'ATAC': 'ATAC_connectivities',    # ATAC neighborhood graph  
         'WNN': 'connectivities_wnn'       # Weighted nearest neighbor graph
     }
     
@@ -887,29 +991,27 @@ def example_neighborhood_purity_analysis():
     purity_results = compute_multimodal_knn_purity(
         adata=adata,
         connectivity_keys=connectivity_keys,
-        metadata_key='celltype',  # or 'leiden', 'annotation_ML_coarse', etc.
+        metadata_key='global_annotation',  # or 'RNA_leiden_08', 'ATAC_leiden_08', etc.
         k=30  # Optional: limit to top k neighbors, or None for all neighbors
     )
     
     # Summarize and visualize purity results
-    summary_df = summarize_purity_scores(purity_results, adata, 'celltype')
-    fig = plot_purity_comparison(purity_results, adata, 'celltype')
-    add_purity_to_adata(adata, purity_results, 'celltype')
+    summary_df = summarize_purity_scores(purity_results, adata, 'global_annotation')
+    fig = plot_purity_comparison(purity_results, adata, 'global_annotation')
+    add_purity_to_adata(adata, purity_results, 'global_annotation')
     
-    # 2. CROSS-MODALITY VALIDATION
-    # Define embedding keys for clustering
-    embedding_keys = {
-        'RNA': 'X_pca_rna',      # RNA PCA embedding
-        'ATAC': 'X_lsi_atac',    # ATAC LSI embedding  
-        'WNN': 'X_pca_wnn'       # Weighted nearest neighbor embedding
+    # 2. CROSS-MODALITY VALIDATION (using existing leiden clusters)
+    # Define cluster label keys (matching your data structure)
+    cluster_keys = {
+        'RNA': 'RNA_leiden_08',      # RNA leiden clusters at resolution 0.8
+        'ATAC': 'ATAC_leiden_08',    # ATAC leiden clusters at resolution 0.8
+        'WNN': 'wsnn_res.0.8'        # WNN clusters at resolution 0.8
     }
     
-    # Perform bidirectional cross-modality validation
+    # Perform bidirectional cross-modality validation using existing clusters
     validation_df = compute_bidirectional_cross_modality_validation(
         adata=adata,
-        embedding_keys=embedding_keys,
-        leiden_resolution=0.5,
-        clustering_method='leiden'  # or 'kmeans' with n_clusters
+        cluster_keys=cluster_keys
     )
     
     # Summarize and visualize cross-modality results
@@ -922,12 +1024,19 @@ def example_neighborhood_purity_analysis():
     # Check available connectivity matrices and embeddings
     print("\\nAvailable connectivity matrices:")
     for key in adata.obsp.keys():
-        if 'connectivities' in key:
+        if 'connectivities' in key or 'connectivities' in key.lower():
             print(f"  - {key}: {adata.obsp[key].shape}")
             
     print("\\nAvailable embeddings:")
     for key in adata.obsm.keys():
         print(f"  - {key}: {adata.obsm[key].shape}")
+        
+    print("\\nAvailable cluster labels:")
+    cluster_cols = ['RNA_leiden_08', 'ATAC_leiden_08', 'wsnn_res.0.8', 'global_annotation']
+    for col in cluster_cols:
+        if col in adata.obs.columns:
+            n_unique = adata.obs[col].nunique()
+            print(f"  - {col}: {n_unique} unique values")
     """)
 
 
