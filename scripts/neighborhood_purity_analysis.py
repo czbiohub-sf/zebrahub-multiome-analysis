@@ -15,11 +15,22 @@ import numpy as np
 import pandas as pd
 import scanpy as sc
 from sklearn.neighbors import NearestNeighbors
+from sklearn.cluster import KMeans
+from sklearn.metrics import adjusted_rand_score, normalized_mutual_info_score, silhouette_score
 from scipy import sparse
 import matplotlib.pyplot as plt
 import seaborn as sns
 from typing import Union, List, Tuple, Dict, Optional
 import warnings
+
+# Try to import scIB metrics - if not available, provide fallback implementations
+try:
+    import scib
+    SCIB_AVAILABLE = True
+    print("✓ scIB package available for comprehensive integration metrics")
+except ImportError:
+    SCIB_AVAILABLE = False
+    warnings.warn("scIB package not available. Using fallback implementations for integration metrics.")
 
 
 def compute_knn_purity_from_connectivities(
@@ -462,6 +473,939 @@ def example_neighborhood_purity_analysis():
     for key in adata.obsp.keys():
         if 'connectivities' in key:
             print(f"  - {key}: {adata.obsp[key].shape}")
+    """)
+
+
+# Cross-Modality Validation Functions
+
+def perform_modality_specific_clustering(
+    adata: sc.AnnData,
+    embedding_key: str,
+    n_clusters: int = None,
+    leiden_resolution: float = 0.5,
+    method: str = 'leiden'
+) -> np.ndarray:
+    """
+    Perform clustering on a specific modality embedding.
+    
+    Parameters:
+    -----------
+    adata : sc.AnnData
+        Annotated data object
+    embedding_key : str
+        Key for embedding in adata.obsm (e.g., 'X_pca_rna', 'X_lsi_atac')
+    n_clusters : int, optional
+        Number of clusters for K-means. If None, uses leiden clustering
+    leiden_resolution : float, default=0.5
+        Resolution for leiden clustering
+    method : str, default='leiden'
+        Clustering method: 'leiden' or 'kmeans'
+        
+    Returns:
+    --------
+    cluster_labels : np.ndarray
+        Cluster labels for each cell
+    """
+    
+    if embedding_key not in adata.obsm.keys():
+        raise ValueError(f"Embedding {embedding_key} not found in adata.obsm")
+    
+    embedding = adata.obsm[embedding_key]
+    
+    if sparse.issparse(embedding):
+        embedding = embedding.toarray()
+    
+    if method == 'kmeans':
+        if n_clusters is None:
+            raise ValueError("n_clusters must be specified for K-means clustering")
+        
+        kmeans = KMeans(n_clusters=n_clusters, random_state=42, n_init=10)
+        cluster_labels = kmeans.fit_predict(embedding)
+        
+    elif method == 'leiden':
+        # Create temporary AnnData for leiden clustering
+        temp_adata = sc.AnnData(X=embedding)
+        temp_adata.obsm['X_embedding'] = embedding
+        
+        # Compute neighbors and perform leiden clustering
+        sc.pp.neighbors(temp_adata, use_rep='X_embedding', n_neighbors=15)
+        sc.tl.leiden(temp_adata, resolution=leiden_resolution)
+        
+        cluster_labels = temp_adata.obs['leiden'].astype(int).values
+        
+    else:
+        raise ValueError("Method must be 'leiden' or 'kmeans'")
+    
+    return cluster_labels
+
+
+def compute_cross_modality_preservation(
+    adata: sc.AnnData,
+    embedding_keys: Dict[str, str],
+    reference_modality: str,
+    n_clusters: int = None,
+    leiden_resolution: float = 0.5,
+    clustering_method: str = 'leiden'
+) -> Dict[str, Dict[str, float]]:
+    """
+    Compute cross-modality cluster preservation using ARI and NMI.
+    
+    This function:
+    1. Clusters cells using the reference modality
+    2. Measures how well these clusters are preserved in other modalities
+    
+    Parameters:
+    -----------
+    adata : sc.AnnData
+        Annotated data object
+    embedding_keys : Dict[str, str]
+        Dictionary mapping modality names to embedding keys
+        e.g., {'RNA': 'X_pca_rna', 'ATAC': 'X_lsi_atac', 'WNN': 'X_pca_wnn'}
+    reference_modality : str
+        Modality to use for reference clustering (key in embedding_keys)
+    n_clusters : int, optional
+        Number of clusters (for K-means only)
+    leiden_resolution : float, default=0.5
+        Resolution for leiden clustering
+    clustering_method : str, default='leiden'
+        Clustering method: 'leiden' or 'kmeans'
+        
+    Returns:
+    --------
+    preservation_scores : Dict[str, Dict[str, float]]
+        Nested dictionary with modality names and metrics (ARI, NMI)
+    """
+    
+    if reference_modality not in embedding_keys:
+        raise ValueError(f"Reference modality {reference_modality} not found in embedding_keys")
+    
+    # Perform reference clustering
+    print(f"Clustering reference modality: {reference_modality}")
+    reference_clusters = perform_modality_specific_clustering(
+        adata, 
+        embedding_keys[reference_modality], 
+        n_clusters=n_clusters,
+        leiden_resolution=leiden_resolution,
+        method=clustering_method
+    )
+    
+    preservation_scores = {}
+    
+    # Test preservation in other modalities
+    for modality_name, embedding_key in embedding_keys.items():
+        if modality_name == reference_modality:
+            # Perfect preservation of self
+            preservation_scores[modality_name] = {'ARI': 1.0, 'NMI': 1.0}
+            continue
+        
+        print(f"Testing preservation in {modality_name} modality")
+        
+        try:
+            # Cluster target modality
+            target_clusters = perform_modality_specific_clustering(
+                adata,
+                embedding_key,
+                n_clusters=n_clusters,
+                leiden_resolution=leiden_resolution,
+                method=clustering_method
+            )
+            
+            # Compute preservation metrics
+            ari = adjusted_rand_score(reference_clusters, target_clusters)
+            nmi = normalized_mutual_info_score(reference_clusters, target_clusters)
+            
+            preservation_scores[modality_name] = {'ARI': ari, 'NMI': nmi}
+            
+        except Exception as e:
+            print(f"✗ Failed to compute preservation for {modality_name}: {str(e)}")
+            preservation_scores[modality_name] = {'ARI': np.nan, 'NMI': np.nan}
+    
+    return preservation_scores
+
+
+def compute_bidirectional_cross_modality_validation(
+    adata: sc.AnnData,
+    embedding_keys: Dict[str, str],
+    n_clusters: int = None,
+    leiden_resolution: float = 0.5,
+    clustering_method: str = 'leiden'
+) -> pd.DataFrame:
+    """
+    Perform bidirectional cross-modality validation.
+    
+    Tests cluster preservation in both directions:
+    - RNA → ATAC, WNN
+    - ATAC → RNA, WNN  
+    - WNN → RNA, ATAC
+    
+    Parameters:
+    -----------
+    adata : sc.AnnData
+        Annotated data object
+    embedding_keys : Dict[str, str]
+        Dictionary mapping modality names to embedding keys
+    n_clusters : int, optional
+        Number of clusters (for K-means only)
+    leiden_resolution : float, default=0.5
+        Resolution for leiden clustering
+    clustering_method : str, default='leiden'
+        Clustering method: 'leiden' or 'kmeans'
+        
+    Returns:
+    --------
+    validation_df : pd.DataFrame
+        DataFrame with preservation scores for all modality pairs
+    """
+    
+    all_results = []
+    
+    for reference_modality in embedding_keys.keys():
+        print(f"\n=== Using {reference_modality} as reference modality ===")
+        
+        preservation_scores = compute_cross_modality_preservation(
+            adata, embedding_keys, reference_modality,
+            n_clusters=n_clusters,
+            leiden_resolution=leiden_resolution,
+            clustering_method=clustering_method
+        )
+        
+        # Convert to DataFrame format
+        for target_modality, scores in preservation_scores.items():
+            all_results.append({
+                'Reference_Modality': reference_modality,
+                'Target_Modality': target_modality,
+                'ARI': scores['ARI'],
+                'NMI': scores['NMI'],
+                'Is_Self': reference_modality == target_modality
+            })
+    
+    validation_df = pd.DataFrame(all_results)
+    return validation_df
+
+
+def plot_cross_modality_validation(
+    validation_df: pd.DataFrame,
+    figsize: Tuple[int, int] = (12, 5),
+    save_path: Optional[str] = None
+) -> plt.Figure:
+    """
+    Create visualization for cross-modality validation results.
+    
+    Parameters:
+    -----------
+    validation_df : pd.DataFrame
+        Results from compute_bidirectional_cross_modality_validation
+    figsize : Tuple[int, int]
+        Figure size
+    save_path : str, optional
+        Path to save the figure
+        
+    Returns:
+    --------
+    fig : matplotlib.Figure
+        The created figure
+    """
+    
+    # Remove self-comparisons for plotting
+    plot_data = validation_df[~validation_df['Is_Self']].copy()
+    
+    fig, axes = plt.subplots(1, 2, figsize=figsize)
+    
+    # ARI heatmap
+    ari_pivot = plot_data.pivot(
+        index='Reference_Modality', 
+        columns='Target_Modality', 
+        values='ARI'
+    )
+    
+    sns.heatmap(
+        ari_pivot, 
+        annot=True, 
+        cmap='viridis', 
+        ax=axes[0],
+        vmin=0, 
+        vmax=1,
+        fmt='.3f'
+    )
+    axes[0].set_title('Adjusted Rand Index (ARI)')
+    axes[0].set_xlabel('Target Modality')
+    axes[0].set_ylabel('Reference Modality')
+    
+    # NMI heatmap
+    nmi_pivot = plot_data.pivot(
+        index='Reference_Modality', 
+        columns='Target_Modality', 
+        values='NMI'
+    )
+    
+    sns.heatmap(
+        nmi_pivot, 
+        annot=True, 
+        cmap='viridis', 
+        ax=axes[1],
+        vmin=0, 
+        vmax=1,
+        fmt='.3f'
+    )
+    axes[1].set_title('Normalized Mutual Information (NMI)')
+    axes[1].set_xlabel('Target Modality')
+    axes[1].set_ylabel('Reference Modality')
+    
+    plt.tight_layout()
+    
+    if save_path:
+        plt.savefig(save_path, dpi=300, bbox_inches='tight')
+    
+    return fig
+
+
+def summarize_cross_modality_validation(
+    validation_df: pd.DataFrame
+) -> pd.DataFrame:
+    """
+    Summarize cross-modality validation results.
+    
+    Parameters:
+    -----------
+    validation_df : pd.DataFrame
+        Results from compute_bidirectional_cross_modality_validation
+        
+    Returns:
+    --------
+    summary_df : pd.DataFrame
+        Summary statistics for cross-modality preservation
+    """
+    
+    # Exclude self-comparisons
+    cross_modal_data = validation_df[~validation_df['Is_Self']].copy()
+    
+    summary_stats = []
+    
+    # Overall statistics
+    summary_stats.extend([
+        {
+            'Category': 'Overall',
+            'Reference': 'All',
+            'Target': 'All',
+            'Metric': 'ARI',
+            'Mean': cross_modal_data['ARI'].mean(),
+            'Std': cross_modal_data['ARI'].std(),
+            'Min': cross_modal_data['ARI'].min(),
+            'Max': cross_modal_data['ARI'].max()
+        },
+        {
+            'Category': 'Overall',
+            'Reference': 'All',
+            'Target': 'All', 
+            'Metric': 'NMI',
+            'Mean': cross_modal_data['NMI'].mean(),
+            'Std': cross_modal_data['NMI'].std(),
+            'Min': cross_modal_data['NMI'].min(),
+            'Max': cross_modal_data['NMI'].max()
+        }
+    ])
+    
+    # By reference modality
+    for ref_mod in cross_modal_data['Reference_Modality'].unique():
+        ref_data = cross_modal_data[cross_modal_data['Reference_Modality'] == ref_mod]
+        
+        summary_stats.extend([
+            {
+                'Category': 'By_Reference',
+                'Reference': ref_mod,
+                'Target': 'All',
+                'Metric': 'ARI',
+                'Mean': ref_data['ARI'].mean(),
+                'Std': ref_data['ARI'].std(),
+                'Min': ref_data['ARI'].min(),
+                'Max': ref_data['ARI'].max()
+            },
+            {
+                'Category': 'By_Reference',
+                'Reference': ref_mod,
+                'Target': 'All',
+                'Metric': 'NMI',
+                'Mean': ref_data['NMI'].mean(),
+                'Std': ref_data['NMI'].std(),
+                'Min': ref_data['NMI'].min(),
+                'Max': ref_data['NMI'].max()
+            }
+        ])
+    
+    # By target modality
+    for target_mod in cross_modal_data['Target_Modality'].unique():
+        target_data = cross_modal_data[cross_modal_data['Target_Modality'] == target_mod]
+        
+        summary_stats.extend([
+            {
+                'Category': 'By_Target',
+                'Reference': 'All',
+                'Target': target_mod,
+                'Metric': 'ARI', 
+                'Mean': target_data['ARI'].mean(),
+                'Std': target_data['ARI'].std(),
+                'Min': target_data['ARI'].min(),
+                'Max': target_data['ARI'].max()
+            },
+            {
+                'Category': 'By_Target',
+                'Reference': 'All',
+                'Target': target_mod,
+                'Metric': 'NMI',
+                'Mean': target_data['NMI'].mean(),
+                'Std': target_data['NMI'].std(),
+                'Min': target_data['NMI'].min(),
+                'Max': target_data['NMI'].max()
+            }
+        ])
+    
+    return pd.DataFrame(summary_stats)
+
+
+# Updated example usage
+def example_neighborhood_purity_analysis():
+    """
+    Example function showing how to use the neighborhood purity analysis.
+    This would typically be called from a Jupyter notebook.
+    """
+    
+    # This is a template - actual usage would load real data
+    print("Example usage of neighborhood purity analysis:")
+    print("""
+    # Load your AnnData object
+    adata = sc.read_h5ad('your_multiome_data.h5ad')
+    
+    # Define connectivity matrices (preferred method)
+    connectivity_keys = {
+        'RNA': 'connectivities_RNA',      # RNA neighborhood graph
+        'ATAC': 'connectivities_ATAC',    # ATAC neighborhood graph  
+        'WNN': 'connectivities_wnn'       # Weighted nearest neighbor graph
+    }
+    
+    # 1. NEIGHBORHOOD PURITY ANALYSIS
+    # Compute purity scores using pre-computed connectivities
+    purity_results = compute_multimodal_knn_purity(
+        adata=adata,
+        connectivity_keys=connectivity_keys,
+        metadata_key='celltype',  # or 'leiden', 'annotation_ML_coarse', etc.
+        k=30  # Optional: limit to top k neighbors, or None for all neighbors
+    )
+    
+    # Summarize and visualize purity results
+    summary_df = summarize_purity_scores(purity_results, adata, 'celltype')
+    fig = plot_purity_comparison(purity_results, adata, 'celltype')
+    add_purity_to_adata(adata, purity_results, 'celltype')
+    
+    # 2. CROSS-MODALITY VALIDATION
+    # Define embedding keys for clustering
+    embedding_keys = {
+        'RNA': 'X_pca_rna',      # RNA PCA embedding
+        'ATAC': 'X_lsi_atac',    # ATAC LSI embedding  
+        'WNN': 'X_pca_wnn'       # Weighted nearest neighbor embedding
+    }
+    
+    # Perform bidirectional cross-modality validation
+    validation_df = compute_bidirectional_cross_modality_validation(
+        adata=adata,
+        embedding_keys=embedding_keys,
+        leiden_resolution=0.5,
+        clustering_method='leiden'  # or 'kmeans' with n_clusters
+    )
+    
+    # Summarize and visualize cross-modality results
+    summary_cross_df = summarize_cross_modality_validation(validation_df)
+    fig_cross = plot_cross_modality_validation(validation_df)
+    
+    print("Cross-modality validation summary:")
+    print(summary_cross_df)
+    
+    # Check available connectivity matrices and embeddings
+    print("\\nAvailable connectivity matrices:")
+    for key in adata.obsp.keys():
+        if 'connectivities' in key:
+            print(f"  - {key}: {adata.obsp[key].shape}")
+            
+    print("\\nAvailable embeddings:")
+    for key in adata.obsm.keys():
+        print(f"  - {key}: {adata.obsm[key].shape}")
+    """)
+
+
+# scIB-Based Integration Quality Assessment Functions
+
+def compute_scIB_leiden_clusters_per_modality(
+    adata: sc.AnnData,
+    embedding_keys: Dict[str, str],
+    resolution: float = 0.5,
+    n_neighbors: int = 15
+) -> Dict[str, np.ndarray]:
+    """
+    Compute leiden clusters independently for each modality using scanpy.
+    
+    Parameters:
+    -----------
+    adata : sc.AnnData
+        Annotated data object
+    embedding_keys : Dict[str, str]
+        Dictionary mapping modality names to embedding keys
+    resolution : float, default=0.5
+        Leiden clustering resolution
+    n_neighbors : int, default=15
+        Number of neighbors for graph construction
+        
+    Returns:
+    --------
+    modality_clusters : Dict[str, np.ndarray]
+        Dictionary mapping modality names to cluster labels
+    """
+    
+    modality_clusters = {}
+    
+    for modality_name, embedding_key in embedding_keys.items():
+        print(f"Computing leiden clusters for {modality_name} modality...")
+        
+        if embedding_key not in adata.obsm.keys():
+            print(f"✗ Embedding {embedding_key} not found, skipping {modality_name}")
+            continue
+        
+        # Create temporary AnnData for clustering this modality
+        temp_adata = adata.copy()
+        temp_adata.obsm['X_embedding'] = adata.obsm[embedding_key]
+        
+        # Compute neighbors and leiden clustering using scanpy
+        sc.pp.neighbors(temp_adata, use_rep='X_embedding', n_neighbors=n_neighbors)
+        sc.tl.leiden(temp_adata, resolution=resolution, key_added=f'leiden_{modality_name}')
+        
+        # Store cluster labels
+        cluster_labels = temp_adata.obs[f'leiden_{modality_name}'].astype(int).values
+        modality_clusters[modality_name] = cluster_labels
+        
+        print(f"✓ Found {len(np.unique(cluster_labels))} clusters in {modality_name}")
+    
+    return modality_clusters
+
+
+def compute_scIB_cross_modality_metrics(
+    adata: sc.AnnData,
+    embedding_keys: Dict[str, str],
+    modality_clusters: Dict[str, np.ndarray],
+    use_scib: bool = True
+) -> pd.DataFrame:
+    """
+    Compute comprehensive scIB-style cross-modality integration metrics.
+    
+    This function implements the key insight from scIB: use each modality as an
+    independent validator of others to avoid circularity.
+    
+    Parameters:
+    -----------
+    adata : sc.AnnData
+        Annotated data object
+    embedding_keys : Dict[str, str]
+        Dictionary mapping modality names to embedding keys
+    modality_clusters : Dict[str, np.ndarray]
+        Pre-computed clusters for each modality
+    use_scib : bool, default=True
+        Whether to use scIB package functions if available
+        
+    Returns:
+    --------
+    metrics_df : pd.DataFrame
+        Comprehensive cross-modality validation metrics
+    """
+    
+    results = []
+    
+    for ref_modality, ref_clusters in modality_clusters.items():
+        ref_embedding = adata.obsm[embedding_keys[ref_modality]]
+        
+        for target_modality, target_clusters in modality_clusters.items():
+            if ref_modality == target_modality:
+                continue  # Skip self-comparison
+            
+            target_embedding = adata.obsm[embedding_keys[target_modality]]
+            
+            print(f"Computing metrics: {ref_modality} → {target_modality}")
+            
+            # Core metrics (always computed)
+            ari = adjusted_rand_score(ref_clusters, target_clusters)
+            nmi = normalized_mutual_info_score(ref_clusters, target_clusters)
+            
+            # Silhouette scores - how well reference clusters separate in target embedding
+            if sparse.issparse(target_embedding):
+                target_embedding_dense = target_embedding.toarray()
+            else:
+                target_embedding_dense = target_embedding
+            
+            try:
+                asw_label = silhouette_score(target_embedding_dense, ref_clusters)
+            except:
+                asw_label = np.nan
+            
+            # Initialize result
+            result = {
+                'Reference_Modality': ref_modality,
+                'Target_Modality': target_modality,
+                'ARI_cluster': ari,
+                'NMI_cluster': nmi,
+                'ASW_label': asw_label,
+            }
+            
+            # scIB-specific metrics if available
+            if use_scib and SCIB_AVAILABLE:
+                try:
+                    # Create temporary AnnData for scIB metrics
+                    temp_adata = sc.AnnData(X=target_embedding_dense)
+                    temp_adata.obs['ref_clusters'] = ref_clusters.astype(str)
+                    temp_adata.obs['target_clusters'] = target_clusters.astype(str)
+                    temp_adata.obsm['X_emb'] = target_embedding_dense
+                    
+                    # Graph connectivity preservation
+                    graph_conn = scib.me.graph_connectivity(temp_adata, label_key='ref_clusters')
+                    result['Graph_connectivity'] = graph_conn
+                    
+                except Exception as e:
+                    print(f"Warning: scIB graph connectivity failed for {ref_modality}→{target_modality}: {e}")
+                    result['Graph_connectivity'] = np.nan
+            else:
+                result['Graph_connectivity'] = np.nan
+            
+            results.append(result)
+    
+    return pd.DataFrame(results)
+
+
+def compute_scIB_integration_quality_comprehensive(
+    adata: sc.AnnData,
+    embedding_keys: Dict[str, str],
+    leiden_resolution: float = 0.5,
+    n_neighbors: int = 15,
+    use_scib: bool = True
+) -> Tuple[pd.DataFrame, Dict[str, np.ndarray]]:
+    """
+    Comprehensive scIB-based integration quality assessment.
+    
+    This function implements the complete scIB validation strategy:
+    1. Independent clustering on each modality
+    2. Cross-modality validation using multiple metrics
+    3. Breaking circularity by using each modality as validator
+    
+    Parameters:
+    -----------
+    adata : sc.AnnData
+        Annotated data object
+    embedding_keys : Dict[str, str]
+        Dictionary mapping modality names to embedding keys
+        e.g., {'RNA': 'X_pca_rna', 'ATAC': 'X_lsi_atac', 'WNN': 'X_pca_wnn'}
+    leiden_resolution : float, default=0.5
+        Resolution for leiden clustering
+    n_neighbors : int, default=15
+        Number of neighbors for graph construction
+    use_scib : bool, default=True
+        Whether to use scIB package functions if available
+        
+    Returns:
+    --------
+    metrics_df : pd.DataFrame
+        Comprehensive cross-modality metrics
+    modality_clusters : Dict[str, np.ndarray]
+        Cluster assignments for each modality
+    """
+    
+    print("=== scIB-Based Integration Quality Assessment ===")
+    
+    # Step 1: Independent clustering on each modality
+    print("\n1. Computing independent leiden clusters for each modality...")
+    modality_clusters = compute_scIB_leiden_clusters_per_modality(
+        adata, embedding_keys, resolution=leiden_resolution, n_neighbors=n_neighbors
+    )
+    
+    # Step 2: Cross-modality validation
+    print("\n2. Computing cross-modality integration metrics...")
+    metrics_df = compute_scIB_cross_modality_metrics(
+        adata, embedding_keys, modality_clusters, use_scib=use_scib
+    )
+    
+    print("✓ scIB integration quality assessment completed")
+    
+    return metrics_df, modality_clusters
+
+
+def summarize_scIB_metrics(metrics_df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Summarize scIB cross-modality integration metrics.
+    
+    Parameters:
+    -----------
+    metrics_df : pd.DataFrame
+        Results from compute_scIB_integration_quality_comprehensive
+        
+    Returns:
+    --------
+    summary_df : pd.DataFrame
+        Summary statistics for scIB integration metrics
+    """
+    
+    summary_stats = []
+    
+    # Metrics to summarize
+    metric_columns = ['ARI_cluster', 'NMI_cluster', 'ASW_label', 'Graph_connectivity']
+    available_metrics = [col for col in metric_columns if col in metrics_df.columns]
+    
+    # Overall statistics
+    for metric in available_metrics:
+        if metrics_df[metric].notna().sum() > 0:  # Only if we have valid data
+            summary_stats.append({
+                'Category': 'Overall',
+                'Reference': 'All',
+                'Target': 'All',
+                'Metric': metric,
+                'Mean': metrics_df[metric].mean(),
+                'Std': metrics_df[metric].std(),
+                'Min': metrics_df[metric].min(),
+                'Max': metrics_df[metric].max(),
+                'N_valid': metrics_df[metric].notna().sum()
+            })
+    
+    # By reference modality (how well each modality preserves others)
+    for ref_mod in metrics_df['Reference_Modality'].unique():
+        ref_data = metrics_df[metrics_df['Reference_Modality'] == ref_mod]
+        
+        for metric in available_metrics:
+            if ref_data[metric].notna().sum() > 0:
+                summary_stats.append({
+                    'Category': 'By_Reference',
+                    'Reference': ref_mod,
+                    'Target': 'All',
+                    'Metric': metric,
+                    'Mean': ref_data[metric].mean(),
+                    'Std': ref_data[metric].std(),
+                    'Min': ref_data[metric].min(),
+                    'Max': ref_data[metric].max(),
+                    'N_valid': ref_data[metric].notna().sum()
+                })
+    
+    # By target modality (how well each modality is preserved by others)
+    for target_mod in metrics_df['Target_Modality'].unique():
+        target_data = metrics_df[metrics_df['Target_Modality'] == target_mod]
+        
+        for metric in available_metrics:
+            if target_data[metric].notna().sum() > 0:
+                summary_stats.append({
+                    'Category': 'By_Target',
+                    'Reference': 'All',
+                    'Target': target_mod,
+                    'Metric': metric,
+                    'Mean': target_data[metric].mean(),
+                    'Std': target_data[metric].std(),
+                    'Min': target_data[metric].min(),
+                    'Max': target_data[metric].max(),
+                    'N_valid': target_data[metric].notna().sum()
+                })
+    
+    return pd.DataFrame(summary_stats)
+
+
+def plot_scIB_integration_metrics(
+    metrics_df: pd.DataFrame,
+    figsize: Tuple[int, int] = (16, 12),
+    save_path: Optional[str] = None
+) -> plt.Figure:
+    """
+    Create comprehensive visualization for scIB integration metrics.
+    
+    Parameters:
+    -----------
+    metrics_df : pd.DataFrame
+        Results from compute_scIB_integration_quality_comprehensive
+    figsize : Tuple[int, int]
+        Figure size
+    save_path : str, optional
+        Path to save the figure
+        
+    Returns:
+    --------
+    fig : matplotlib.Figure
+        The created figure
+    """
+    
+    # Available metrics
+    metric_columns = ['ARI_cluster', 'NMI_cluster', 'ASW_label', 'Graph_connectivity']
+    available_metrics = [col for col in metric_columns if col in metrics_df.columns and metrics_df[col].notna().sum() > 0]
+    
+    n_metrics = len(available_metrics)
+    if n_metrics == 0:
+        print("No valid metrics to plot")
+        return None
+    
+    # Create subplots
+    fig, axes = plt.subplots(2, n_metrics, figsize=figsize)
+    if n_metrics == 1:
+        axes = axes.reshape(2, 1)
+    
+    for i, metric in enumerate(available_metrics):
+        # Top row: Heatmaps
+        pivot_data = metrics_df.pivot(
+            index='Reference_Modality',
+            columns='Target_Modality', 
+            values=metric
+        )
+        
+        # Determine colormap range
+        vmin = metrics_df[metric].min() if not np.isnan(metrics_df[metric].min()) else 0
+        vmax = metrics_df[metric].max() if not np.isnan(metrics_df[metric].max()) else 1
+        
+        sns.heatmap(
+            pivot_data,
+            annot=True,
+            cmap='viridis',
+            ax=axes[0, i],
+            vmin=vmin,
+            vmax=vmax,
+            fmt='.3f',
+            cbar_kws={'shrink': 0.8}
+        )
+        axes[0, i].set_title(f'{metric} (Cross-Modality)')
+        axes[0, i].set_xlabel('Target Modality')
+        axes[0, i].set_ylabel('Reference Modality')
+        
+        # Bottom row: Bar plots showing preservation scores
+        ref_means = metrics_df.groupby('Reference_Modality')[metric].mean()
+        target_means = metrics_df.groupby('Target_Modality')[metric].mean()
+        
+        x_pos = np.arange(len(ref_means))
+        width = 0.35
+        
+        axes[1, i].bar(x_pos - width/2, ref_means.values, width, 
+                      label='As Reference', alpha=0.8)
+        axes[1, i].bar(x_pos + width/2, target_means.values, width, 
+                      label='As Target', alpha=0.8)
+        
+        axes[1, i].set_title(f'{metric} by Modality Role')
+        axes[1, i].set_xlabel('Modality')
+        axes[1, i].set_ylabel(f'Mean {metric}')
+        axes[1, i].set_xticks(x_pos)
+        axes[1, i].set_xticklabels(ref_means.index, rotation=45)
+        axes[1, i].legend()
+        axes[1, i].grid(True, alpha=0.3)
+    
+    plt.tight_layout()
+    
+    if save_path:
+        plt.savefig(save_path, dpi=300, bbox_inches='tight')
+    
+    return fig
+
+
+def add_scIB_clusters_to_adata(
+    adata: sc.AnnData,
+    modality_clusters: Dict[str, np.ndarray],
+    cluster_key_prefix: str = 'scIB_leiden'
+) -> None:
+    """
+    Add scIB-computed cluster assignments to AnnData object.
+    
+    Parameters:
+    -----------
+    adata : sc.AnnData
+        Annotated data object to modify
+    modality_clusters : Dict[str, np.ndarray]
+        Cluster assignments from compute_scIB_leiden_clusters_per_modality
+    cluster_key_prefix : str, default='scIB_leiden'
+        Prefix for cluster keys in adata.obs
+    """
+    
+    for modality_name, clusters in modality_clusters.items():
+        key_name = f'{cluster_key_prefix}_{modality_name}'
+        adata.obs[key_name] = clusters.astype(str)
+        print(f"✓ Added {key_name} to adata.obs")
+
+
+# Updated example usage with scIB functions
+def example_neighborhood_purity_analysis():
+    """
+    Example function showing how to use the neighborhood purity analysis.
+    This would typically be called from a Jupyter notebook.
+    """
+    
+    # This is a template - actual usage would load real data
+    print("Example usage of neighborhood purity analysis:")
+    print("""
+    # Load your AnnData object
+    adata = sc.read_h5ad('your_multiome_data.h5ad')
+    
+    # Define connectivity matrices (for neighborhood purity)
+    connectivity_keys = {
+        'RNA': 'connectivities_RNA',      # RNA neighborhood graph
+        'ATAC': 'connectivities_ATAC',    # ATAC neighborhood graph  
+        'WNN': 'connectivities_wnn'       # Weighted nearest neighbor graph
+    }
+    
+    # Define embedding keys (for clustering and scIB metrics)
+    embedding_keys = {
+        'RNA': 'X_pca_rna',      # RNA PCA embedding
+        'ATAC': 'X_lsi_atac',    # ATAC LSI embedding  
+        'WNN': 'X_pca_wnn'       # Weighted nearest neighbor embedding
+    }
+    
+    # 1. NEIGHBORHOOD PURITY ANALYSIS
+    print("=== Neighborhood Purity Analysis ===")
+    purity_results = compute_multimodal_knn_purity(
+        adata=adata,
+        connectivity_keys=connectivity_keys,
+        metadata_key='celltype',
+        k=30
+    )
+    
+    summary_purity = summarize_purity_scores(purity_results, adata, 'celltype')
+    fig_purity = plot_purity_comparison(purity_results, adata, 'celltype')
+    add_purity_to_adata(adata, purity_results, 'celltype')
+    
+    # 2. STANDARD CROSS-MODALITY VALIDATION
+    print("\\n=== Standard Cross-Modality Validation ===")
+    validation_df = compute_bidirectional_cross_modality_validation(
+        adata=adata,
+        embedding_keys=embedding_keys,
+        leiden_resolution=0.5
+    )
+    
+    summary_cross = summarize_cross_modality_validation(validation_df)
+    fig_cross = plot_cross_modality_validation(validation_df)
+    
+    # 3. scIB-BASED COMPREHENSIVE EVALUATION
+    print("\\n=== scIB-Based Integration Quality Assessment ===")
+    scib_metrics_df, modality_clusters = compute_scIB_integration_quality_comprehensive(
+        adata=adata,
+        embedding_keys=embedding_keys,
+        leiden_resolution=0.5,
+        use_scib=True  # Use scIB package if available
+    )
+    
+    # Summarize and visualize scIB results
+    scib_summary = summarize_scIB_metrics(scib_metrics_df)
+    fig_scib = plot_scIB_integration_metrics(scib_metrics_df)
+    add_scIB_clusters_to_adata(adata, modality_clusters)
+    
+    print("\\nscIB Integration Quality Summary:")
+    print(scib_summary)
+    
+    # 4. INTERPRETATION GUIDANCE
+    print("\\n=== Results Interpretation ===")
+    print("For a good joint (WNN) embedding, you should see:")
+    print("- High ARI/NMI when WNN clusters are compared to RNA and ATAC clusters")
+    print("- Lower ARI/NMI between RNA-only and ATAC-only clusters")
+    print("- High ASW_label scores (good separation of biological groups)")
+    print("- High Graph_connectivity scores (preserved neighborhood structure)")
+    
+    # Check available data
+    print("\\nAvailable connectivity matrices:")
+    for key in adata.obsp.keys():
+        if 'connectivities' in key:
+            print(f"  - {key}: {adata.obsp[key].shape}")
+            
+    print("\\nAvailable embeddings:")
+    for key in adata.obsm.keys():
+        print(f"  - {key}: {adata.obsm[key].shape}")
     """)
 
 
