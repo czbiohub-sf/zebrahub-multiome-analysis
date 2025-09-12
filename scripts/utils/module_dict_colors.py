@@ -1,6 +1,8 @@
 # A module to define the color palettes used in this paper
 import matplotlib.pyplot as plt
 import seaborn as sns
+import matplotlib.cm as cm
+import numpy as np
 
 # a color palette for the "coarse" grained celltype annotation ("annotation_ML_coarse")
 cell_type_color_dict = {
@@ -36,6 +38,81 @@ cell_type_color_dict = {
     'somites': '#1b9e77',
     'spinal_cord': '#d95f02',
     'tail_bud': '#7570b3'
+}
+
+# celltype to lineage mapping
+celltype_to_lineage = {
+    "CNS": [
+        "neural", 
+        "neural_optic", 
+        "neural_posterior", 
+        "neural_telencephalon",
+        "neurons",
+        "hindbrain",
+        "midbrain_hindbrain_boundary",
+        "optic_cup",
+        "spinal_cord",
+        "differentiating_neurons",
+        "floor_plate",
+        "neural_floor_plate",
+        "enteric_neurons",
+    ],
+    
+    "Neural Crest": [
+        "neural_crest"
+    ],
+    
+    "Paraxial Mesoderm": [
+        "somites",
+        "fast_muscle",
+        "muscle",
+        "PSM",  # Presomitic mesoderm
+        "NMPs",  # Neuromesodermal progenitors
+        "tail_bud", 
+        "notochord",
+    ],
+    
+    "Lateral Mesoderm": [
+        "lateral_plate_mesoderm",
+        "heart_myocardium",
+        "hematopoietic_vasculature",
+        "pharyngeal_arches",
+        "pronephros",
+        "hemangioblasts",
+        "hatching_gland",
+    ],
+    
+    "Endoderm": [
+        "endoderm",
+        "endocrine_pancreas",
+    ],
+    
+    "Epiderm": [
+        "epidermis"
+    ],
+    
+    "Germline": [
+        "primordial_germ_cells"
+    ],
+}
+
+# lineage-level annotation
+lineage_colors = {
+    'CNS': '#DAA520',                    # Golden/orange
+    'Endoderm': '#6A5ACD',              # Blue/purple  
+    'Epiderm': '#DC143C',               # Red
+    'Germline': '#DA70D6',              # Magenta/orchid
+    'Lateral Mesoderm': '#228B22',      # Forest green
+    'Neural Crest': '#20B2AA',          # Light sea green/teal
+    'Paraxial Mesoderm': '#4169E1'      # Royal blue
+}
+
+# timepoint progression colors using viridis colormap
+timepoint_list = ['10hpf', '12hpf', '14hpf', '16hpf', '19hpf', '24hpf']
+viridis_cmap = cm.get_cmap('viridis')
+timepoint_colors = {
+    timepoint: viridis_cmap(i / (len(timepoint_list) - 1)) 
+    for i, timepoint in enumerate(timepoint_list)
 }
 
 # Script to generate a color palette with 33 distinct colors
