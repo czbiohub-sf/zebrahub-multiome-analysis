@@ -17,42 +17,45 @@ from collections import defaultdict, Counter
 import warnings
 warnings.filterwarnings('ignore')
 
-def extract_tf_gene_pairs(grn_matrix):
+def extract_tf_gene_pairs(grn_df):
     """
-    Extract TF-gene pairs from a GRN matrix
+    Extract TF-gene pairs from a GRN DataFrame in long format
     
     Parameters:
     -----------
-    grn_matrix : pd.DataFrame or None
-        GRN matrix with targets as rows and TFs as columns
+    grn_df : pd.DataFrame or None
+        GRN DataFrame with columns: source, target, coef_mean, coef_abs, p, -logp
         
     Returns:
     --------
-    set : Set of TF-gene pairs in format "target_tf"
+    set : Set of TF-gene pairs in format "source_target"
     """
-    if grn_matrix is None or grn_matrix.empty:
+    if grn_df is None or grn_df.empty:
         return set()
     
-    # Stack the matrix to get (target, TF) pairs with non-zero values
-    grn_stacked = grn_matrix.stack()
-    pairs = set(f"{target}_{tf}" for (target, tf), val in grn_stacked.items() if val != 0)
+    # Create pairs from source (TF) and target columns
+    pairs = set(f"{row['source']}_{row['target']}" for _, row in grn_df.iterrows())
     return pairs
 
-def compute_timepoint_presence_fractions(dict_grns):
+def compute_timepoint_presence_fractions(dict_filtered_grns, exclude_groups=None):
     """
     Compute presence fractions of TF-gene pairs across celltypes within each timepoint
     
     Parameters:
     -----------
-    dict_grns : dict
-        Dictionary with structure {timepoint: {celltype: grn_matrix}}
+    dict_filtered_grns : dict
+        Dictionary with structure {timepoint: {celltype: grn_dataframe}}
+        where grn_dataframe has columns: source, target, coef_mean, coef_abs, p, -logp
+    exclude_groups : list, optional
+        List of strings in format "{timepoint}_{celltype}" to exclude from analysis
+        (e.g., groups with too few cells)
         
     Returns:
     --------
     dict : Dictionary containing presence fraction analysis for each timepoint
     """
-    timepoints = list(dict_grns.keys())
-    celltypes = list(dict_grns[timepoints[0]].keys())
+    timepoints = list(dict_filtered_grns.keys())
+    celltypes = list(dict_filtered_grns[timepoints[0]].keys())
     
     timepoint_presence = {}
     
@@ -64,7 +67,11 @@ def compute_timepoint_presence_fractions(dict_grns):
         valid_celltypes = []
         
         for ct in celltypes:
-            grn = dict_grns[tp].get(ct)
+            # Skip if this timepoint-celltype combination should be excluded
+            if exclude_groups and f"{tp}_{ct}" in exclude_groups:
+                continue
+                
+            grn = dict_filtered_grns[tp].get(ct)
             if grn is not None and not grn.empty:
                 tp_grns.append(grn)
                 valid_celltypes.append(ct)
@@ -98,21 +105,25 @@ def compute_timepoint_presence_fractions(dict_grns):
     
     return timepoint_presence
 
-def compute_celltype_presence_fractions(dict_grns):
+def compute_celltype_presence_fractions(dict_filtered_grns, exclude_groups=None):
     """
     Compute presence fractions of TF-gene pairs across timepoints within each celltype
     
     Parameters:
     -----------
-    dict_grns : dict
-        Dictionary with structure {timepoint: {celltype: grn_matrix}}
+    dict_filtered_grns : dict
+        Dictionary with structure {timepoint: {celltype: grn_dataframe}}
+        where grn_dataframe has columns: source, target, coef_mean, coef_abs, p, -logp
+    exclude_groups : list, optional
+        List of strings in format "{timepoint}_{celltype}" to exclude from analysis
+        (e.g., groups with too few cells)
         
     Returns:
     --------
     dict : Dictionary containing presence fraction analysis for each celltype
     """
-    timepoints = list(dict_grns.keys())
-    celltypes = list(dict_grns[timepoints[0]].keys())
+    timepoints = list(dict_filtered_grns.keys())
+    celltypes = list(dict_filtered_grns[timepoints[0]].keys())
     
     celltype_presence = {}
     
@@ -124,7 +135,11 @@ def compute_celltype_presence_fractions(dict_grns):
         valid_timepoints = []
         
         for tp in timepoints:
-            grn = dict_grns[tp].get(ct)
+            # Skip if this timepoint-celltype combination should be excluded
+            if exclude_groups and f"{tp}_{ct}" in exclude_groups:
+                continue
+                
+            grn = dict_filtered_grns[tp].get(ct)
             if grn is not None and not grn.empty:
                 ct_grns.append(grn)
                 valid_timepoints.append(tp)
@@ -197,14 +212,18 @@ def create_summary_statistics(presence_data, analysis_type='timepoint'):
     
     return pd.DataFrame(summary)
 
-def analyze_grn_overlap(dict_grns, verbose=True):
+def analyze_grn_overlap(dict_filtered_grns, exclude_groups=None, verbose=True):
     """
     Complete analysis of GRN overlap including both timepoint and celltype analyses
     
     Parameters:
     -----------
-    dict_grns : dict
-        Dictionary with structure {timepoint: {celltype: grn_matrix}}
+    dict_filtered_grns : dict
+        Dictionary with structure {timepoint: {celltype: grn_dataframe}}
+        where grn_dataframe has columns: source, target, coef_mean, coef_abs, p, -logp
+    exclude_groups : list, optional
+        List of strings in format "{timepoint}_{celltype}" to exclude from analysis
+        (e.g., groups with too few cells)
     verbose : bool
         Whether to print progress information
         
@@ -213,17 +232,19 @@ def analyze_grn_overlap(dict_grns, verbose=True):
     dict : Dictionary containing all analysis results
     """
     if verbose:
-        timepoints = list(dict_grns.keys())
-        celltypes = list(dict_grns[timepoints[0]].keys())
+        timepoints = list(dict_filtered_grns.keys())
+        celltypes = list(dict_filtered_grns[timepoints[0]].keys())
         print(f"Found {len(timepoints)} timepoints: {timepoints}")
         print(f"Found {len(celltypes)} celltypes")
+        if exclude_groups:
+            print(f"Excluding {len(exclude_groups)} timepoint-celltype combinations: {exclude_groups[:5]}{'...' if len(exclude_groups) > 5 else ''}")
         print("\n" + "="*60)
         print("COMPUTING PRESENCE FRACTIONS...")
         print("="*60)
     
     # Compute presence fractions
-    timepoint_presence = compute_timepoint_presence_fractions(dict_grns)
-    celltype_presence = compute_celltype_presence_fractions(dict_grns)
+    timepoint_presence = compute_timepoint_presence_fractions(dict_filtered_grns, exclude_groups)
+    celltype_presence = compute_celltype_presence_fractions(dict_filtered_grns, exclude_groups)
     
     # Create summary statistics
     tp_summary_df = create_summary_statistics(timepoint_presence, 'timepoint')
@@ -548,15 +569,19 @@ def save_results_to_csv(analysis_results, prefix="grn_overlap"):
     }
 
 # Convenience function for complete analysis workflow
-def complete_grn_overlap_analysis(dict_grns, save_prefix="grn_overlap", save_plot_path=None, 
-                                 show_plot=True, save_csv=True, verbose=True):
+def complete_grn_overlap_analysis(dict_filtered_grns, exclude_groups=None, save_prefix="grn_overlap", 
+                                 save_plot_path=None, show_plot=True, save_csv=True, verbose=True):
     """
     Complete workflow for GRN overlap analysis
     
     Parameters:
     -----------
-    dict_grns : dict
-        Dictionary with structure {timepoint: {celltype: grn_matrix}}
+    dict_filtered_grns : dict
+        Dictionary with structure {timepoint: {celltype: grn_dataframe}}
+        where grn_dataframe has columns: source, target, coef_mean, coef_abs, p, -logp
+    exclude_groups : list, optional
+        List of strings in format "{timepoint}_{celltype}" to exclude from analysis
+        (e.g., groups with too few cells)
     save_prefix : str
         Prefix for saved files
     save_plot_path : str, optional
@@ -573,7 +598,7 @@ def complete_grn_overlap_analysis(dict_grns, save_prefix="grn_overlap", save_plo
     dict : Dictionary containing all analysis results and recommendations
     """
     # Run main analysis
-    analysis_results = analyze_grn_overlap(dict_grns, verbose=verbose)
+    analysis_results = analyze_grn_overlap(dict_filtered_grns, exclude_groups, verbose=verbose)
     
     # Get threshold recommendations
     recommendations = recommend_thresholds(
