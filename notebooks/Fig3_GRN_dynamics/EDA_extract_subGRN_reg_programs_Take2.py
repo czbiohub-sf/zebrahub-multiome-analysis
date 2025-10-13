@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.17.2
+#       jupytext_version: 1.17.3
 #   kernelspec:
 #     display_name: sc_rapids
 #     language: python
@@ -16,7 +16,7 @@
 # %% [markdown]
 # # EDA on extracting sub-GRNs from the regulatory programs
 #
-# - last updated: 7/28/2025
+# - last updated: 8/4/2025
 #
 # - inputs: 
 #     - fine cluster-by-motifs matrix (from GimmeMotifs scanning)
@@ -57,6 +57,7 @@ import numpy as np
 import scipy.sparse as sp
 import sys
 import os
+import pickle
 
 # rapids-singlecell
 import cupy as cp
@@ -92,17 +93,17 @@ figpath = "/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/zebrahub-mu
 os.makedirs(figpath, exist_ok=True)
 sc.settings.figdir = figpath
 
-# %% [markdown] jp-MarkdownHeadingCollapsed=true
-# ## step 1. curate the inputs
-#
-# - TO-DO: make sure to save all the input files in a directory for systematic querying.
-#
-
 # %%
 # import the peaks-by-celltype&timepoint pseudobulk object
 # NOTE. the 2 MT peaks and 2 blacklisted peaks (since they go beyond the end of the chromosome) were filtered out.
 adata_peaks = sc.read_h5ad("/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/annotated_data/objects_v2/peaks_by_pb_annotated_master.h5ad")
 adata_peaks
+
+# %% [markdown] jp-MarkdownHeadingCollapsed=true
+# ## step 1. curate the inputs
+#
+# - TO-DO: make sure to save all the input files in a directory for systematic querying.
+#
 
 # %%
 sc.pl.umap(adata_peaks, color="leiden_coarse")
@@ -215,23 +216,6 @@ axes[1,0].grid(False)
 thresh_to_plot = [1.0, 2.0, 3.0]
 colors = ['blue', 'orange', 'green']
 
-# for i, thresh in enumerate(thresh_to_plot):
-#     sig_counts = (clust_by_motifs >= thresh).sum(axis=1)
-    
-#     # Histogram
-#     axes[1,1].hist(sig_counts, bins=10, alpha=0.4, color=colors[i], 
-#                    label=f'Threshold {thresh}', density=True)
-    
-#     # Kernel density
-#     if len(sig_counts) > 1 and sig_counts.std() > 0:  # Check if we have variation
-#         sns.kdeplot(sig_counts, ax=axes[1,1], color=colors[i], 
-#                    linewidth=2, alpha=0.8, bw_adjust=1.5)  # bw_adjust makes it smoother
-
-# axes[1,1].set_xlabel('Significant motifs per cluster')
-# axes[1,1].set_ylabel('Density')
-# axes[1,1].set_title('Distribution of motif counts (Histogram + KDE)')
-# axes[1,1].grid(False)
-# axes[1,1].legend()
 # --- decide on common bin edges once ----------------------------------------
 sig_counts_all = np.concatenate([
     (clust_by_motifs >= t).sum(axis=1) for t in thresh_to_plot      # [1.0, 2.0, 3.0]
@@ -320,69 +304,19 @@ for thresh in thresholds_test:
         most_similar_idx = np.argmax(similarities)
         print(f"Most similar pair: {names[most_similar_idx]} (similarity: {similarities[most_similar_idx]:.3f})")
 
-# %%
-from module_extract_subGRN import *
-
-# %%
-# def get_top_motifs_per_cluster(clusters_motifs_df, method="threshold", threshold_value=2):
-#     """
-#     Step 1: Extract top motifs for each cluster using percentile or z-score threshold.
-    
-#     Parameters:
-#     -----------
-#     clusters_motifs_df : pd.DataFrame
-#         Clusters x motifs with enrichment scores
-#     method : str
-#         Either "percentile" or "threshold" (z-score)
-#     threshold_value : float
-#         - If method="percentile": percentile threshold (e.g., 99 for 99th percentile)
-#         - If method="threshold": z-score threshold (e.g., 2.0 for z > 2.0)
-        
-#     Returns:
-#     --------
-#     clusters_motifs_dict : dict
-#         {cluster_id: [list_of_top_motifs]}
-#     """
-#     xcxx
-#     clusters_motifs_dict = {}
-    
-#     print(f"Using {method} method with threshold: {threshold_value}")
-    
-#     for cluster_id in clusters_motifs_df.index:
-#         scores = clusters_motifs_df.loc[cluster_id]
-        
-#         # default is "threshold" using z-score values
-#         if method == "threshold":
-#             # Use direct z-score threshold
-#             threshold = threshold_value
-#             top_motifs = scores[scores >= threshold].sort_values(ascending=False)
-#         elif method == "percentile":
-#             # Use percentile-based threshold
-#             threshold = np.percentile(scores, threshold_value)
-#             top_motifs = scores[scores >= threshold].sort_values(ascending=False)
-            
-#         else:
-#             raise ValueError("method must be either 'percentile' or 'threshold'")
-        
-#         clusters_motifs_dict[cluster_id] = top_motifs.index.tolist()
-        
-#         # Optional: print details for verification
-#         # print(f"Cluster {cluster_id}: {len(top_motifs)} motifs above {threshold:.3f}")
-    
-#     return clusters_motifs_dict
-
-# %%
-
 # %% [markdown]
 # ## Step 2. construct a TF-gene mesh for each fine peak cluster 
 # - First, prototype here, then script as a workflow later.
 # - 
 
 # %%
+from module_extract_subGRN import *
+
+# %%
 # How to run the workflow step-by-step
 """ 
 # Step 1
-clusters_motifs_dict = get_top_motifs_per_cluster(clusters_motifs_df, 99)
+clusters_motifs_dict = get_top_motifs_per_cluster(clust_by_motifs, threshold_value=2)
 
 # Step 2  
 clusters_tfs_dict = get_tfs_from_motifs(clusters_motifs_dict, info_motifs)
@@ -429,9 +363,6 @@ from module_motif_db import *
 # %%
 # convert to a dataframe (motifs:TFs)
 info_motifs_df = create_motif_factors_dataframe(info_motifs_TFs)
-
-# %%
-info_motifs[info_motifs["direct"]!="None"]
 
 # %%
 # reformat the dataframe
@@ -507,7 +438,7 @@ plt.title('TF Count Distribution (Box Plot)')
 plt.grid(False)
 
 plt.tight_layout()
-plt.savefig(figpath + "hist_n_TFs_per_peak_clust.pdf")
+# plt.savefig(figpath + "hist_n_TFs_per_peak_clust.pdf")
 plt.show()
 
 # Show some statistics
@@ -536,10 +467,10 @@ cluster_tf_gene_matrices = create_tf_gene_matrix_per_cluster(clusters_tfs_dict, 
 
 
 # %% [markdown]
-# ### simple visualization of "meshes"
+# ## simple visualization of "meshes"
 # - a scatter plot where each dot represents a peak cluster, for the number of TFs (x-axis), and the number of linked_genes (y-axis), and corresponding histogram at each axis.
 #
-# ### Check the clusters-by-TFs/genes 
+# ### 1) Check the clusters-by-TFs/genes 
 #
 # - [DONE] there are multiple thresholding options for both candidate TFs and associated genes
 # - (1) candidate TFs: enrichment score, percentile, etc.
@@ -793,7 +724,7 @@ tf_sharing_stats.sort_values(ascending=False).head(30)
 # - Sox TFs are enriched in many (140) peak clusters
 
 # %% [markdown]
-# ### REPEAT this for "linked_gene": shared and unique genes across peak clusters
+# ### 2) REPEAT this for "linked_gene": shared and unique genes across peak clusters
 #
 # - expectation is that the linked_gene is NOT shared across peak clusters as they are more specific than the enriched TFs
 
@@ -961,25 +892,1251 @@ sim_matrix, cluster_names, linkage_info, dense_blocks = create_cluster_similarit
 )
 
 # %%
-# compute the similarity matrix for “linked genes” and plot the heat‑map
-sim_matrix_genes, cluster_names_genes, dense_blocks_genes = create_cluster_similarity_heatmap(
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from matplotlib.patches import Rectangle
+from scipy.cluster.hierarchy import linkage, dendrogram, fcluster
+from scipy.spatial.distance import squareform
+
+def analyze_similarity_distribution(cluster_tf_matrix):
+    """
+    Analyze the actual similarity distribution in your data to set realistic thresholds
+    """
+    print("=== ANALYZING SIMILARITY DISTRIBUTION ===")
+    
+    # Calculate similarity matrix (same as in your function)
+    matrix_subset = cluster_tf_matrix
+    clusters = matrix_subset.index.tolist()
+    n = len(clusters)
+    similarity = np.eye(n)
+    
+    for i in range(n):
+        set_i = set(matrix_subset.columns[matrix_subset.iloc[i] == 1])
+        for j in range(i + 1, n):
+            set_j = set(matrix_subset.columns[matrix_subset.iloc[j] == 1])
+            denom = len(set_i | set_j)
+            sim = 0 if denom == 0 else len(set_i & set_j) / denom
+            similarity[i, j] = similarity[j, i] = sim
+    
+    # Get upper triangle (excluding diagonal)
+    upper_triangle = similarity[np.triu_indices_from(similarity, k=1)]
+    
+    # Calculate statistics
+    stats = {
+        'mean': np.mean(upper_triangle),
+        'median': np.median(upper_triangle),
+        'std': np.std(upper_triangle),
+        'p75': np.percentile(upper_triangle, 75),
+        'p90': np.percentile(upper_triangle, 90),
+        'p95': np.percentile(upper_triangle, 95),
+        'p99': np.percentile(upper_triangle, 99),
+        'max': np.max(upper_triangle)
+    }
+    
+    print(f"Similarity Statistics:")
+    print(f"  Mean: {stats['mean']:.3f}")
+    print(f"  Median: {stats['median']:.3f}")
+    print(f"  75th percentile: {stats['p75']:.3f}")
+    print(f"  90th percentile: {stats['p90']:.3f}")
+    print(f"  95th percentile: {stats['p95']:.3f}")
+    print(f"  99th percentile: {stats['p99']:.3f}")
+    print(f"  Maximum: {stats['max']:.3f}")
+    
+    # Plot distribution
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
+    
+    # Histogram
+    ax1.hist(upper_triangle, bins=50, alpha=0.7, edgecolor='black')
+    ax1.axvline(stats['mean'], color='red', linestyle='--', label=f'Mean: {stats["mean"]:.3f}')
+    ax1.axvline(stats['p90'], color='orange', linestyle='--', label=f'90th %ile: {stats["p90"]:.3f}')
+    ax1.axvline(stats['p95'], color='green', linestyle='--', label=f'95th %ile: {stats["p95"]:.3f}')
+    ax1.set_xlabel('Jaccard Similarity')
+    ax1.set_ylabel('Frequency')
+    ax1.set_title('Distribution of Pairwise Similarities')
+    ax1.legend()
+    
+    # Cumulative distribution
+    sorted_sims = np.sort(upper_triangle)
+    cumulative = np.arange(1, len(sorted_sims) + 1) / len(sorted_sims)
+    ax2.plot(sorted_sims, cumulative)
+    ax2.axvline(stats['p90'], color='orange', linestyle='--', label=f'90th %ile: {stats["p90"]:.3f}')
+    ax2.axvline(stats['p95'], color='green', linestyle='--', label=f'95th %ile: {stats["p95"]:.3f}')
+    ax2.set_xlabel('Jaccard Similarity')
+    ax2.set_ylabel('Cumulative Probability')
+    ax2.set_title('Cumulative Distribution')
+    ax2.legend()
+    
+    plt.tight_layout()
+    plt.show()
+    
+    # Recommend thresholds
+    recommended_internal = max(stats['p90'], stats['mean'] + stats['std'])
+    recommended_primary = max(stats['p75'], stats['mean'])
+    
+    print(f"\n=== RECOMMENDED THRESHOLDS ===")
+    print(f"Primary cutoff: {recommended_primary:.3f} (for initial detection)")
+    print(f"Internal similarity minimum: {recommended_internal:.3f} (for quality filtering)")
+    
+    return stats, recommended_primary, recommended_internal
+
+# analyze the similarity distribution
+analyze_similarity_distribution(cluster_tf_matrix)
+
+# %%
+# adjust the gamma value
+import matplotlib.colors as mcolors
+
+# Create gamma-corrected colormap
+colors = plt.cm.Blues(np.linspace(0, 1, 256))
+colors_gamma = colors.copy()
+colors_gamma[:, :3] = np.power(colors[:, :3], 0.6)  # Try 0.5, 0.6, or 0.7
+gamma_cmap = mcolors.ListedColormap(colors_gamma)
+gamma_cmap
+
+
+# %%
+def find_dense_similarity_regions(cluster_feature_matrix,
+                                top_n_clusters=50,
+                                feature_type="TFs",
+                                savefig=False,
+                                filename=None,
+                                # Dense region parameters
+                                min_similarity_threshold=0.15,  # All pairs must exceed this
+                                average_similarity_threshold=None,  # NEW: Optional average similarity filter
+                                min_block_size=4,
+                                max_block_size=30,
+                                hide_axis_labels=True, 
+                                cmap="Blues",
+                                gamma=None,
+                                show_blocks=True):
+    """
+    Find dense similarity regions using a region-growing approach
+    
+    Parameters:
+    - average_similarity_threshold: Optional. If provided, only keep blocks with 
+                                   average similarity >= this threshold. If None, no filtering.
+    - cmap: Colormap to use ('Blues', 'Reds', etc.) or custom colormap object
+    - gamma: Optional gamma correction (e.g., 0.5 for enhanced light regions). If None, no correction.
+    """
+    
+    print(f"\n=== DENSE REGION DETECTION ({feature_type}) ===")
+    
+    # Preprocessing
+    if len(cluster_feature_matrix) > top_n_clusters:
+        counts = cluster_feature_matrix.sum(axis=1)
+        matrix_subset = cluster_feature_matrix.loc[counts.nlargest(top_n_clusters).index]
+        print(f"Using top {top_n_clusters} clusters by {feature_type} count")
+    else:
+        matrix_subset = cluster_feature_matrix
+        print(f"Using all {len(cluster_feature_matrix)} clusters")
+    
+    # Calculate Jaccard similarity
+    clusters = matrix_subset.index.tolist()
+    n = len(clusters)
+    similarity = np.eye(n)
+    
+    print("Computing pairwise similarities...")
+    for i in range(n):
+        set_i = set(matrix_subset.columns[matrix_subset.iloc[i] == 1])
+        for j in range(i + 1, n):
+            set_j = set(matrix_subset.columns[matrix_subset.iloc[j] == 1])
+            denom = len(set_i | set_j)
+            sim = 0 if denom == 0 else len(set_i & set_j) / denom
+            similarity[i, j] = similarity[j, i] = sim
+    
+    # Hierarchical ordering for visualization (but not for block detection)
+    dist_vec = squareform(1 - similarity, checks=False)
+    linkage_matrix = linkage(dist_vec, method='average')
+    order = dendrogram(linkage_matrix, no_plot=True)['leaves']
+    
+    sim_ord = similarity[np.ix_(order, order)]
+    name_ord = [clusters[i] for i in order]
+    
+    print(f"Detection parameters:")
+    print(f"  Minimum similarity threshold: {min_similarity_threshold:.3f}")
+    if average_similarity_threshold is not None:
+        print(f"  Average similarity threshold: {average_similarity_threshold:.3f}")
+    else:
+        print(f"  Average similarity threshold: None (no filtering)")
+    print(f"  Block size range: {min_block_size}-{max_block_size}")
+    print(f"  Colormap: {cmap if isinstance(cmap, str) else 'Custom'}")        # ← ADDED
+    if gamma is not None:                                                      # ← ADDED
+        print(f"  Gamma correction: {gamma}")                                  # ← ADDED
+    else:                                                                      # ← ADDED
+        print(f"  Gamma correction: None")                                     # ← ADDED
+    
+    # METHOD 1: Seed-and-grow approach
+    print("\nUsing seed-and-grow approach...")
+    
+    used_clusters = set()
+    dense_blocks = []
+    
+    # Start with highest similarity pairs as seeds
+    similarity_pairs = []
+    for i in range(n):
+        for j in range(i + 1, n):
+            if similarity[i, j] >= min_similarity_threshold:
+                similarity_pairs.append((similarity[i, j], i, j))
+    
+    # Sort by similarity (highest first)
+    similarity_pairs.sort(reverse=True)
+    
+    print(f"Found {len(similarity_pairs)} pairs above threshold {min_similarity_threshold:.3f}")
+    
+    for sim_value, seed_i, seed_j in similarity_pairs:
+        # Skip if either cluster is already used
+        if seed_i in used_clusters or seed_j in used_clusters:
+            continue
+        
+        # Start growing a block from this seed pair
+        current_block = {seed_i, seed_j}
+        
+        # Keep adding clusters that are similar to ALL clusters in the current block
+        improved = True
+        while improved and len(current_block) < max_block_size:
+            improved = False
+            best_candidate = None
+            best_min_sim = 0
+            
+            # Find the best candidate to add
+            for candidate in range(n):
+                if candidate in current_block or candidate in used_clusters:
+                    continue
+                
+                # Check if this candidate is similar enough to ALL clusters in current block
+                min_sim_to_block = min(similarity[candidate, block_member] for block_member in current_block)
+                
+                if min_sim_to_block >= min_similarity_threshold and min_sim_to_block > best_min_sim:
+                    best_candidate = candidate
+                    best_min_sim = min_sim_to_block
+            
+            # Add the best candidate if found
+            if best_candidate is not None:
+                current_block.add(best_candidate)
+                improved = True
+        
+        # Accept block if it meets size requirements
+        if len(current_block) >= min_block_size:
+            # Verify all pairs meet threshold (double-check)
+            all_pairs_valid = True
+            internal_similarities = []
+            
+            for i in current_block:
+                for j in current_block:
+                    if i != j:
+                        sim_ij = similarity[i, j]
+                        internal_similarities.append(sim_ij)
+                        if sim_ij < min_similarity_threshold:
+                            all_pairs_valid = False
+                            break
+                if not all_pairs_valid:
+                    break
+            
+            if all_pairs_valid:
+                block_clusters = [clusters[i] for i in current_block]
+                avg_sim = np.mean(internal_similarities)
+                min_sim = np.min(internal_similarities)
+                
+                dense_blocks.append({
+                    'indices': list(current_block),
+                    'clusters': block_clusters,
+                    'avg_similarity': avg_sim,
+                    'min_similarity': min_sim,
+                    'size': len(current_block)
+                })
+                
+                # Mark these clusters as used
+                used_clusters.update(current_block)
+                
+                print(f"  ✓ Found block: {len(current_block)} clusters, avg_sim={avg_sim:.3f}, min_sim={min_sim:.3f}")
+            else:
+                print(f"  ✗ Block validation failed: not all pairs meet threshold")
+    
+    print(f"\nSeed-and-grow result: {len(dense_blocks)} dense blocks")
+    
+    # NEW: Apply average similarity filtering if threshold is provided
+    if average_similarity_threshold is not None:
+        print(f"\nApplying average similarity filter (≥ {average_similarity_threshold:.3f})...")
+        
+        high_quality_blocks = []
+        rejected_blocks = []
+        
+        for i, block in enumerate(dense_blocks):
+            avg_sim = block['avg_similarity']
+            
+            if avg_sim >= average_similarity_threshold:
+                high_quality_blocks.append(block)
+                print(f"  ✓ Block {i+1}: KEPT - size={block['size']}, avg_sim={avg_sim:.3f}")
+            else:
+                rejected_blocks.append(block)
+                print(f"  ✗ Block {i+1}: REJECTED - size={block['size']}, avg_sim={avg_sim:.3f} < {average_similarity_threshold:.3f}")
+        
+        print(f"\nFiltering summary:")
+        print(f"  Original blocks: {len(dense_blocks)}")
+        print(f"  High-quality blocks: {len(high_quality_blocks)}")
+        print(f"  Rejected blocks: {len(rejected_blocks)}")
+        
+        # Use filtered blocks for visualization
+        dense_blocks = high_quality_blocks
+    
+    # Convert to ordered positions for visualization
+    ordered_blocks = []
+    for block in dense_blocks:
+        # Map original indices to ordered positions
+        ordered_indices = []
+        for orig_idx in block['indices']:
+            cluster_name = clusters[orig_idx]
+            if cluster_name in name_ord:
+                ordered_pos = name_ord.index(cluster_name)
+                ordered_indices.append(ordered_pos)
+        
+        if ordered_indices:
+            ordered_blocks.append({
+                **block,
+                'ordered_indices': ordered_indices
+            })
+    
+    # PLOTTING
+    fig, ax = plt.subplots(figsize=(14, 12))
+    
+    # Plot heatmap
+    # im = ax.imshow(sim_ord, cmap='Blues', aspect='auto', vmin=0, vmax=1)
+    # im = ax.imshow(sim_ord, cmap=gamma_cmap, aspect='auto', vmin=0, vmax=1)
+    # Create gamma-corrected colormap
+    # Apply gamma correction if specified                                     
+    if gamma is not None and isinstance(cmap, str):                           
+        print(f"Applying gamma correction (γ={gamma}) to {cmap} colormap")   
+        colors = plt.cm.get_cmap(cmap)(np.linspace(0, 1, 256))              
+        colors_gamma = colors.copy()                                          
+        colors_gamma[:, :3] = np.power(colors[:, :3], gamma)                  
+        plot_cmap = mcolors.ListedColormap(colors_gamma)                      
+    else:                                                                     
+        plot_cmap = cmap                                                      
+                                                                              
+    # Plot heatmap with enhanced colormap                                    
+    im = ax.imshow(sim_ord, cmap=plot_cmap, aspect='auto', vmin=0, vmax=1)
+    
+    # Colorbar
+    cbar = plt.colorbar(im, ax=ax, shrink=0.8)
+    cbar.set_label('Jaccard Similarity', rotation=270, labelpad=20, fontsize=12)
+    
+    # Draw dense blocks
+    colors = ['darkred', 'gold', 'green', 'purple', 'indigo', 'pink', 'cyan', 'lime', 'magenta', 'yellow']
+    if show_blocks ==True:
+        for i, block in enumerate(ordered_blocks):
+            indices = block['ordered_indices']
+            if not indices:
+                continue
+
+            # Create bounding rectangle for the block
+            min_pos = min(indices)
+            max_pos = max(indices)
+            size = max_pos - min_pos + 1
+
+            color = colors[i % len(colors)]
+
+            # Draw rectangle
+            rect = Rectangle((min_pos, min_pos), size, size,
+                            linewidth=3, edgecolor=color, facecolor='none', alpha=0.9)
+            ax.add_patch(rect)
+
+            # Enhanced labels
+            avg_sim = block['avg_similarity']
+            min_sim = block['min_similarity']
+            block_size = block['size']
+
+            # Add quality indicator to label if filtering was applied
+            label_prefix = 'HQ' if average_similarity_threshold is not None else 'B'
+            label_text = f'{label_prefix}{i+1}\n({block_size})\navg:{avg_sim:.3f}\nmin:{min_sim:.3f}'
+            ax.text(min_pos + size/2, min_pos - 25, label_text, 
+                   ha='center', va='bottom', fontweight='bold', 
+                   color=color, fontsize=9,
+                   bbox=dict(boxstyle='round,pad=0.3', facecolor='white', alpha=0.9))
+
+            print(f"Block {i+1} visualization: positions {min_pos}-{max_pos}, actual size {block_size}")
+    
+    # Enhanced title
+    if average_similarity_threshold is not None:
+        title = f'High-Quality Dense Similarity Regions ({feature_type})\n' \
+                f'{len(ordered_blocks)} blocks (all pairs ≥ {min_similarity_threshold:.3f}, avg ≥ {average_similarity_threshold:.3f})'
+    else:
+        title = f'Dense Similarity Regions ({feature_type})\n' \
+                f'{len(ordered_blocks)} blocks (all pairs ≥ {min_similarity_threshold:.3f})'
+    
+    ax.set_title(title, fontsize=16, fontweight='bold', pad=30)
+    
+    if hide_axis_labels:
+        ax.set_xticks([])
+        ax.set_yticks([])
+        ax.set_xlabel('')
+        ax.set_ylabel('')
+    
+    plt.tight_layout()
+    
+    if savefig and filename:
+        plt.savefig(filename, dpi=300, bbox_inches='tight')
+    
+    plt.show()
+    
+    # Return results
+    dense_block_clusters = [block['clusters'] for block in dense_blocks]
+    linkage_info = {
+        'linkage_matrix': linkage_matrix,
+        'cluster_order': order,
+        'cluster_names': clusters
+    }
+    
+    return sim_ord, name_ord, linkage_info, dense_block_clusters, dense_blocks
+
+
+
+# %%
+
+# ====================================================================
+# RUN DENSE REGION DETECTION
+# ====================================================================
+
+print("="*60)
+print("RUNNING DENSE REGION DETECTION")
+print("="*60)
+
+# Try with realistic thresholds based on your data
+sim_matrix, cluster_names, linkage_info, dense_blocks, block_details = find_dense_similarity_regions(
+    cluster_feature_matrix=cluster_tf_matrix,
+    top_n_clusters=402,
+    feature_type="TFs",
+    min_similarity_threshold=0.15,  # All pairs must be at least 0.15
+    average_similarity_threshold=0.35,
+    min_block_size=4,
+    max_block_size=100,
+    savefig=True,
+    filename="dense_similarity_regions.png",
+    hide_axis_labels=True, cmap="Blues", gamma=0.6,
+)
+
+print(f"\nFINAL RESULT: {len(dense_blocks)} dense regions detected!")
+
+for i, (block, details) in enumerate(zip(dense_blocks, block_details)):
+    print(f"Dense Region {i+1}: {len(block)} clusters")
+    print(f"  Average similarity: {details['avg_similarity']:.3f}")
+    print(f"  Minimum similarity: {details['min_similarity']:.3f} (guaranteed ≥ 0.15)")
+    print(f"  Sample clusters: {block[:3]}{'...' if len(block) > 3 else ''}")
+
+# # Also try DBSCAN approach
+# print(f"\n" + "="*40)
+# print("TRYING DBSCAN APPROACH")
+# print("="*40)
+
+# dbscan_blocks = find_blocks_with_dbscan(
+#     cluster_tf_matrix,
+#     similarity_threshold=0.15,
+#     min_samples=4
+# )
+
+# print(f"DBSCAN found {len(dbscan_blocks)} blocks")
+
+# %%
+# plot without the boxes
+sim_matrix, cluster_names, linkage_info, dense_blocks, block_details = find_dense_similarity_regions(
+    cluster_feature_matrix=cluster_tf_matrix,
+    top_n_clusters=402,
+    feature_type="TFs",
+    min_similarity_threshold=0.15,  # All pairs must be at least 0.15
+    average_similarity_threshold=0.35,
+    min_block_size=4,
+    max_block_size=100,
+    savefig=True,
+    filename=figpath + "enriched_TFs_per_peak_cluster_similarity_with_blocks.png",
+    hide_axis_labels=True, cmap="Blues", gamma=0.6,show_blocks=False,
+)
+
+# %%
+# adjust the gamma value
+import matplotlib.colors as mcolors
+
+# Create gamma-corrected colormap
+colors = plt.cm.Blues(np.linspace(0, 1, 256))
+colors_gamma = colors.copy()
+colors_gamma[:, :3] = np.power(colors[:, :3], 0.6)  # Try 0.5, 0.6, or 0.7
+gamma_cmap = mcolors.ListedColormap(colors_gamma)
+
+# Save your gamma colorbar as PDF
+fig, ax = plt.subplots(figsize=(2, 8))
+cbar = plt.colorbar(plt.cm.ScalarMappable(norm=mcolors.Normalize(0, 1), cmap=gamma_cmap), 
+                   ax=ax, shrink=0.8)
+cbar.set_label('Jaccard Similarity', rotation=270, labelpad=20, fontsize=12)
+ax.remove()
+plt.savefig(figpath + 'gamma_colorbar.pdf', bbox_inches='tight')
+plt.show()
+
+# %%
+# Extract specific high-quality blocks
+# Your function returned: sim_matrix, cluster_names, linkage_info, dense_blocks, block_details
+
+# ====================================================================
+# EXTRACT SPECIFIC BLOCKS
+# ====================================================================
+
+print("=== EXTRACTING SPECIFIC HIGH-QUALITY BLOCKS ===")
+
+# Extract the blocks you're interested in (HQ1, HQ2, HQ3, HQ5, HQ6)
+# Note: Python uses 0-based indexing, so HQ1 = index 0, HQ2 = index 1, etc.
+
+target_blocks = {
+    'HQ1': 0,  # First block
+    'HQ2': 1,  # Second block  
+    'HQ3': 2,  # Third block
+    'HQ5': 4,  # Fifth block
+    'HQ6': 5   # Sixth block
+}
+
+extracted_blocks = {}
+
+for block_name, block_index in target_blocks.items():
+    if block_index < len(dense_blocks):
+        # Extract cluster list
+        cluster_list = dense_blocks[block_index]
+        
+        # Extract detailed information
+        block_info = block_details[block_index]
+        
+        extracted_blocks[block_name] = {
+            'clusters': cluster_list,
+            'size': len(cluster_list),
+            'avg_similarity': block_info['avg_similarity'],
+            'min_similarity': block_info['min_similarity'],
+            'details': block_info
+        }
+        
+        print(f"\n{block_name} ({len(cluster_list)} clusters):")
+        print(f"  Average similarity: {block_info['avg_similarity']:.3f}")
+        print(f"  Minimum similarity: {block_info['min_similarity']:.3f}")
+        print(f"  Clusters: {cluster_list[:5]}{'...' if len(cluster_list) > 5 else ''}")
+        print(f"  All clusters: {cluster_list}")
+    else:
+        print(f"\n{block_name}: Block index {block_index} not found (only {len(dense_blocks)} blocks available)")
+
+# ====================================================================
+# CREATE ANNOTATION DICTIONARY
+# ====================================================================
+
+print(f"\n=== CREATING ANNOTATION DICTIONARY ===")
+
+# Create a clean dictionary for easy access
+block_annotations = {}
+
+for block_name, block_data in extracted_blocks.items():
+    block_annotations[block_name] = {
+        'clusters': block_data['clusters'],
+        'description': f"{block_data['size']} clusters, avg_sim={block_data['avg_similarity']:.3f}",
+        'quality_score': block_data['avg_similarity']
+    }
+
+# Display the annotation dictionary
+for block_name, annotation in block_annotations.items():
+    print(f"\n{block_name}:")
+    print(f"  Description: {annotation['description']}")
+    print(f"  Cluster count: {len(annotation['clusters'])}")
+    print(f"  First 3 clusters: {annotation['clusters'][:3]}")
+
+# ====================================================================
+# EXPORT TO VARIOUS FORMATS
+# ====================================================================
+
+print(f"\n=== EXPORTING BLOCK INFORMATION ===")
+
+# 1. Export to CSV
+import pandas as pd
+
+# Create a DataFrame with all cluster assignments
+cluster_assignments = []
+for block_name, annotation in block_annotations.items():
+    for cluster in annotation['clusters']:
+        cluster_assignments.append({
+            'cluster_id': cluster,
+            'block_name': block_name,
+            'block_size': len(annotation['clusters']),
+            'avg_similarity': annotation['quality_score']
+        })
+
+df_assignments = pd.DataFrame(cluster_assignments)
+df_assignments.to_csv("selected_block_assignments.csv", index=False)
+print("Saved cluster assignments to: selected_block_assignments.csv")
+
+# 2. Export to text file with detailed info
+with open("selected_blocks_detailed.txt", "w") as f:
+    f.write("=== SELECTED HIGH-QUALITY SIMILARITY BLOCKS ===\n\n")
+    
+    for block_name, annotation in block_annotations.items():
+        f.write(f"{block_name}: {annotation['description']}\n")
+        f.write(f"Clusters ({len(annotation['clusters'])}): {', '.join(annotation['clusters'])}\n")
+        f.write("\n" + "-"*50 + "\n\n")
+
+print("Saved detailed block info to: selected_blocks_detailed.txt")
+
+# 3. Create a summary table
+print(f"\n=== SUMMARY TABLE ===")
+summary_data = []
+for block_name, annotation in block_annotations.items():
+    summary_data.append({
+        'Block': block_name,
+        'Size': len(annotation['clusters']),
+        'Avg_Similarity': f"{annotation['quality_score']:.3f}",
+        'Sample_Clusters': ', '.join(annotation['clusters'][:3]) + ('...' if len(annotation['clusters']) > 3 else '')
+    })
+
+df_summary = pd.DataFrame(summary_data)
+print(df_summary.to_string(index=False))
+
+# ====================================================================
+# QUICK ACCESS VARIABLES
+# ====================================================================
+
+print(f"\n=== QUICK ACCESS VARIABLES ===")
+
+# Create individual variables for easy access
+if 'HQ1' in extracted_blocks:
+    HQ1_clusters = extracted_blocks['HQ1']['clusters']
+    print(f"HQ1_clusters = {HQ1_clusters}")
+
+if 'HQ2' in extracted_blocks:
+    HQ2_clusters = extracted_blocks['HQ2']['clusters']
+    print(f"HQ2_clusters = {HQ2_clusters}")
+
+if 'HQ3' in extracted_blocks:
+    HQ3_clusters = extracted_blocks['HQ3']['clusters']
+    print(f"HQ3_clusters = {HQ3_clusters}")
+
+if 'HQ5' in extracted_blocks:
+    HQ5_clusters = extracted_blocks['HQ5']['clusters']
+    print(f"HQ5_clusters = {HQ5_clusters}")
+
+if 'HQ6' in extracted_blocks:
+    HQ6_clusters = extracted_blocks['HQ6']['clusters']
+    print(f"HQ6_clusters = {HQ6_clusters}")
+
+# ====================================================================
+# ANNOTATION HELPER FUNCTION
+# ====================================================================
+
+def annotate_block_clusters(block_name, cluster_list, additional_info=""):
+    """
+    Helper function to create annotation text for a block
+    """
+    annotation = f"{block_name}: {len(cluster_list)} clusters"
+    if additional_info:
+        annotation += f" ({additional_info})"
+    
+    # Add sample clusters
+    if len(cluster_list) <= 3:
+        annotation += f"\nClusters: {', '.join(cluster_list)}"
+    else:
+        annotation += f"\nSample: {', '.join(cluster_list[:3])}..."
+    
+    return annotation
+
+# Example usage for annotations
+print(f"\n=== EXAMPLE ANNOTATIONS ===")
+for block_name, annotation in block_annotations.items():
+    if block_name in ['HQ1', 'HQ2', 'HQ3', 'HQ5', 'HQ6']:
+        sample_annotation = annotate_block_clusters(
+            block_name, 
+            annotation['clusters'], 
+            f"avg_sim={annotation['quality_score']:.3f}"
+        )
+        print(f"\n{sample_annotation}")
+
+# ====================================================================
+# CREATE MAPPING FOR FURTHER ANALYSIS
+# ====================================================================
+
+print(f"\n=== CREATING CLUSTER-TO-BLOCK MAPPING ===")
+
+# Create reverse mapping: cluster -> block
+cluster_to_block_mapping = {}
+for block_name, annotation in block_annotations.items():
+    for cluster in annotation['clusters']:
+        cluster_to_block_mapping[cluster] = block_name
+
+print(f"Created mapping for {len(cluster_to_block_mapping)} clusters")
+print("Example mappings:")
+for i, (cluster, block) in enumerate(list(cluster_to_block_mapping.items())[:5]):
+    print(f"  {cluster} → {block}")
+
+# Save the mapping
+with open("cluster_to_block_mapping.txt", "w") as f:
+    for cluster, block in cluster_to_block_mapping.items():
+        f.write(f"{cluster}\t{block}\n")
+
+print("Saved cluster-to-block mapping to: cluster_to_block_mapping.txt")
+
+print(f"\n=== READY FOR ANNOTATION! ===")
+print("You now have:")
+print("1. extracted_blocks - Dictionary with detailed block information")
+print("2. block_annotations - Clean annotation dictionary")
+print("3. Individual variables: HQ1_clusters, HQ2_clusters, etc.")
+print("4. cluster_to_block_mapping - Reverse lookup")
+print("5. CSV and text file exports for further use")
+
+# %%
+# HQ1
+list_clusters = ['19_5', '0_0', '19_7', '7_3', '7_7', '7_5', '1_1', '29_9', '7_9', '1_11', '1_13', '1_2', '1_3', '7_2', '1_0', '1_12', '9_3', '1_7', '1_9', '1_8', '1_4', '2_6', '11_8', '7_6', '12_1', '30_4', '22_10', '12_13', '12_3', '22_12', '22_14', '12_5', '12_7', '7_8', '13_12', '32_14', '13_15', '24_12', '24_4', '14_4', '24_7', '25_12', '15_13', '15_14', '35_13', '35_12', '15_3', '35_2', '35_4', '35_6', '35_7', '16_2', '16_5', '4_0', '4_1', '27_4', '4_3', '4_4', '18_11', '29_14', '18_2', '5_5', '7_12', '19_1', '19_10', '19_11', '19_12', '7_0', '19_15', '7_10', '19_17', '29_17', '19_3', '19_4']
+
+# Create boolean mask
+adata_peaks.obs['HQ1'] = adata_peaks.obs['leiden_unified'].isin(list_clusters)
+
+# Plot with custom colors
+sc.pl.umap(adata_peaks, color='HQ1', palette={'True': 'darkred', 'False': 'lightgrey'}, save="_cluster_HQ1.png")
+
+# %%
+# HQ2
+list_clusters = ['0_1', '10_6', '11_11', '11_9', '12_4', '12_8', '13_11', '13_16', '13_3', '13_4', '13_6', '14_0', '14_6', '15_10', '15_11', '15_12', '15_4', '17_7', '18_1', '18_10', '18_12', '18_5', '18_6', '19_13', '1_6', '21_1', '21_2', '21_3', '21_4', '21_6', '22_15', '22_7', '22_8', '22_9', '24_9', '25_4', '25_9', '26_6', '26_7', '28_0', '28_10', '28_11', '28_12', '28_2', '28_3', '28_5', '28_7', '28_8', '28_9', '29_13', '29_15', '29_4', '29_8', '2_12', '2_17', '2_18', '2_19', '2_2', '30_0', '30_6', '31_0', '32_15', '34_0', '34_4', '35_0', '35_1', '35_15', '35_3', '3_1', '3_10', '3_3', '3_4', '3_5', '3_8', '3_9', '5_1', '7_11']
+
+# Create boolean mask
+adata_peaks.obs['HQ2'] = adata_peaks.obs['leiden_unified'].isin(list_clusters)
+
+# Plot with custom colors
+sc.pl.umap(adata_peaks, color='HQ2', palette={'True': 'gold', 'False': 'lightgrey'}, save="_cluster_HQ2.png")
+
+# %%
+# HQ3
+list_clusters = ['7_4', '10_10', '29_7', '10_2', '10_4', '2_0', '8_2', '10_5', '8_4', '8_5', '11_0', '2_15', '11_15', '20_4', '11_5', '11_6', '11_7', '21_0', '21_5', '12_11', '22_0', '22_1', '22_11', '12_2', '31_1', '22_16', '31_6', '22_17', '22_2', '22_5', '22_6', '32_12', '13_13', '32_13', '13_10', '32_6', '33_1', '33_2', '13_9', '14_1', '14_2', '33_4', '33_7', '14_5', '14_8', '34_3', '34_2', '25_10', '26_0', '26_10', '3_0', '16_4', '26_3', '26_5', '26_4', '26_8', '3_6', '3_7', '17_5', '17_8', '5_2', '5_3', '18_4', '28_6', '5_8', '18_9', '6_1', '6_2', '6_3', '29_12', '7_1']
+
+# Create boolean mask
+adata_peaks.obs['HQ3'] = adata_peaks.obs['leiden_unified'].isin(list_clusters)
+
+# Plot with custom colors
+sc.pl.umap(adata_peaks, color='HQ3', palette={'True': 'green', 'False': 'lightgrey'}, save="_cluster_HQ3.png")
+
+# %%
+# HQ5
+list_clusters = ['33_6', '17_9', '31_3', '8_0', '8_3', '32_0', '13_0', '2_5', '15_9', '35_8', '24_1', '19_16', '13_8', '33_3', '29_19']
+
+# Create boolean mask
+adata_peaks.obs['HQ5'] = adata_peaks.obs['leiden_unified'].isin(list_clusters)
+
+# Plot with custom colors
+sc.pl.umap(adata_peaks, color='HQ5', palette={'True': 'indigo', 'False': 'lightgrey'}, save="_cluster_HQ5.png")
+
+# %%
+# HQ6
+list_clusters = ['24_3', '24_5', '10_0', '4_2', '31_4', '35_10', '9_1', '6_0', '20_1', '32_3']
+
+# Create boolean mask
+adata_peaks.obs['HQ6'] = adata_peaks.obs['leiden_unified'].isin(list_clusters)
+
+# Plot with custom colors
+sc.pl.umap(adata_peaks, color='HQ6', palette={'True': 'darkorange', 'False': 'lightgrey'}, save="_cluster_HQ6.png")
+
+# %%
+
+# %%
+
+# %%
+
+# %% [markdown]
+# ## What are the enriched motifs in these "cluster of clusters"?
+#
+
+# %%
+from scipy.stats import hypergeom, chi2_contingency
+from collections import defaultdict
+
+def analyze_tf_enrichment_in_blocks(cluster_tf_matrix, blocks_data, 
+                                   min_frequency=0.3, 
+                                   min_enrichment_ratio=1.5,
+                                   max_tfs_per_block=15,
+                                   statistical_test='hypergeometric'):
+    """
+    Analyze TF enrichment in similarity blocks
+    
+    Parameters:
+    - cluster_tf_matrix: Binary matrix (clusters × TFs)
+    - blocks_data: Dictionary with block_name -> list of cluster IDs
+    - min_frequency: Minimum frequency of TF within block to consider
+    - min_enrichment_ratio: Minimum enrichment ratio vs background
+    - statistical_test: 'hypergeometric', 'chi2', or 'none'
+    """
+    
+    print("=== TF ENRICHMENT ANALYSIS FOR SIMILARITY BLOCKS ===")
+    
+    # Verify cluster availability
+    available_clusters = set(cluster_tf_matrix.index)
+    all_analysis_clusters = set()
+    for clusters in blocks_data.values():
+        all_analysis_clusters.update(clusters)
+    
+    missing_clusters = all_analysis_clusters - available_clusters
+    if missing_clusters:
+        print(f"Warning: {len(missing_clusters)} clusters not found in TF matrix")
+        print(f"Missing: {list(missing_clusters)[:10]}{'...' if len(missing_clusters) > 10 else ''}")
+    
+    # Calculate background TF frequencies (all clusters)
+    background_tf_freq = cluster_tf_matrix.mean(axis=0)
+    total_clusters = len(cluster_tf_matrix)
+    
+    print(f"Background: {total_clusters} total clusters, {len(background_tf_freq)} TFs")
+    
+    # Analyze each block
+    enrichment_results = {}
+    
+    for block_name, cluster_list in blocks_data.items():
+        print(f"\n--- Analyzing {block_name} ({len(cluster_list)} clusters) ---")
+        
+        # Get clusters that exist in TF matrix
+        valid_clusters = [c for c in cluster_list if c in available_clusters]
+        print(f"Valid clusters in TF matrix: {len(valid_clusters)}/{len(cluster_list)}")
+        
+        if len(valid_clusters) < 2:
+            print(f"Skipping {block_name}: insufficient valid clusters")
+            continue
+        
+        # Extract TF matrix for this block
+        block_tf_matrix = cluster_tf_matrix.loc[valid_clusters]
+        block_size = len(valid_clusters)
+        
+        # Calculate TF frequencies within block
+        block_tf_freq = block_tf_matrix.mean(axis=0)
+        block_tf_counts = block_tf_matrix.sum(axis=0)
+        
+        # Calculate enrichment metrics
+        enrichment_data = []
+        
+        for tf in cluster_tf_matrix.columns:
+            # Frequencies
+            freq_in_block = block_tf_freq[tf]
+            freq_background = background_tf_freq[tf]
+            
+            # Counts for statistical testing
+            count_in_block = block_tf_counts[tf]
+            count_in_background = cluster_tf_matrix[tf].sum()
+            
+            # Skip if too infrequent in block
+            if freq_in_block < min_frequency:
+                continue
+            
+            # Calculate enrichment ratio
+            enrichment_ratio = freq_in_block / freq_background if freq_background > 0 else float('inf')
+            
+            # Statistical testing
+            p_value = 1.0
+            if statistical_test == 'hypergeometric':
+                # Hypergeometric test: is this TF overrepresented in the block?
+                # Population: all clusters, successes in population: clusters with this TF
+                # Sample: block clusters, observed successes: block clusters with this TF
+                p_value = hypergeom.sf(
+                    count_in_block - 1,  # observed - 1 (for survival function)
+                    total_clusters,      # population size
+                    count_in_background, # successes in population
+                    block_size          # sample size
+                )
+            elif statistical_test == 'chi2':
+                # Chi-square test for independence
+                contingency_table = [
+                    [count_in_block, block_size - count_in_block],
+                    [count_in_background - count_in_block, total_clusters - block_size - (count_in_background - count_in_block)]
+                ]
+                try:
+                    chi2, p_value, dof, expected = chi2_contingency(contingency_table)
+                except:
+                    p_value = 1.0
+            
+            enrichment_data.append({
+                'tf': tf,
+                'freq_in_block': freq_in_block,
+                'freq_background': freq_background,
+                'enrichment_ratio': enrichment_ratio,
+                'count_in_block': count_in_block,
+                'count_background': count_in_background,
+                'p_value': p_value,
+                'neg_log_p': -np.log10(p_value) if p_value > 0 else 10
+            })
+        
+        # Sort by enrichment ratio and significance
+        enrichment_df = pd.DataFrame(enrichment_data)
+        
+        if len(enrichment_df) > 0:
+            # Filter by enrichment ratio
+            significant_tfs = enrichment_df[
+                (enrichment_df['enrichment_ratio'] >= min_enrichment_ratio) &
+                (enrichment_df['freq_in_block'] >= min_frequency)
+            ].copy()
+            
+            # Sort by combined score (enrichment × significance)
+            significant_tfs['combined_score'] = significant_tfs['enrichment_ratio'] * significant_tfs['neg_log_p']
+            significant_tfs = significant_tfs.sort_values('combined_score', ascending=False)
+            
+            # Keep top TFs
+            top_tfs = significant_tfs.head(max_tfs_per_block)
+            
+            enrichment_results[block_name] = {
+                'top_tfs': top_tfs,
+                'all_significant': significant_tfs,
+                'block_size': block_size,
+                'valid_clusters': valid_clusters
+            }
+            
+            print(f"Top {len(top_tfs)} enriched TFs:")
+            for _, row in top_tfs.iterrows():
+                print(f"  {row['tf']}: {row['freq_in_block']:.2%} (vs {row['freq_background']:.2%} bg), "
+                      f"ratio={row['enrichment_ratio']:.2f}, p={row['p_value']:.2e}")
+        else:
+            print(f"No TFs passed enrichment criteria")
+            enrichment_results[block_name] = None
+    
+    return enrichment_results
+
+def visualize_tf_enrichment(enrichment_results, top_n=10):
+    """
+    Create comprehensive visualizations of TF enrichment
+    """
+    
+    print(f"\n=== CREATING TF ENRICHMENT VISUALIZATIONS ===")
+    
+    # Collect data for visualization
+    plot_data = []
+    all_top_tfs = set()
+    
+    for block_name, result in enrichment_results.items():
+        if result is not None:
+            top_tfs = result['top_tfs'].head(top_n)
+            for _, row in top_tfs.iterrows():
+                plot_data.append({
+                    'Block': block_name,
+                    'TF': row['tf'],
+                    'Frequency': row['freq_in_block'],
+                    'Background': row['freq_background'],
+                    'Enrichment_Ratio': row['enrichment_ratio'],
+                    'Neg_Log_P': row['neg_log_p'],
+                    'Combined_Score': row['combined_score']
+                })
+                all_top_tfs.add(row['tf'])
+    
+    if not plot_data:
+        print("No enrichment data available for visualization")
+        return
+    
+    df_plot = pd.DataFrame(plot_data)
+    
+    # Create comprehensive visualization
+    fig = plt.figure(figsize=(20, 16))
+    
+    # 1. Heatmap of TF frequencies across blocks
+    ax1 = plt.subplot(3, 3, (1, 2))
+    
+    # Create matrix for heatmap
+    tf_block_matrix = df_plot.pivot_table(
+        index='TF', columns='Block', values='Frequency', fill_value=0
+    )
+    
+    # Sort TFs by maximum enrichment across blocks
+    tf_max_enrichment = df_plot.groupby('TF')['Enrichment_Ratio'].max()
+    tf_order = tf_max_enrichment.sort_values(ascending=False).index
+    tf_block_matrix = tf_block_matrix.reindex(tf_order)
+    
+    sns.heatmap(tf_block_matrix, annot=True, fmt='.2f', cmap='Reds', 
+                ax=ax1, cbar_kws={'label': 'TF Frequency'})
+    ax1.set_title('TF Frequency Across Blocks', fontweight='bold', fontsize=14)
+    ax1.set_xlabel('Similarity Block')
+    ax1.set_ylabel('Transcription Factor')
+    
+    # 2. Enrichment ratio heatmap
+    ax2 = plt.subplot(3, 3, (3, 3))
+    
+    enrichment_matrix = df_plot.pivot_table(
+        index='TF', columns='Block', values='Enrichment_Ratio', fill_value=1
+    )
+    enrichment_matrix = enrichment_matrix.reindex(tf_order)
+    
+    sns.heatmap(enrichment_matrix, annot=True, fmt='.1f', cmap='RdYlBu_r', 
+                center=1, ax=ax2, cbar_kws={'label': 'Enrichment Ratio'})
+    ax2.set_title('TF Enrichment Ratios', fontweight='bold', fontsize=14)
+    ax2.set_xlabel('Similarity Block')
+    ax2.set_ylabel('')
+    
+    # 3. Top TFs by block (bar plots)
+    for i, (block_name, result) in enumerate(enrichment_results.items()):
+        if result is None:
+            continue
+            
+        ax = plt.subplot(3, 3, 4 + i)
+        
+        top_tfs = result['top_tfs'].head(8)  # Top 8 for space
+        
+        if len(top_tfs) > 0:
+            bars = ax.barh(range(len(top_tfs)), top_tfs['enrichment_ratio'], 
+                          color='steelblue', alpha=0.7)
+            
+            # Add frequency annotations
+            for j, (_, row) in enumerate(top_tfs.iterrows()):
+                ax.text(row['enrichment_ratio'] + 0.1, j, 
+                       f"{row['freq_in_block']:.1%}", 
+                       va='center', fontsize=8)
+            
+            ax.set_yticks(range(len(top_tfs)))
+            ax.set_yticklabels(top_tfs['tf'], fontsize=9)
+            ax.set_xlabel('Enrichment Ratio')
+            ax.set_title(f'{block_name} Top TFs', fontweight='bold', fontsize=12)
+            ax.grid(axis='x', alpha=0.3)
+        else:
+            ax.text(0.5, 0.5, 'No enriched TFs', ha='center', va='center', 
+                   transform=ax.transAxes)
+            ax.set_title(f'{block_name} Top TFs', fontweight='bold', fontsize=12)
+        
+        # Limit subplots to available blocks
+        if i >= 4:  # Only show first 5 blocks
+            break
+    
+    plt.suptitle('TF Enrichment Analysis Across Similarity Blocks', 
+                fontsize=16, fontweight='bold', y=0.98)
+    plt.tight_layout()
+    plt.subplots_adjust(top=0.93)
+    plt.savefig("tf_enrichment_analysis.png", dpi=300, bbox_inches='tight')
+    plt.show()
+
+def create_block_tf_summary(enrichment_results, blocks_data):
+    """
+    Create a comprehensive summary of block-defining TFs
+    """
+    
+    print(f"\n=== BLOCK-DEFINING TF SUMMARY ===")
+    
+    summary = {}
+    
+    for block_name, result in enrichment_results.items():
+        if result is None:
+            continue
+        
+        top_tfs = result['top_tfs']
+        block_size = result['block_size']
+        
+        if len(top_tfs) > 0:
+            # Get top 5 TFs for summary
+            top_5 = top_tfs.head(5)
+            
+            tf_summary = []
+            for _, row in top_5.iterrows():
+                tf_info = f"{row['tf']} ({row['freq_in_block']:.1%}, {row['enrichment_ratio']:.1f}×)"
+                tf_summary.append(tf_info)
+            
+            # Identify highly specific TFs (high enrichment, low background)
+            highly_specific = top_tfs[
+                (top_tfs['enrichment_ratio'] > 3.0) & 
+                (top_tfs['freq_background'] < 0.1)
+            ]
+            
+            summary[block_name] = {
+                'size': block_size,
+                'top_tfs': tf_summary,
+                'n_enriched': len(top_tfs),
+                'highly_specific': list(highly_specific['tf'].head(3)),
+                'best_tf': top_tfs.iloc[0]['tf'] if len(top_tfs) > 0 else None,
+                'best_enrichment': top_tfs.iloc[0]['enrichment_ratio'] if len(top_tfs) > 0 else 0
+            }
+            
+            print(f"\n{block_name} ({block_size} clusters):")
+            print(f"  Block-defining TFs: {', '.join(tf_summary[:3])}")
+            if len(highly_specific) > 0:
+                print(f"  Highly specific TFs: {', '.join(list(highly_specific['tf'].head(3)))}")
+            print(f"  Total enriched TFs: {len(top_tfs)}")
+        else:
+            summary[block_name] = {'size': block_size, 'no_enrichment': True}
+            print(f"\n{block_name}: No significantly enriched TFs")
+    
+    return summary
+
+def find_shared_vs_specific_tfs(enrichment_results):
+    """
+    Identify TFs that are shared across blocks vs block-specific
+    """
+    
+    print(f"\n=== SHARED vs BLOCK-SPECIFIC TF ANALYSIS ===")
+    
+    # Collect all enriched TFs by block
+    block_tfs = {}
+    all_enriched_tfs = set()
+    
+    for block_name, result in enrichment_results.items():
+        if result is not None and len(result['top_tfs']) > 0:
+            block_enriched = set(result['top_tfs']['tf'])
+            block_tfs[block_name] = block_enriched
+            all_enriched_tfs.update(block_enriched)
+    
+    # Categorize TFs
+    tf_block_membership = defaultdict(list)
+    for tf in all_enriched_tfs:
+        for block_name, tf_set in block_tfs.items():
+            if tf in tf_set:
+                tf_block_membership[tf].append(block_name)
+    
+    # Categorize by sharing pattern
+    shared_tfs = {}  # TF -> list of blocks
+    specific_tfs = {}  # Block -> list of specific TFs
+    
+    for tf, blocks in tf_block_membership.items():
+        if len(blocks) > 1:
+            shared_tfs[tf] = blocks
+        else:
+            block_name = blocks[0]
+            if block_name not in specific_tfs:
+                specific_tfs[block_name] = []
+            specific_tfs[block_name].append(tf)
+    
+    print(f"Shared TFs (enriched in multiple blocks): {len(shared_tfs)}")
+    for tf, blocks in list(shared_tfs.items())[:10]:  # Show top 10
+        print(f"  {tf}: {', '.join(blocks)}")
+    
+    print(f"\nBlock-specific TFs:")
+    for block_name, tf_list in specific_tfs.items():
+        print(f"  {block_name}: {len(tf_list)} specific TFs")
+        print(f"    {', '.join(tf_list[:5])}{'...' if len(tf_list) > 5 else ''}")
+    
+    return shared_tfs, specific_tfs
+
+def create_enrichment_ranking_table(enrichment_results, output_file="tf_enrichment_ranking.csv"):
+    """
+    Create a comprehensive ranking table of all enriched TFs
+    """
+    
+    print(f"\n=== CREATING COMPREHENSIVE TF RANKING ===")
+    
+    all_enrichment_data = []
+    
+    for block_name, result in enrichment_results.items():
+        if result is not None and len(result['top_tfs']) > 0:
+            for _, row in result['top_tfs'].iterrows():
+                all_enrichment_data.append({
+                    'Block': block_name,
+                    'TF': row['tf'],
+                    'Frequency_in_Block': row['freq_in_block'],
+                    'Background_Frequency': row['freq_background'],
+                    'Enrichment_Ratio': row['enrichment_ratio'],
+                    'Count_in_Block': row['count_in_block'],
+                    'P_Value': row['p_value'],
+                    'Neg_Log_P': row['neg_log_p'],
+                    'Combined_Score': row['combined_score']
+                })
+    
+    df_all_enrichment = pd.DataFrame(all_enrichment_data)
+    
+    if len(df_all_enrichment) > 0:
+        # Sort by combined score
+        df_ranked = df_all_enrichment.sort_values('Combined_Score', ascending=False)
+        
+        # Save to CSV
+        df_ranked.to_csv(output_file, index=False)
+        print(f"Comprehensive ranking saved to: {output_file}")
+        
+        # Show top overall TFs
+        print(f"\nTop 10 TFs across all blocks (by combined score):")
+        for i, (_, row) in enumerate(df_ranked.head(10).iterrows()):
+            print(f"  {i+1:2d}. {row['TF']} ({row['Block']}): "
+                  f"{row['Frequency_in_Block']:.1%} freq, {row['Enrichment_Ratio']:.1f}× enrichment")
+        
+        return df_ranked
+    else:
+        print("No enrichment data to rank")
+        return pd.DataFrame()
+
+
+
+# %%
+
+# ====================================================================
+# RUN COMPLETE TF ENRICHMENT ANALYSIS
+# ====================================================================
+
+# Define your blocks data
+blocks_data = {
+    'HQ1': ['19_5', '0_0', '19_7', '7_3', '7_7', '7_5', '1_1', '29_9', '7_9', '1_11', '1_13', '1_2', '1_3', '7_2', '1_0', '1_12', '9_3', '1_7', '1_9', '1_8', '1_4', '2_6', '11_8', '7_6', '12_1', '30_4', '22_10', '12_13', '12_3', '22_12', '22_14', '12_5', '12_7', '7_8', '13_12', '32_14', '13_15', '24_12', '24_4', '14_4', '24_7', '25_12', '15_13', '15_14', '35_13', '35_12', '15_3', '35_2', '35_4', '35_6', '35_7', '16_2', '16_5', '4_0', '4_1', '27_4', '4_3', '4_4', '18_11', '29_14', '18_2', '5_5', '7_12', '19_1', '19_10', '19_11', '19_12', '7_0', '19_15', '7_10', '19_17', '29_17', '19_3', '19_4'],
+    'HQ2': ['0_1', '10_6', '11_11', '11_9', '12_4', '12_8', '13_11', '13_16', '13_3', '13_4', '13_6', '14_0', '14_6', '15_10', '15_11', '15_12', '15_4', '17_7', '18_1', '18_10', '18_12', '18_5', '18_6', '19_13', '1_6', '21_1', '21_2', '21_3', '21_4', '21_6', '22_15', '22_7', '22_8', '22_9', '24_9', '25_4', '25_9', '26_6', '26_7', '28_0', '28_10', '28_11', '28_12', '28_2', '28_3', '28_5', '28_7', '28_8', '28_9', '29_13', '29_15', '29_4', '29_8', '2_12', '2_17', '2_18', '2_19', '2_2', '30_0', '30_6', '31_0', '32_15', '34_0', '34_4', '35_0', '35_1', '35_15', '35_3', '3_1', '3_10', '3_3', '3_4', '3_5', '3_8', '3_9', '5_1', '7_11'],
+    'HQ3': ['7_4', '10_10', '29_7', '10_2', '10_4', '2_0', '8_2', '10_5', '8_4', '8_5', '11_0', '2_15', '11_15', '20_4', '11_5', '11_6', '11_7', '21_0', '21_5', '12_11', '22_0', '22_1', '22_11', '12_2', '31_1', '22_16', '31_6', '22_17', '22_2', '22_5', '22_6', '32_12', '13_13', '32_13', '13_10', '32_6', '33_1', '33_2', '13_9', '14_1', '14_2', '33_4', '33_7', '14_5', '14_8', '34_3', '34_2', '25_10', '26_0', '26_10', '3_0', '16_4', '26_3', '26_5', '26_4', '26_8', '3_6', '3_7', '17_5', '17_8', '5_2', '5_3', '18_4', '28_6', '5_8', '18_9', '6_1', '6_2', '6_3', '29_12', '7_1'],
+    'HQ5': ['33_6', '17_9', '31_3', '8_0', '8_3', '32_0', '13_0', '2_5', '15_9', '35_8', '24_1', '19_16', '13_8', '33_3', '29_19'],
+    'HQ6': ['24_3', '24_5', '10_0', '4_2', '31_4', '35_10', '9_1', '6_0', '20_1', '32_3']
+}
+
+print("Step 1: Running TF enrichment analysis...")
+
+# Run the main enrichment analysis
+enrichment_results = analyze_tf_enrichment_in_blocks(
+    cluster_tf_matrix=cluster_tf_matrix,
+    blocks_data=blocks_data,
+    min_frequency=0.25,         # TF must be in ≥25% of block clusters
+    min_enrichment_ratio=1.5,   # Must be ≥1.5× more frequent than background
+    max_tfs_per_block=15,       # Show top 15 TFs per block
+    statistical_test='hypergeometric'
+)
+
+print("\nStep 2: Creating visualizations...")
+
+# Create visualizations
+visualize_tf_enrichment(enrichment_results, top_n=12)
+
+print("\nStep 3: Analyzing shared vs specific TFs...")
+
+# Analyze shared vs specific patterns
+shared_tfs, specific_tfs = find_shared_vs_specific_tfs(enrichment_results)
+
+print("\nStep 4: Creating comprehensive ranking...")
+
+# Create ranking table
+df_ranked = create_enrichment_ranking_table(enrichment_results)
+
+print("\nStep 5: Creating block summary...")
+
+# Create summary
+block_summary = create_block_tf_summary(enrichment_results, blocks_data)
+
+print(f"\n=== ANALYSIS COMPLETE ===")
+print("Generated files:")
+print("1. tf_enrichment_analysis.png - Comprehensive visualization")
+print("2. tf_enrichment_ranking.csv - Detailed TF rankings") 
+print("3. Console output with block-specific TF signatures")
+
+print(f"\nKey variables created:")
+print("- enrichment_results: Detailed enrichment data per block")
+print("- shared_tfs: TFs enriched in multiple blocks")
+print("- specific_tfs: TFs unique to each block")
+print("- block_summary: Clean summary of block-defining TFs")
+
+# %%
+
+# %%
+# plot without the boxes
+sim_matrix, cluster_names, linkage_info, dense_blocks, block_details = find_dense_similarity_regions(
     cluster_feature_matrix=cluster_genes_matrix,
     top_n_clusters=402,
-    savefig=True,
-    filename="linked_genes_per_peak_cluster_similarity.png",
     feature_type="genes",
-
-    # reuse ordering from the TF heat‑map so rows/cols line up
-    linkage_info=linkage_info,
-    return_linkage=False,          # we don’t need the linkage back this time
-
-    # ── NEW OPTIONS ────────────────────────────────────────────────
-    hide_axis_labels=True,         # drop cluttered tick labels
-    similarity_cutoff=0.85,        # ≥ 0.85 Jaccard ⇒ dense block
-    min_box_size=5,                # only mark blocks with ≥ 5 clusters
-    highlight_blocks=False,         # draw red rectangles
-    return_block_clusters=True     # get the cluster lists in Python
+    # min_similarity_threshold=0.15,  # All pairs must be at least 0.15
+    # average_similarity_threshold=0.35,
+    # min_block_size=4,
+    # max_block_size=100,
+    savefig=True,
+    filename=figpath + "linked_genes_per_peak_cluster_similarity_blocks.png",
+    hide_axis_labels=True, cmap="Blues", gamma=0.6,show_blocks=False,
 )
+
+# %%
+# # compute the similarity matrix for “linked genes” and plot the heat‑map
+# sim_matrix_genes, cluster_names_genes, dense_blocks_genes = create_cluster_similarity_heatmap(
+#     cluster_feature_matrix=cluster_genes_matrix,
+#     top_n_clusters=402,
+#     savefig=True,
+#     filename="linked_genes_per_peak_cluster_similarity.png",
+#     feature_type="genes",
+
+#     # reuse ordering from the TF heat‑map so rows/cols line up
+#     linkage_info=linkage_info,
+#     return_linkage=False,          # we don’t need the linkage back this time
+
+#     # ── NEW OPTIONS ────────────────────────────────────────────────
+#     hide_axis_labels=True,         # drop cluttered tick labels
+#     similarity_cutoff=0.85,        # ≥ 0.85 Jaccard ⇒ dense block
+#     min_box_size=5,                # only mark blocks with ≥ 5 clusters
+#     highlight_blocks=False,         # draw red rectangles
+#     return_block_clusters=True     # get the cluster lists in Python
+# )
 
 # %%
 # Compute correlation between the two similarity matrices
@@ -1064,6 +2221,163 @@ plt.show()
 # %%
 # create a mesh with candidate TFs:linked genes (instead of associated genes, to capture "clean" signal)
 cluster_tf_gene_matrices = create_tf_gene_matrix_per_cluster(clusters_tfs_dict, cluster_genes_dict)
+
+# Save the cluster_tf_gene_matrices for future reference
+output_path = "/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/14_sub_GRN_reg_programs/cluster_tf_gene_matrices.pkl"
+with open(output_path, "wb") as f:
+    pickle.dump(cluster_tf_gene_matrices, f)
+print(f"Saved cluster_tf_gene_matrices with {len(cluster_tf_gene_matrices)} clusters to:")
+print(f"  {output_path}")
+
+# %%
+# load the cluster_tf_gene_matrices
+# output_path = "/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/14_sub_GRN_reg_programs/cluster_tf_gene_matrices.pkl"
+# with open(output_path, "rb") as f:
+#     cluster_tf_gene_matrices = pickle.load(f)
+# print(f"Loaded cluster_tf_gene_matrices with {len(cluster_tf_gene_matrices)} clusters from:")
+# print(f"  {output_path}")
+
+# %%
+# Function to identify clusters with strong specificity
+def calculate_cluster_specificity(df_clusters_groups, top_n=2):
+    """
+    Calculate specificity metrics for each cluster to identify those with 
+    strong signal in only 1-2 celltypes/timepoints.
+    
+    Parameters:
+    -----------
+    df_clusters_groups : pd.DataFrame
+        Clusters (rows) by pseudobulk groups (columns) accessibility matrix
+    top_n : int
+        Number of top groups to consider (default: 2)
+    
+    Returns:
+    --------
+    pd.DataFrame
+        Specificity metrics for each cluster
+    """
+    specificity_metrics = []
+    
+    for cluster_id in df_clusters_groups.index:
+        values = df_clusters_groups.loc[cluster_id].sort_values(ascending=False)
+        
+        # Calculate metrics
+        top_values = values.iloc[:top_n]
+        rest_values = values.iloc[top_n:]
+        
+        total_signal = values.sum()
+        top_signal = top_values.sum()
+        
+        # Specificity score: fraction of signal in top N groups
+        specificity_score = top_signal / total_signal if total_signal > 0 else 0
+        
+        # Signal concentration: ratio of top mean to rest mean
+        top_mean = top_values.mean()
+        rest_mean = rest_values.mean() if len(rest_values) > 0 else 0
+        fold_enrichment = top_mean / rest_mean if rest_mean > 0 else top_mean
+        
+        # Entropy-based specificity (lower = more specific)
+        normalized_values = values / values.sum() if values.sum() > 0 else values
+        entropy = -np.sum(normalized_values * np.log2(normalized_values + 1e-10))
+        max_entropy = np.log2(len(values))
+        normalized_entropy = entropy / max_entropy
+        
+        specificity_metrics.append({
+            'cluster_id': cluster_id,
+            'top1_group': values.index[0],
+            'top1_value': values.iloc[0],
+            'top2_group': values.index[1] if len(values) > 1 else None,
+            'top2_value': values.iloc[1] if len(values) > 1 else 0,
+            'specificity_score': specificity_score,
+            'fold_enrichment': fold_enrichment,
+            'normalized_entropy': normalized_entropy,
+            'total_signal': total_signal
+        })
+    
+    return pd.DataFrame(specificity_metrics).set_index('cluster_id')
+
+# %%
+# Load the clusters-by-pseudobulk accessibility matrix
+df_clusters_groups = pd.read_csv("/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/annotated_data/objects_v2/leiden_fine_by_pseudobulk.csv",
+                                 index_col=0)
+print(f"Loaded cluster accessibility matrix: {df_clusters_groups.shape}")
+print(f"  {len(df_clusters_groups)} clusters x {len(df_clusters_groups.columns)} pseudobulk groups")
+
+# %%
+# Calculate specificity for all clusters
+df_specificity = calculate_cluster_specificity(df_clusters_groups, top_n=2)
+
+# Sort by specificity score (higher = more specific to top 2 groups)
+df_specificity_sorted = df_specificity.sort_values('specificity_score', ascending=False)
+
+print("Top 20 most specific clusters (high signal in 1-2 celltypes/timepoints):")
+print("="*80)
+display(df_specificity_sorted.head(20))
+
+# %%
+# Visualize specificity distribution
+fig, axes = plt.subplots(2, 2, figsize=(14, 10))
+
+# 1. Specificity score distribution
+ax = axes[0, 0]
+ax.hist(df_specificity['specificity_score'], bins=50, edgecolor='black')
+ax.axvline(0.5, color='red', linestyle='--', label='50% threshold')
+ax.set_xlabel('Specificity Score\n(Fraction in top 2 groups)')
+ax.set_ylabel('Number of clusters')
+ax.set_title('Distribution of Cluster Specificity')
+ax.legend()
+
+# 2. Fold enrichment vs specificity
+ax = axes[0, 1]
+scatter = ax.scatter(df_specificity['specificity_score'], 
+                     np.log2(df_specificity['fold_enrichment'] + 1),
+                     c=df_specificity['total_signal'],
+                     cmap='viridis', alpha=0.6, s=30)
+ax.set_xlabel('Specificity Score')
+ax.set_ylabel('Log2(Fold Enrichment)')
+ax.set_title('Specificity vs Fold Enrichment')
+plt.colorbar(scatter, ax=ax, label='Total Signal')
+
+# 3. Entropy distribution
+ax = axes[1, 0]
+ax.hist(df_specificity['normalized_entropy'], bins=50, edgecolor='black')
+ax.axvline(0.3, color='red', linestyle='--', label='Low entropy threshold')
+ax.set_xlabel('Normalized Entropy\n(Lower = more specific)')
+ax.set_ylabel('Number of clusters')
+ax.set_title('Distribution of Signal Entropy')
+ax.legend()
+
+# 4. Top cluster annotations
+ax = axes[1, 1]
+top_clusters = df_specificity_sorted.head(15)
+y_pos = np.arange(len(top_clusters))
+ax.barh(y_pos, top_clusters['specificity_score'], alpha=0.7)
+ax.set_yticks(y_pos)
+ax.set_yticklabels([f"{idx}" for idx in top_clusters.index])
+ax.set_xlabel('Specificity Score')
+ax.set_ylabel('Cluster ID')
+ax.set_title('Top 15 Most Specific Clusters')
+ax.invert_yaxis()
+
+plt.tight_layout()
+plt.show()
+
+# %%
+# Identify highly specific clusters (you can adjust thresholds)
+specific_clusters = df_specificity[
+    (df_specificity['specificity_score'] > 0.5) &  # >50% signal in top 2 groups
+    (df_specificity['fold_enrichment'] > 3) &      # At least 3x enrichment
+    (df_specificity['normalized_entropy'] < 0.4)   # Low entropy
+].sort_values('specificity_score', ascending=False)
+
+print(f"\nFound {len(specific_clusters)} highly specific clusters:")
+print("="*80)
+for cluster_id in specific_clusters.index[:10]:
+    row = df_specificity.loc[cluster_id]
+    print(f"\nCluster {cluster_id}:")
+    print(f"  Top group: {row['top1_group']} (value: {row['top1_value']:.3f})")
+    print(f"  2nd group: {row['top2_group']} (value: {row['top2_value']:.3f})")
+    print(f"  Specificity: {row['specificity_score']:.3f} | Fold enrichment: {row['fold_enrichment']:.2f}x")
 
 # %%
 
@@ -1150,17 +2464,56 @@ df_clusters_groups.loc[:,"NMPs_0somites"].sort_values(ascending=False)
 
 # %%
 # check the pseudobulk profiles for the given cluster
-df_clusters_groups.loc[cluster_id].sort_values(ascending=False)[0:20]
-
-# %%
-# we can add up the GRNs from the top 10 celltypes and timepoints (or top N, or using some distribution)
-# but, for now, we'll pick one GRN[ct,tp]
-nmp_5som.head()
+df_clusters_groups.loc[clust_id].sort_values(ascending=False)[0:20]
 
 
 # %%
-# Import extract functions from module instead of redefining
-# (These functions are now available from module_extract_subGRN)
+def extract_subGRN_from_cluster(grn_df, cluster_tf_gene_matrix, cluster_id):
+    """
+    Extract subGRN based on TF-gene relationships from peak cluster
+    
+    Parameters:
+    - grn_df: GRN dataframe with 'source', 'target', coefficients, etc.
+    - cluster_tf_gene_matrix: TF-by-genes binarized matrix (pandas DataFrame)
+    - cluster_id: identifier for the cluster
+    
+    Returns:
+    - filtered GRN dataframe containing only edges predicted by the cluster
+    """
+    
+    # Get all TF-target pairs where matrix = 1
+    tf_target_pairs = []
+    for tf in cluster_tf_gene_matrix.index:
+        for gene in cluster_tf_gene_matrix.columns:
+            if cluster_tf_gene_matrix.loc[tf, gene] == 1:
+                tf_target_pairs.append((tf, gene))
+    
+    # Convert to set for faster lookup
+    predicted_pairs = set(tf_target_pairs)
+    
+    # Filter GRN to only include predicted pairs
+    mask = grn_df.apply(lambda row: (row['source'], row['target']) in predicted_pairs, axis=1)
+    subgrn = grn_df[mask].copy()
+    
+    # Add cluster information
+    subgrn['cluster_id'] = cluster_id
+    
+    return subgrn
+
+# Apply to all clusters
+def extract_all_cluster_subGRNs(grn_df, cluster_dict):
+    """
+    Extract subGRNs for all clusters
+    """
+    all_subgrns = []
+    
+    for cluster_id, tf_gene_matrix in cluster_dict.items():
+        subgrn = extract_subGRN_from_cluster(grn_df, tf_gene_matrix, cluster_id)
+        if len(subgrn) > 0:  # Only keep non-empty subGRNs
+            all_subgrns.append(subgrn)
+            print(f"Cluster {cluster_id}: {len(subgrn)} edges found")
+    
+    return all_subgrns
 
 
 # %%
@@ -1175,14 +2528,6 @@ test_subGRN.head()
 
 # %%
 from module_grn_viz import *
-from module_extract_subGRN import load_grn_dict_pathlib, extract_subGRN_from_cluster, extract_all_cluster_subGRNs
-from module_plot_subGRN import plot_subgrns_over_time, compare_timepoints, analyze_edge_types
-from module_cluster_analysis import (cluster_similarity_analysis, create_cluster_tf_matrix, 
-                                   analyze_tf_sharing, create_cluster_similarity_heatmap,
-                                   cluster_dict_to_df, build_master_df)
-from module_grn_temporal import (analyze_single_timepoint, compare_celltypes_similarity, 
-                               compare_across_timepoints, track_celltype_across_time, 
-                               summarize_analysis, run_complete_temporal_analysis)
 
 # %%
 # test with the TFs:linked_genes
@@ -1198,6 +2543,37 @@ visualize_subGRN_networkx_styled(test_subGRN, cluster_id = clust_id)
 
 # %% [markdown]
 # ## Systematic analysis of "dynamic" subGRN modules
+
+# %%
+from pathlib import Path
+# loading the GRNs as a dict
+def load_grn_dict_pathlib(base_dir="grn_exports", grn_type="filtered"):
+    """
+    Load GRN dictionary using pathlib (more robust)
+    """
+    grn_dict = {}
+    base_path = Path(base_dir) / grn_type
+    
+    # Find all CSV files recursively
+    csv_files = list(base_path.glob("*/*.csv"))
+    
+    for csv_file in csv_files:
+        # Extract timepoint from parent directory
+        timepoint_dir = csv_file.parent.name
+        timepoint = timepoint_dir.split('_')[1] if 'timepoint_' in timepoint_dir else timepoint_dir
+        
+        # Extract celltype from filename
+        celltype = csv_file.stem  # filename without extension
+        
+        # Load GRN
+        # try:
+        #     grn_df = pd.read_csv(csv_file)
+        #     grn_dict[(celltype, timepoint)] = grn_df
+        # except Exception as e:
+        grn_df = pd.read_csv(csv_file)
+        grn_dict[(celltype, timepoint)] = grn_df
+    
+    return grn_dict
 
 
 # %%
@@ -4393,27 +5769,678 @@ nmp_subgrns, master_grn, master_positions = plot_subgrns_over_time(
 #     debug_labels=True
 # )
 
+# %% [markdown]
+# ## quantification of subGRN modules 
+# - updated: 9/24/2025
+
 # %%
+import pandas as pd
+import numpy as np
+
+def extract_subgrn_metrics(cluster_id, celltype_of_interest, grn_dict, cluster_tf_gene_matrices, predicted_pairs):
+    """
+    Extract key metrics for subGRN analysis to fill in manuscript statement.
+    
+    Parameters:
+    -----------
+    cluster_id : str
+        The cluster ID to analyze (e.g., "26_8")
+    celltype_of_interest : str  
+        The celltype to focus on (e.g., "neural_floor_plate")
+    grn_dict : dict
+        Dictionary of GRNs keyed by (celltype, timepoint)
+    cluster_tf_gene_matrices : dict
+        Dictionary of TF-gene matrices for each cluster
+    predicted_pairs : list
+        List of predicted TF-target pairs from the mesh
+        
+    Returns:
+    --------
+    dict : Dictionary containing all the metrics
+    """
+    
+    print(f"=== Extracting metrics for cluster {cluster_id} in {celltype_of_interest} ===")
+    
+    # Get all timepoints for this celltype
+    timepoints = []
+    for (celltype, timepoint) in grn_dict.keys():
+        if celltype == celltype_of_interest:
+            timepoints.append(timepoint)
+    timepoints = sorted(timepoints)
+    
+    # Extract subGRNs for each timepoint
+    all_subgrn_nodes = set()
+    all_subgrn_edges = set()
+    subgrns_by_timepoint = {}
+    
+    for timepoint in timepoints:
+        if (celltype_of_interest, timepoint) in grn_dict:
+            grn_df = grn_dict[(celltype_of_interest, timepoint)]
+            
+            # Find intersection with predicted pairs (same logic as in your notebook)
+            grn_pairs = set(zip(grn_df['source'], grn_df['target']))
+            found_pairs = set(predicted_pairs) & grn_pairs
+            
+            # Extract matching edges
+            mask = grn_df.apply(lambda row: (row['source'], row['target']) in found_pairs, axis=1)
+            subgrn = grn_df[mask].copy()
+            
+            subgrns_by_timepoint[timepoint] = subgrn
+            
+            if len(subgrn) > 0:
+                # Collect nodes and edges
+                all_subgrn_nodes.update(subgrn['source'])
+                all_subgrn_nodes.update(subgrn['target'])
+                all_subgrn_edges.update(zip(subgrn['source'], subgrn['target']))
+    
+    # Calculate node classifications
+    all_sources = set()
+    all_targets = set()
+    for subgrn in subgrns_by_timepoint.values():
+        if len(subgrn) > 0:
+            all_sources.update(subgrn['source'])
+            all_targets.update(subgrn['target'])
+    
+    tf_only_nodes = all_sources - all_targets  # TFs that are never targets
+    target_only_nodes = all_targets - all_sources  # Targets that are never TFs  
+    dual_tf_target_nodes = all_sources & all_targets  # Both TF and target
+    
+    # Calculate metrics
+    total_nodes = len(all_subgrn_nodes)  # NN
+    total_tfs = len(all_sources)  # N (all nodes that act as TFs)
+    total_targets = len(all_targets)  # M (all nodes that act as targets)
+    total_edges = len(all_subgrn_edges)
+    dual_nodes = len(dual_tf_target_nodes)
+    
+    # Calculate complexity reduction (XX%)
+    # Compare subGRN size to original mesh size
+    cluster_matrix = cluster_tf_gene_matrices[cluster_id]
+    original_tf_count = len(cluster_matrix.index)  # TFs in mesh
+    original_gene_count = len(cluster_matrix.columns)  # Genes in mesh
+    original_possible_edges = (cluster_matrix == 1).sum().sum()  # Actual predicted edges in mesh
+    
+    # Calculate reduction percentages
+    node_reduction = (1 - total_nodes / (original_tf_count + original_gene_count)) * 100
+    edge_reduction = (1 - total_edges / original_possible_edges) * 100 if original_possible_edges > 0 else 0
+    
+    # Overall complexity reduction (using edge reduction as primary metric)
+    complexity_reduction = edge_reduction
+    
+    # Print detailed breakdown
+    print(f"\n=== SUBGRN COMPOSITION ===")
+    print(f"Total nodes (NN): {total_nodes}")
+    print(f"  - TF-only nodes: {len(tf_only_nodes)}")
+    print(f"  - Target-only nodes: {len(target_only_nodes)}")  
+    print(f"  - Dual TF/Target nodes: {dual_nodes}")
+    print(f"Total transcription factors (N): {total_tfs}")
+    print(f"Total target genes (M): {total_targets}")
+    print(f"Total edges: {total_edges}")
+    
+    print(f"\n=== ORIGINAL MESH COMPARISON ===")
+    print(f"Original mesh TFs: {original_tf_count}")
+    print(f"Original mesh genes: {original_gene_count}")
+    print(f"Original predicted edges: {original_possible_edges}")
+    print(f"Node reduction: {node_reduction:.1f}%")
+    print(f"Edge reduction: {edge_reduction:.1f}%")
+    print(f"Overall complexity reduction (XX): {complexity_reduction:.1f}%")
+    
+    print(f"\n=== TEMPORAL ANALYSIS ===")
+    for timepoint in timepoints:
+        subgrn = subgrns_by_timepoint[timepoint]
+        print(f"Timepoint {timepoint}: {len(subgrn)} edges, {len(set(subgrn['source']) | set(subgrn['target'])) if len(subgrn) > 0 else 0} nodes")
+    
+    # Return all metrics
+    metrics = {
+        'cluster_id': cluster_id,
+        'celltype': celltype_of_interest,
+        'total_nodes_NN': total_nodes,
+        'total_tfs_N': total_tfs, 
+        'total_targets_M': total_targets,
+        'dual_nodes': dual_nodes,
+        'total_edges': total_edges,
+        'complexity_reduction_XX': round(complexity_reduction, 1),
+        'node_classifications': {
+            'tf_only': list(tf_only_nodes),
+            'target_only': list(target_only_nodes), 
+            'dual_tf_target': list(dual_tf_target_nodes)
+        },
+        'temporal_breakdown': {tp: len(subgrns_by_timepoint[tp]) for tp in timepoints}
+    }
+    
+    return metrics
+
+
+
+# %%
+cluster_matrix = cluster_tf_gene_matrices[cluster_id]
+
+# Extract all predicted TF-target pairs from this mesh
+predicted_pairs = []
+for tf in cluster_matrix.index:
+    for gene in cluster_matrix.columns:
+        if cluster_matrix.loc[tf, gene] == 1:
+            predicted_pairs.append((tf, gene))
+
+# %%
+# Example usage for your specific cluster:
+cluster_id = "26_8"
+celltype_of_interest = "neural_floor_plate"
+
+# Extract metrics using your existing data structures
+metrics = extract_subgrn_metrics(
+    cluster_id=cluster_id,
+    celltype_of_interest=celltype_of_interest, 
+    grn_dict=grn_dict,
+    cluster_tf_gene_matrices=cluster_tf_gene_matrices,
+    predicted_pairs=predicted_pairs
+)
+
+# Print the values for your manuscript
+print(f"\n{'='*50}")
+print(f"VALUES FOR MANUSCRIPT:")
+print(f"{'='*50}")
+print(f"NN (total nodes): {metrics['total_nodes_NN']}")
+print(f"N (transcription factors): {metrics['total_tfs_N']}")
+print(f"M (target genes): {metrics['total_targets_M']}")
+print(f"XX (complexity reduction): {metrics['complexity_reduction_XX']}%")
+print(f"Dual TF/Target nodes: {metrics['dual_nodes']}")
+
+print(f"\n=== MANUSCRIPT TEXT ===")
+manuscript_text = f"""This approach successfully identified modular regulatory programs with distinct temporal dynamics. Analysis of regulatory program "{cluster_id}" in neural floor plate cells revealed a {metrics['total_nodes_NN']}-node subGRN containing {metrics['total_tfs_N']} transcription factors and {metrics['total_targets_M']} target genes (Fig.~\\ref{{fig:grn}}h). The network showed clear temporal dynamics, with specific TF-gene interactions active at early stages (10-14 hpf) becoming inactive by later timepoints (19-24 hpf), while new regulatory connections emerged during mid-development. Notably, {metrics['dual_nodes']} nodes functioned as both transcription factors and target genes (highlighted in yellow), indicating hierarchical regulatory cascades within the module. This regulatory program-based approach reduced network complexity by {metrics['complexity_reduction_XX']}% while preserving biologically meaningful modules, enabling detailed analysis of how specific regulatory circuits evolve during development."""
+
+print(manuscript_text)
+
+# Optional: Save metrics to file
+import json
+with open(f'subgrn_metrics_{cluster_id}_{celltype_of_interest}.json', 'w') as f:
+    # Convert sets to lists for JSON serialization
+    metrics_json = metrics.copy()
+    for key, value in metrics_json['node_classifications'].items():
+        if isinstance(value, set):
+            metrics_json['node_classifications'][key] = list(value)
+    json.dump(metrics_json, f, indent=2)
+    
+print(f"\nMetrics saved to: subgrn_metrics_{cluster_id}_{celltype_of_interest}.json")
 
 # %%
 
-# %%
+# %% [markdown]
+# ## Systematic Discovery of Dynamic SubGRNs via Temporal Dynamics Scoring
+# - last updated: 10/9/2025
+# - Goal: Rank all 402 peak clusters by temporal dynamics to identify biologically interesting regulatory programs
+# - Strategy:
+#   1. For each cluster, find the most accessible celltype (via Gini coefficient)
+#   2. Extract subGRNs for that celltype across all timepoints
+#   3. Compute temporal dynamics score (focus on developmental TF turnover)
+#   4. Rank and visualize top candidates
 
 # %%
+def gini_coefficient(values):
+    """
+    Calculate Gini coefficient to measure concentration of accessibility.
+
+    Parameters:
+    -----------
+    values : array-like
+        Accessibility values across all pseudobulk groups
+
+    Returns:
+    --------
+    float : Gini coefficient (0=equal distribution, 1=concentrated in few groups)
+    """
+    sorted_values = np.sort(values)
+    n = len(values)
+    index = np.arange(1, n + 1)
+    return (2 * np.sum(index * sorted_values)) / (n * np.sum(sorted_values)) - (n + 1) / n
+
+
+def find_most_accessible_celltype(cluster_id, df_clusters_groups, min_accessibility=0.01):
+    """
+    Find the celltype×timepoint with highest accessibility for a peak cluster.
+
+    Parameters:
+    -----------
+    cluster_id : str
+        Peak cluster ID (e.g., "26_8")
+    df_clusters_groups : pd.DataFrame
+        Cluster × pseudobulk accessibility matrix
+    min_accessibility : float
+        Minimum threshold to consider (filter noise)
+
+    Returns:
+    --------
+    dict with:
+        - best_group: str (e.g., "neural_floor_plate_14somites")
+        - celltype: str (e.g., "neural_floor_plate")
+        - timepoint: str (e.g., "14somites" or "03")
+        - accessibility: float
+        - gini_coefficient: float (concentration score)
+        - top_5_groups: list of (group, accessibility) tuples
+    """
+
+    # Get accessibility profile for this cluster
+    values = df_clusters_groups.loc[cluster_id]
+
+    # Filter by minimum threshold
+    values_filtered = values[values >= min_accessibility]
+
+    if len(values_filtered) == 0:
+        return None  # No signal
+
+    # Compute Gini coefficient (concentration)
+    gini = gini_coefficient(values.values)
+
+    # Find top group
+    best_group = values_filtered.idxmax()
+    best_value = values_filtered.max()
+
+    # Parse celltype and timepoint from group name
+    # Format: "celltype_timepoint" (e.g., "neural_floor_plate_14somites")
+    parts = best_group.rsplit('_', 1)
+    if len(parts) == 2:
+        celltype, timepoint = parts
+    else:
+        celltype = best_group
+        timepoint = None
+
+    # Get top 5 for context
+    top_5 = [(group, val) for group, val in
+             values_filtered.sort_values(ascending=False).head(5).items()]
+
+    return {
+        'cluster_id': cluster_id,
+        'best_group': best_group,
+        'celltype': celltype,
+        'timepoint': timepoint,
+        'accessibility': best_value,
+        'gini_coefficient': gini,
+        'top_5_groups': top_5
+    }
 
 # %%
+def compute_temporal_dynamics_score(cluster_id, celltype, grn_dict,
+                                    cluster_tf_gene_matrices,
+                                    developmental_tfs=None):
+    """
+    Compute how dynamically a subGRN changes over time for a specific celltype.
+
+    Parameters:
+    -----------
+    cluster_id : str
+        Peak cluster ID
+    celltype : str
+        Celltype to analyze (e.g., "neural_floor_plate")
+    grn_dict : dict
+        {(celltype, timepoint): grn_df}
+    cluster_tf_gene_matrices : dict
+        {cluster_id: TF×gene binary matrix}
+    developmental_tfs : set, optional
+        Set of well-known developmental TF names to track specifically
+
+    Returns:
+    --------
+    dict with dynamics metrics:
+        - n_timepoints: int
+        - node_turnover_rate: float (0-1, higher = more dynamic)
+        - edge_turnover_rate: float (0-1, higher = more dynamic)
+        - tf_turnover_rate: float (focuses on TF nodes only)
+        - developmental_tf_dynamics: float (focuses on known dev TFs)
+        - temporal_variance: float (std of edge counts across timepoints)
+        - dynamics_score: float (composite score, 0-1)
+        - subgrns_by_timepoint: dict {timepoint: subgrn_df}
+    """
+
+    if developmental_tfs is None:
+        # Well-known zebrafish developmental TFs
+        developmental_tfs = {
+            'sox2', 'sox3', 'sox9a', 'sox9b', 'sox10', 'sox19a', 'sox19b',
+            'pax6a', 'pax6b', 'pax2a', 'pax8',
+            'tbx6', 'tbx16', 'tbx5a', 'tbxa',
+            'myod1', 'myf5', 'myog', 'myf6',
+            'neurog1', 'neurod1', 'neurod4',
+            'gata1a', 'gata2a', 'gata3', 'gata4', 'gata5', 'gata6',
+            'hand2', 'hoxb1b', 'hoxa2b', 'hoxb5a',
+            'foxa1', 'foxa2', 'foxa3',
+            'nkx2.1a', 'nkx2.5', 'nkx6.1', 'nkx6.2',
+            'olig2', 'ascl1a', 'msgn1', 'meox1', 'tcf21'
+        }
+
+    # Get predicted TF-gene pairs from mesh
+    cluster_matrix = cluster_tf_gene_matrices[cluster_id]
+    predicted_pairs = set()
+    for tf in cluster_matrix.index:
+        for gene in cluster_matrix.columns:
+            if cluster_matrix.loc[tf, gene] == 1:
+                predicted_pairs.add((tf, gene))
+
+    # Get all timepoints for this celltype
+    timepoints = sorted([tp for (ct, tp) in grn_dict.keys() if ct == celltype])
+
+    if len(timepoints) < 2:
+        return None  # Need at least 2 timepoints for dynamics
+
+    # Extract subGRNs for each timepoint
+    subgrns_by_timepoint = {}
+    nodes_by_timepoint = {}
+    edges_by_timepoint = {}
+    tfs_by_timepoint = {}
+    dev_tfs_by_timepoint = {}
+
+    for timepoint in timepoints:
+        if (celltype, timepoint) not in grn_dict:
+            continue
+
+        grn_df = grn_dict[(celltype, timepoint)]
+
+        # Find intersection with predicted pairs
+        grn_pairs = set(zip(grn_df['source'], grn_df['target']))
+        found_pairs = predicted_pairs & grn_pairs
+
+        # Extract matching edges
+        mask = grn_df.apply(lambda row: (row['source'], row['target']) in found_pairs, axis=1)
+        subgrn = grn_df[mask].copy()
+
+        subgrns_by_timepoint[timepoint] = subgrn
+
+        if len(subgrn) > 0:
+            # Collect nodes, edges, TFs
+            nodes = set(subgrn['source']) | set(subgrn['target'])
+            edges = set(zip(subgrn['source'], subgrn['target']))
+            tfs = set(subgrn['source'])
+            dev_tfs = tfs & developmental_tfs
+
+            nodes_by_timepoint[timepoint] = nodes
+            edges_by_timepoint[timepoint] = edges
+            tfs_by_timepoint[timepoint] = tfs
+            dev_tfs_by_timepoint[timepoint] = dev_tfs
+        else:
+            nodes_by_timepoint[timepoint] = set()
+            edges_by_timepoint[timepoint] = set()
+            tfs_by_timepoint[timepoint] = set()
+            dev_tfs_by_timepoint[timepoint] = set()
+
+    # Compute turnover metrics
+    all_nodes = set.union(*nodes_by_timepoint.values()) if nodes_by_timepoint else set()
+    all_edges = set.union(*edges_by_timepoint.values()) if edges_by_timepoint else set()
+    all_tfs = set.union(*tfs_by_timepoint.values()) if tfs_by_timepoint else set()
+    all_dev_tfs = set.union(*dev_tfs_by_timepoint.values()) if dev_tfs_by_timepoint else set()
+
+    if len(all_nodes) == 0:
+        return None  # No signal at all
+
+    # Node turnover: how many nodes are NOT present in all timepoints?
+    nodes_present_count = {node: sum(1 for tp_nodes in nodes_by_timepoint.values()
+                                     if node in tp_nodes)
+                           for node in all_nodes}
+    dynamic_nodes = sum(1 for count in nodes_present_count.values()
+                        if count < len(timepoints))
+    node_turnover_rate = dynamic_nodes / len(all_nodes) if len(all_nodes) > 0 else 0
+
+    # Edge turnover
+    edges_present_count = {edge: sum(1 for tp_edges in edges_by_timepoint.values()
+                                     if edge in tp_edges)
+                           for edge in all_edges}
+    dynamic_edges = sum(1 for count in edges_present_count.values()
+                        if count < len(timepoints))
+    edge_turnover_rate = dynamic_edges / len(all_edges) if len(all_edges) > 0 else 0
+
+    # TF turnover (focus on source nodes)
+    tfs_present_count = {tf: sum(1 for tp_tfs in tfs_by_timepoint.values()
+                                 if tf in tp_tfs)
+                         for tf in all_tfs}
+    dynamic_tfs = sum(1 for count in tfs_present_count.values()
+                      if count < len(timepoints))
+    tf_turnover_rate = dynamic_tfs / len(all_tfs) if len(all_tfs) > 0 else 0
+
+    # Developmental TF dynamics (HIGH PRIORITY)
+    dev_tfs_present_count = {tf: sum(1 for tp_dev_tfs in dev_tfs_by_timepoint.values()
+                                     if tf in tp_dev_tfs)
+                             for tf in all_dev_tfs}
+    dynamic_dev_tfs = sum(1 for count in dev_tfs_present_count.values()
+                          if count < len(timepoints))
+    dev_tf_turnover_rate = (dynamic_dev_tfs / len(all_dev_tfs)
+                           if len(all_dev_tfs) > 0 else 0)
+
+    # Temporal variance in edge counts
+    edge_counts = [len(edges) for edges in edges_by_timepoint.values()]
+    temporal_variance = np.std(edge_counts) / np.mean(edge_counts) if np.mean(edge_counts) > 0 else 0
+
+    # Composite dynamics score (weighted average)
+    # Prioritize: developmental TF dynamics > edge turnover > TF turnover > temporal variance
+    dynamics_score = (
+        0.4 * dev_tf_turnover_rate +  # Highest weight: known dev TFs changing
+        0.3 * edge_turnover_rate +      # Edges changing
+        0.2 * tf_turnover_rate +        # TFs changing
+        0.1 * temporal_variance         # Variance in activity
+    )
+
+    return {
+        'cluster_id': cluster_id,
+        'celltype': celltype,
+        'n_timepoints': len(timepoints),
+        'n_total_nodes': len(all_nodes),
+        'n_total_edges': len(all_edges),
+        'n_total_tfs': len(all_tfs),
+        'n_developmental_tfs': len(all_dev_tfs),
+        'developmental_tfs_list': sorted(list(all_dev_tfs)),
+        'node_turnover_rate': node_turnover_rate,
+        'edge_turnover_rate': edge_turnover_rate,
+        'tf_turnover_rate': tf_turnover_rate,
+        'dev_tf_turnover_rate': dev_tf_turnover_rate,
+        'temporal_variance': temporal_variance,
+        'dynamics_score': dynamics_score,
+        'subgrns_by_timepoint': subgrns_by_timepoint,
+        'timepoints': timepoints
+    }
 
 # %%
+from tqdm import tqdm
+
+def rank_clusters_by_temporal_dynamics(df_clusters_groups, grn_dict,
+                                       cluster_tf_gene_matrices,
+                                       min_accessibility=0.01,
+                                       min_timepoints=3,
+                                       output_csv="cluster_ranking_temporal_dynamics.csv"):
+    """
+    Full pipeline: rank all 402 clusters by temporal dynamics.
+
+    Parameters:
+    -----------
+    df_clusters_groups : pd.DataFrame
+        Cluster × pseudobulk accessibility matrix
+    grn_dict : dict
+        {(celltype, timepoint): grn_df}
+    cluster_tf_gene_matrices : dict
+        {cluster_id: TF×gene binary matrix}
+    min_accessibility : float
+        Minimum accessibility threshold
+    min_timepoints : int
+        Minimum timepoints required for dynamics analysis
+    output_csv : str
+        Path to save ranking table
+
+    Returns:
+    --------
+    pd.DataFrame : Ranked clusters with all metrics
+    """
+
+    print(f"Starting analysis of {len(cluster_tf_gene_matrices)} clusters...")
+
+    results = []
+
+    for cluster_id in tqdm(cluster_tf_gene_matrices.keys(), desc="Processing clusters"):
+        # Step 1: Find most accessible celltype
+        access_info = find_most_accessible_celltype(
+            cluster_id, df_clusters_groups, min_accessibility
+        )
+
+        if access_info is None:
+            continue  # Skip clusters with no signal
+
+        celltype = access_info['celltype']
+
+        # Step 2: Compute temporal dynamics for this celltype
+        dynamics_info = compute_temporal_dynamics_score(
+            cluster_id, celltype, grn_dict, cluster_tf_gene_matrices
+        )
+
+        if dynamics_info is None:
+            continue  # Skip if no dynamics (e.g., <2 timepoints)
+
+        if dynamics_info['n_timepoints'] < min_timepoints:
+            continue  # Skip if too few timepoints
+
+        # Combine results
+        result = {**access_info, **dynamics_info}
+        results.append(result)
+
+    # Create DataFrame
+    df_ranked = pd.DataFrame(results)
+
+    # Sort by dynamics score (highest = most dynamic)
+    df_ranked = df_ranked.sort_values('dynamics_score', ascending=False)
+
+    # Save to CSV
+    # Don't save the subgrns_by_timepoint dict (too large)
+    df_ranked_export = df_ranked.drop(columns=['subgrns_by_timepoint', 'top_5_groups'], errors='ignore')
+    df_ranked_export.to_csv(output_csv, index=False)
+    print(f"\nRanking table saved to: {output_csv}")
+
+    # Print summary statistics
+    print(f"\n{'='*60}")
+    print(f"RANKING SUMMARY")
+    print(f"{'='*60}")
+    print(f"Total clusters analyzed: {len(df_ranked)}")
+    print(f"Dynamics score range: {df_ranked['dynamics_score'].min():.3f} - {df_ranked['dynamics_score'].max():.3f}")
+    print(f"Median dynamics score: {df_ranked['dynamics_score'].median():.3f}")
+    print(f"\nTop 10 most dynamic clusters:")
+    print(df_ranked[['cluster_id', 'celltype', 'dynamics_score',
+                     'n_developmental_tfs', 'developmental_tfs_list']].head(10).to_string(index=False))
+
+    return df_ranked
 
 # %%
+def visualize_top_dynamic_clusters(df_ranked, grn_dict, cluster_tf_gene_matrices,
+                                   top_n=10, figpath="./"):
+    """
+    Generate NetworkX visualizations for top N most dynamic clusters.
+
+    Parameters:
+    -----------
+    df_ranked : pd.DataFrame
+        Output from rank_clusters_by_temporal_dynamics()
+    grn_dict : dict
+        {(celltype, timepoint): grn_df}
+    cluster_tf_gene_matrices : dict
+        {cluster_id: TF×gene binary matrix}
+    top_n : int
+        Number of top clusters to visualize
+    figpath : str
+        Directory to save figures
+
+    Returns:
+    --------
+    None (saves figures to disk)
+    """
+
+    import os
+    os.makedirs(figpath, exist_ok=True)
+
+    for idx, row in df_ranked.head(top_n).iterrows():
+        cluster_id = row['cluster_id']
+        celltype = row['celltype']
+        dynamics_score = row['dynamics_score']
+        dev_tfs = row['developmental_tfs_list']
+
+        print(f"\n{'='*60}")
+        print(f"Visualizing rank #{idx+1}: cluster {cluster_id} in {celltype}")
+        print(f"Dynamics score: {dynamics_score:.3f}")
+        print(f"Developmental TFs: {', '.join(dev_tfs)}")
+        print(f"{'='*60}")
+
+        # Get predicted pairs
+        cluster_matrix = cluster_tf_gene_matrices[cluster_id]
+        predicted_pairs = []
+        for tf in cluster_matrix.index:
+            for gene in cluster_matrix.columns:
+                if cluster_matrix.loc[tf, gene] == 1:
+                    predicted_pairs.append((tf, gene))
+
+        # Call your existing visualization function
+        try:
+            subgrns, master_grn, master_pos = plot_subgrns_over_time(
+                grn_dict=grn_dict,
+                predicted_pairs=predicted_pairs,
+                cluster_id=cluster_id,
+                celltype_of_interest=celltype,
+                spring_k=1.8,
+                layout_scale=1.8,
+                max_labels=50,
+                label_strategy="all_tfs_plus_dynamic",
+                debug_labels=False,
+                savefig=True,
+                filename=f"{figpath}subGRN_rank{idx+1}_{cluster_id}_{celltype}.pdf",
+                max_edge_width=2.0,
+                figsize=(15, 10),
+                node_size_scale=0.5
+            )
+        except Exception as e:
+            print(f"Error visualizing {cluster_id}/{celltype}: {e}")
+            continue
 
 # %%
+# Filter out pseudobulk groups with < 20 cells before ranking
+excluded_groups = [
+    'NMPs_30somites', 'epidermis_30somites', 'fast_muscle_0somites',
+    'hatching_gland_30somites', 'muscle_30somites', 'neural_10somites',
+    'optic_cup_0somites', 'primordial_germ_cells_0somites',
+    'primordial_germ_cells_5somites', 'primordial_germ_cells_10somites',
+    'primordial_germ_cells_15somites', 'primordial_germ_cells_20somites',
+    'primordial_germ_cells_30somites', 'tail_bud_30somites'
+]
+
+# Create filtered version of df_clusters_groups
+cols_to_drop = [col for col in excluded_groups if col in df_clusters_groups.columns]
+df_clusters_groups_filtered = df_clusters_groups.drop(columns=cols_to_drop)
+print(f"Filtered out {len(cols_to_drop)} low-cell groups (< 20 cells)")
+print(f"Original shape: {df_clusters_groups.shape}, Filtered shape: {df_clusters_groups_filtered.shape}")
 
 # %%
+# Run the full ranking pipeline with filtered data
+df_ranked = rank_clusters_by_temporal_dynamics(
+    df_clusters_groups=df_clusters_groups_filtered,
+    grn_dict=grn_dict,
+    cluster_tf_gene_matrices=cluster_tf_gene_matrices,
+    min_accessibility=0.01,
+    min_timepoints=3,
+    output_csv=figpath + "cluster_ranking_temporal_dynamics.csv"
+)
 
 # %%
+# Inspect the top 20 candidates
+print("\nTop 20 most dynamic clusters:")
+print(df_ranked[['cluster_id', 'celltype', 'dynamics_score',
+                 'n_developmental_tfs', 'dev_tf_turnover_rate',
+                 'edge_turnover_rate', 'developmental_tfs_list']].head(20))
 
 # %%
+# Explore by celltype
+print("\n=== Top clusters by celltype ===")
+for celltype in df_ranked['celltype'].unique()[:10]:
+    ct_clusters = df_ranked[df_ranked['celltype'] == celltype]
+    if len(ct_clusters) > 0:
+        print(f"\n{celltype}: {len(ct_clusters)} clusters")
+        print(ct_clusters[['cluster_id', 'dynamics_score', 'n_developmental_tfs']].head(3).to_string(index=False))
+
+# %%
+# Visualize top 5 most dynamic clusters
+visualize_top_dynamic_clusters(
+    df_ranked=df_ranked,
+    grn_dict=grn_dict,
+    cluster_tf_gene_matrices=cluster_tf_gene_matrices,
+    top_n=5,
+    figpath=figpath
+)
 
 # %%
 
