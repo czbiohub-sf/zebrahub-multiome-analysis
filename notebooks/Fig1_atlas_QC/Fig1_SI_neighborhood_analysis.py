@@ -51,7 +51,7 @@ from pathlib import Path
 
 # Add scripts directory to path for importing our custom modules
 sys.path.append('../scripts')
-from neighborhood_purity_analysis import *
+from neighborhood_purity_module import *
 
 # Configure scanpy settings
 sc.settings.verbosity = 3  # verbosity level: errors (0), warnings (1), info (2), hints (3)
@@ -104,10 +104,10 @@ cluster_keys = {
 }
 
 # Metadata key for biological validation
-metadata_key = 'global_annotation'  # or other metadata in adata.obs
+metadata_key = 'annotation_ML_coarse'  # or other metadata in adata.obs
 
 # Analysis parameters
-leiden_resolution = 0.5    # Resolution for leiden clustering
+leiden_resolution = 0.8    # Resolution for leiden clustering
 k_neighbors = 30           # Number of neighbors for purity analysis
 n_neighbors_clustering = 15 # Number of neighbors for clustering
 

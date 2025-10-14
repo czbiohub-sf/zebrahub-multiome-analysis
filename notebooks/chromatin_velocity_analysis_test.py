@@ -93,6 +93,143 @@ print(f"\nCo-accessibility score statistics (column: {coaccess_col}):")
 print(coaccess_df[coaccess_col].describe())
 
 # %%
+# Analyze chromosome distribution in co-accessibility data
+print("=== CHROMOSOME ANALYSIS ===")
+
+# Check if Peak1 column exists, if not try to identify it
+peak1_col = None
+for col in coaccess_df.columns:
+    if 'peak1' in col.lower() or (col.lower().startswith('peak') and '1' in col):
+        peak1_col = col
+        break
+
+if peak1_col is None:
+    print("Warning: Could not identify Peak1 column for chromosome analysis")
+    print(f"Available columns: {list(coaccess_df.columns)}")
+else:
+    print(f"Analyzing chromosome distribution in '{peak1_col}' column")
+    
+    # Extract chromosome information from Peak1 (format: chromosome-start-end)
+    chromosomes = []
+    invalid_formats = []
+    
+    for peak in coaccess_df[peak1_col].dropna():
+        try:
+            # Split by '-' and take the first part as chromosome
+            parts = str(peak).split('-')
+            if len(parts) >= 3:  # Should have at least chr-start-end
+                chrom = parts[0]
+                chromosomes.append(chrom)
+            else:
+                invalid_formats.append(peak)
+        except:
+            invalid_formats.append(peak)
+    
+    # Count chromosome occurrences
+    from collections import Counter
+    chrom_counts = Counter(chromosomes)
+    
+    print(f"\nTotal peaks analyzed: {len(chromosomes):,}")
+    print(f"Invalid format peaks: {len(invalid_formats):,}")
+    
+    # Check for chromosomes 1-25
+    expected_chroms = [str(i) for i in range(1, 26)]  # 1, 2, 3, ..., 25
+    
+    print(f"\nChromosome distribution:")
+    print(f"{'Chromosome':<12} {'Count':<10} {'Present'}")
+    print("-" * 35)
+    
+    present_chroms = []
+    missing_chroms = []
+    
+    for chrom in expected_chroms:
+        count = chrom_counts.get(chrom, 0)
+        is_present = "✓" if count > 0 else "✗"
+        print(f"{chrom:<12} {count:<10,} {is_present}")
+        
+        if count > 0:
+            present_chroms.append(chrom)
+        else:
+            missing_chroms.append(chrom)
+    
+    # Check for any unexpected chromosomes
+    unexpected_chroms = set(chromosomes) - set(expected_chroms)
+    
+    print(f"\n📊 Summary:")
+    print(f"  - Expected chromosomes (1-25): {len(expected_chroms)}")
+    print(f"  - Present chromosomes: {len(present_chroms)} {present_chroms}")
+    print(f"  - Missing chromosomes: {len(missing_chroms)} {missing_chroms}")
+    
+    if unexpected_chroms:
+        print(f"  - Unexpected chromosomes found: {sorted(unexpected_chroms)}")
+        print(f"    Counts: {[(c, chrom_counts[c]) for c in sorted(unexpected_chroms)]}")
+    
+    # Show some example peak formats
+    print(f"\nExample peak formats:")
+    example_peaks = list(coaccess_df[peak1_col].dropna().head(5))
+    for i, peak in enumerate(example_peaks, 1):
+        print(f"  {i}. {peak}")
+    
+    if invalid_formats:
+        print(f"\nExample invalid formats: {invalid_formats[:3]}")
+
+# %%
+# Quick overlap analysis between peak names and co-accessibility data
+print("=== OVERLAP ANALYSIS ===")
+
+# Check if Peak1 column exists, if not try to identify it
+peak1_col = None
+for col in coaccess_df.columns:
+    if 'peak1' in col.lower() or (col.lower().startswith('peak') and '1' in col):
+        peak1_col = col
+        break
+
+if peak1_col is None:
+    print("Warning: Could not identify Peak1 column in co-accessibility data")
+    print(f"Available columns: {list(coaccess_df.columns)}")
+else:
+    print(f"Using '{peak1_col}' as Peak1 column")
+    
+    # Convert to sets for fast overlap computation
+    obs_names_set = set(adata_peaks.obs_names)  # Peak names
+    var_names_set = set(adata_peaks.var_names)  # Pseudobulk names
+    peak1_set = set(coaccess_df[peak1_col].dropna())
+    
+    print(f"\nDataset sizes:")
+    print(f"  - adata_peaks.obs_names (peaks): {len(obs_names_set):,}")
+    print(f"  - adata_peaks.var_names (pseudobulks): {len(var_names_set):,}")
+    print(f"  - coaccess_df['{peak1_col}'] (unique): {len(peak1_set):,}")
+    
+    # Check overlap between obs_names (peaks) and Peak1 - this is the relevant comparison
+    obs_peak1_overlap = obs_names_set & peak1_set
+    obs_only = obs_names_set - peak1_set
+    peak1_only = peak1_set - obs_names_set
+    
+    print(f"\n📊 Overlap: adata_peaks.obs_names (peaks) vs coaccess_df['{peak1_col}']:")
+    print(f"  - Overlap: {len(obs_peak1_overlap):,} peaks")
+    print(f"  - Only in obs_names: {len(obs_only):,} peaks")
+    print(f"  - Only in Peak1: {len(peak1_only):,} peaks")
+    print(f"  - Overlap percentage: {len(obs_peak1_overlap)/len(obs_names_set)*100:.2f}% of obs_names")
+    print(f"  - Coverage percentage: {len(obs_peak1_overlap)/len(peak1_set)*100:.2f}% of Peak1")
+    
+    # Show some examples
+    if len(obs_peak1_overlap) > 0:
+        print(f"\nExample overlapping peaks: {list(obs_peak1_overlap)[:5]}")
+    if len(obs_only) > 0:
+        print(f"Example peaks only in obs_names: {list(obs_only)[:5]}")
+    if len(peak1_only) > 0:
+        print(f"Example peaks only in Peak1: {list(peak1_only)[:5]}")
+        
+    # Quick summary for decision making
+    print(f"\n💡 SUMMARY:")
+    if len(obs_peak1_overlap) / len(obs_names_set) > 0.8:
+        print("✅ Good overlap between peak names - should work well for analysis")
+    elif len(obs_peak1_overlap) / len(obs_names_set) > 0.5:
+        print("⚠️  Moderate overlap - may need to filter or investigate missing peaks")
+    else:
+        print("❌ Poor overlap - check peak naming conventions or data compatibility")
+
+# %%
 # Examine temporal structure in pseudobulk names
 print("Analyzing temporal structure in pseudobulk names:")
 pb_names = adata_peaks.obs_names.tolist()
