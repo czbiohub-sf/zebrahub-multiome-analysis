@@ -1,0 +1,264 @@
+================================================================================
+VISUALIZING SELECTED DEVELOPMENTAL CLUSTERS
+================================================================================
+
+1. Loading ranking results...
+   ✓ Loaded 60 ranked clusters
+
+2. Loading analysis data...
+   ✓ Loaded GRN dictionary: 189 combinations
+   ✓ Loaded cluster_tf_gene_matrices: 346 clusters
+
+3. Defining visualization function...
+
+4. Generating visualizations for 3 selected clusters...
+================================================================================
+
+================================================================================
+Tail Bud (370 edges, 12 TFs)
+Cluster 21_6 in tail_bud
+Dynamics score: 0.910
+Developmental TFs: hoxb1b, meox1, nkx2.5, pax2a, pax6a, pax6b, sox10, sox19a, sox19b, sox2, sox3, sox9b
+================================================================================
+
+Generating PNG for 21_6/tail_bud...
+Found tail_bud at timepoints: ['00', '05', '10', '15', '20', '30']
+Timepoint 00: 86 edges
+Timepoint 05: 63 edges
+Timepoint 10: 163 edges
+Timepoint 15: 127 edges
+Timepoint 20: 129 edges
+Timepoint 30: 18 edges
+Master GRN: 123 total nodes, 370 total edges
+Computing master layout for 123 nodes, 370 edges...
+Calculating node dynamics across timepoints...
+Top 10 most dynamic nodes:
+   1. apoc1: score=125 (edges=90) in ['00', '05', '10', '20']
+   2. ved: score=102 (edges=62) in ['00', '05', '10', '15']
+   3. hoxd3a: score=97 (edges=32) in ['15']
+   4. sox3: score=97 (edges=12) in ['00', '20']
+   5. eve1: score=91 (edges=16) in ['00', '10']
+   6. hspb1: score=90 (edges=40) in ['00', '05', '10']
+   7. pax5: score=90 (edges=5) in ['05', '30']
+   8. nkx2.7: score=90 (edges=5) in ['10', '30']
+   9. her7: score=89 (edges=4) in ['00', '20']
+  10. tlx3b: score=88 (edges=3) in ['10', '30']
+Timepoint 00: 64 activation, 22 repression edges
+Timepoint 00: Showing labels for 49 out of 49 nodes
+Timepoint 05: 43 activation, 20 repression edges
+Timepoint 05: Showing labels for 46 out of 46 nodes
+Timepoint 10: 112 activation, 51 repression edges
+Timepoint 10: Showing labels for 51 out of 78 nodes
+Timepoint 15: 106 activation, 21 repression edges
+Timepoint 15: Showing labels for 50 out of 60 nodes
+Timepoint 20: 95 activation, 34 repression edges
+Timepoint 20: Showing labels for 50 out of 64 nodes
+Timepoint 30: 15 activation, 3 repression edges
+Timepoint 30: Showing labels for 20 out of 20 nodes
+✓ Saved: /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/zebrahub-multiome-analysis/figures/sub_GRNs_reg_programs/subGRN_selected_21_6_tail_bud.png
+   ✓ Saved: subGRN_selected_21_6_tail_bud.png
+
+Generating PDF for 21_6/tail_bud...
+Found tail_bud at timepoints: ['00', '05', '10', '15', '20', '30']
+Timepoint 00: 86 edges
+Timepoint 05: 63 edges
+Timepoint 10: 163 edges
+Timepoint 15: 127 edges
+Timepoint 20: 129 edges
+Timepoint 30: 18 edges
+Master GRN: 123 total nodes, 370 total edges
+Computing master layout for 123 nodes, 370 edges...
+Calculating node dynamics across timepoints...
+Top 10 most dynamic nodes:
+   1. apoc1: score=125 (edges=90) in ['00', '05', '10', '20']
+   2. ved: score=102 (edges=62) in ['00', '05', '10', '15']
+   3. hoxd3a: score=97 (edges=32) in ['15']
+   4. sox3: score=97 (edges=12) in ['00', '20']
+   5. eve1: score=91 (edges=16) in ['00', '10']
+   6. hspb1: score=90 (edges=40) in ['00', '05', '10']
+   7. pax5: score=90 (edges=5) in ['05', '30']
+   8. nkx2.7: score=90 (edges=5) in ['10', '30']
+   9. her7: score=89 (edges=4) in ['00', '20']
+  10. tlx3b: score=88 (edges=3) in ['10', '30']
+Timepoint 00: 64 activation, 22 repression edges
+Timepoint 00: Showing labels for 49 out of 49 nodes
+Timepoint 05: 43 activation, 20 repression edges
+Timepoint 05: Showing labels for 46 out of 46 nodes
+Timepoint 10: 112 activation, 51 repression edges
+Timepoint 10: Showing labels for 51 out of 78 nodes
+Timepoint 15: 106 activation, 21 repression edges
+Timepoint 15: Showing labels for 50 out of 60 nodes
+Timepoint 20: 95 activation, 34 repression edges
+Timepoint 20: Showing labels for 50 out of 64 nodes
+Timepoint 30: 15 activation, 3 repression edges
+Timepoint 30: Showing labels for 20 out of 20 nodes
+✓ Saved: /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/zebrahub-multiome-analysis/figures/sub_GRNs_reg_programs/subGRN_selected_21_6_tail_bud.pdf
+   ✓ Saved: subGRN_selected_21_6_tail_bud.pdf
+
+================================================================================
+Neural Floor Plate (267 edges, 6 Sox TFs)
+Cluster 26_10 in neural_floor_plate
+Dynamics score: 0.916
+Developmental TFs: sox10, sox19a, sox19b, sox2, sox3, sox9b
+================================================================================
+
+Generating PNG for 26_10/neural_floor_plate...
+Found neural_floor_plate at timepoints: ['00', '05', '10', '15', '20', '30']
+Timepoint 00: 33 edges
+Timepoint 05: 47 edges
+Timepoint 10: 61 edges
+Timepoint 15: 91 edges
+Timepoint 20: 119 edges
+Timepoint 30: 61 edges
+Master GRN: 89 total nodes, 267 total edges
+Computing master layout for 89 nodes, 267 edges...
+Calculating node dynamics across timepoints...
+Top 10 most dynamic nodes:
+   1. lrp2a: score=96 (edges=6) in ['00', '15']
+   2. rarab: score=85 (edges=10) in ['05', '15']
+   3. cyp26c1: score=85 (edges=20) in ['00', '05', '15']
+   4. mdka: score=81 (edges=36) in ['10', '15', '20']
+   5. sox9b: score=79 (edges=4) in ['05', '15']
+   6. zbtb16a: score=77 (edges=42) in ['00', '05', '15', '20']
+   7. en2b: score=74 (edges=4) in ['10', '20']
+   8. thrb: score=74 (edges=4) in ['05']
+   9. si:ch73-21g5.7: score=74 (edges=9) in ['30']
+  10. sox18: score=72 (edges=2) in ['05']
+Timepoint 00: 26 activation, 7 repression edges
+Timepoint 00: Showing labels for 25 out of 25 nodes
+Timepoint 05: 40 activation, 7 repression edges
+Timepoint 05: Showing labels for 39 out of 39 nodes
+Timepoint 10: 50 activation, 11 repression edges
+Timepoint 10: Showing labels for 46 out of 46 nodes
+Timepoint 15: 74 activation, 17 repression edges
+Timepoint 15: Showing labels for 50 out of 55 nodes
+Timepoint 20: 88 activation, 31 repression edges
+Timepoint 20: Showing labels for 50 out of 56 nodes
+Timepoint 30: 48 activation, 13 repression edges
+Timepoint 30: Showing labels for 41 out of 41 nodes
+✓ Saved: /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/zebrahub-multiome-analysis/figures/sub_GRNs_reg_programs/subGRN_selected_26_10_neural_floor_plate.png
+   ✓ Saved: subGRN_selected_26_10_neural_floor_plate.png
+
+Generating PDF for 26_10/neural_floor_plate...
+Found neural_floor_plate at timepoints: ['00', '05', '10', '15', '20', '30']
+Timepoint 00: 33 edges
+Timepoint 05: 47 edges
+Timepoint 10: 61 edges
+Timepoint 15: 91 edges
+Timepoint 20: 119 edges
+Timepoint 30: 61 edges
+Master GRN: 89 total nodes, 267 total edges
+Computing master layout for 89 nodes, 267 edges...
+Calculating node dynamics across timepoints...
+Top 10 most dynamic nodes:
+   1. lrp2a: score=96 (edges=6) in ['00', '15']
+   2. rarab: score=85 (edges=10) in ['05', '15']
+   3. cyp26c1: score=85 (edges=20) in ['00', '05', '15']
+   4. mdka: score=81 (edges=36) in ['10', '15', '20']
+   5. sox9b: score=79 (edges=4) in ['05', '15']
+   6. zbtb16a: score=77 (edges=42) in ['00', '05', '15', '20']
+   7. en2b: score=74 (edges=4) in ['10', '20']
+   8. thrb: score=74 (edges=4) in ['05']
+   9. si:ch73-21g5.7: score=74 (edges=9) in ['30']
+  10. sox18: score=72 (edges=2) in ['05']
+Timepoint 00: 26 activation, 7 repression edges
+Timepoint 00: Showing labels for 25 out of 25 nodes
+Timepoint 05: 40 activation, 7 repression edges
+Timepoint 05: Showing labels for 39 out of 39 nodes
+Timepoint 10: 50 activation, 11 repression edges
+Timepoint 10: Showing labels for 46 out of 46 nodes
+Timepoint 15: 74 activation, 17 repression edges
+Timepoint 15: Showing labels for 50 out of 55 nodes
+Timepoint 20: 88 activation, 31 repression edges
+Timepoint 20: Showing labels for 50 out of 56 nodes
+Timepoint 30: 48 activation, 13 repression edges
+Timepoint 30: Showing labels for 41 out of 41 nodes
+✓ Saved: /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/zebrahub-multiome-analysis/figures/sub_GRNs_reg_programs/subGRN_selected_26_10_neural_floor_plate.pdf
+   ✓ Saved: subGRN_selected_26_10_neural_floor_plate.pdf
+
+================================================================================
+Spinal Cord (134 edges, 9 TFs)
+Cluster 21_4 in spinal_cord
+Dynamics score: 0.875
+Developmental TFs: hoxb1b, meox1, olig2, pax6a, pax6b, sox10, sox19a, sox3, sox9b
+================================================================================
+
+Generating PNG for 21_4/spinal_cord...
+Found spinal_cord at timepoints: ['00', '05', '10', '15', '20', '30']
+Timepoint 00: 33 edges
+Timepoint 05: 31 edges
+Timepoint 10: 48 edges
+Timepoint 15: 37 edges
+Timepoint 20: 37 edges
+Timepoint 30: 14 edges
+Master GRN: 72 total nodes, 134 total edges
+Computing master layout for 72 nodes, 134 edges...
+Calculating node dynamics across timepoints...
+Top 10 most dynamic nodes:
+   1. alcamb: score=97 (edges=32) in ['10']
+   2. rps5: score=96 (edges=36) in ['00', '05']
+   3. gbx1: score=94 (edges=4) in ['00', '15']
+   4. sulf1: score=94 (edges=4) in ['00', '15']
+   5. sox11b: score=90 (edges=5) in ['05', '30']
+   6. hoxb1b: score=81 (edges=6) in ['00', '10']
+   7. mnx2b: score=80 (edges=5) in ['00', '15', '30']
+   8. noto: score=79 (edges=4) in ['00', '10']
+   9. dlx3b: score=76 (edges=6) in ['10', '20']
+  10. meox1: score=74 (edges=4) in ['10', '20']
+Timepoint 00: 27 activation, 6 repression edges
+Timepoint 00: Showing labels for 30 out of 30 nodes
+Timepoint 05: 23 activation, 8 repression edges
+Timepoint 05: Showing labels for 23 out of 23 nodes
+Timepoint 10: 39 activation, 9 repression edges
+Timepoint 10: Showing labels for 40 out of 40 nodes
+Timepoint 15: 29 activation, 8 repression edges
+Timepoint 15: Showing labels for 33 out of 33 nodes
+Timepoint 20: 23 activation, 14 repression edges
+Timepoint 20: Showing labels for 31 out of 31 nodes
+Timepoint 30: 13 activation, 1 repression edges
+Timepoint 30: Showing labels for 17 out of 17 nodes
+✓ Saved: /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/zebrahub-multiome-analysis/figures/sub_GRNs_reg_programs/subGRN_selected_21_4_spinal_cord.png
+   ✓ Saved: subGRN_selected_21_4_spinal_cord.png
+
+Generating PDF for 21_4/spinal_cord...
+Found spinal_cord at timepoints: ['00', '05', '10', '15', '20', '30']
+Timepoint 00: 33 edges
+Timepoint 05: 31 edges
+Timepoint 10: 48 edges
+Timepoint 15: 37 edges
+Timepoint 20: 37 edges
+Timepoint 30: 14 edges
+Master GRN: 72 total nodes, 134 total edges
+Computing master layout for 72 nodes, 134 edges...
+Calculating node dynamics across timepoints...
+Top 10 most dynamic nodes:
+   1. alcamb: score=97 (edges=32) in ['10']
+   2. rps5: score=96 (edges=36) in ['00', '05']
+   3. gbx1: score=94 (edges=4) in ['00', '15']
+   4. sulf1: score=94 (edges=4) in ['00', '15']
+   5. sox11b: score=90 (edges=5) in ['05', '30']
+   6. hoxb1b: score=81 (edges=6) in ['00', '10']
+   7. mnx2b: score=80 (edges=5) in ['00', '15', '30']
+   8. noto: score=79 (edges=4) in ['00', '10']
+   9. dlx3b: score=76 (edges=6) in ['10', '20']
+  10. meox1: score=74 (edges=4) in ['10', '20']
+Timepoint 00: 27 activation, 6 repression edges
+Timepoint 00: Showing labels for 30 out of 30 nodes
+Timepoint 05: 23 activation, 8 repression edges
+Timepoint 05: Showing labels for 23 out of 23 nodes
+Timepoint 10: 39 activation, 9 repression edges
+Timepoint 10: Showing labels for 40 out of 40 nodes
+Timepoint 15: 29 activation, 8 repression edges
+Timepoint 15: Showing labels for 33 out of 33 nodes
+Timepoint 20: 23 activation, 14 repression edges
+Timepoint 20: Showing labels for 31 out of 31 nodes
+Timepoint 30: 13 activation, 1 repression edges
+Timepoint 30: Showing labels for 17 out of 17 nodes
+✓ Saved: /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/zebrahub-multiome-analysis/figures/sub_GRNs_reg_programs/subGRN_selected_21_4_spinal_cord.pdf
+   ✓ Saved: subGRN_selected_21_4_spinal_cord.pdf
+
+================================================================================
+VISUALIZATION COMPLETE!
+================================================================================
+Output directory: /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/zebrahub-multiome-analysis/figures/sub_GRNs_reg_programs/
+Generated 6 files (3 PNG + 3 PDF)

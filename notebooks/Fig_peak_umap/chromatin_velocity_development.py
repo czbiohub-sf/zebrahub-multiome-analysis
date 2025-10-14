@@ -34,8 +34,8 @@ from tqdm import tqdm
 import warnings
 
 # rapids-singlecell
-import cupy as cp
-import rapids_singlecell as rsc
+# import cupy as cp
+# import rapids_singlecell as rsc
 
 # Add scripts directory to path
 sys.path.append('../scripts')
@@ -218,7 +218,7 @@ else:
 
 # %%
 # load the co-accessibility matrix
-cicero_output_path = "/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/13_peak_umap_analysis/cicero_integrated_ATAC/02_integrated_ATAC_cicero_connections_peaks_integrated.csv"
+cicero_output_path = "/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/13_peak_umap_analysis/cicero_integrated_ATAC_v2/02_integrated_ATAC_v2_cicero_connections_peaks_integrated_peaks.csv"
 coaccess_matrix, peak_names_coaccess = load_coaccessibility_matrix_longformat(
     cicero_output_path, 
     peak1_col='Peak1', 

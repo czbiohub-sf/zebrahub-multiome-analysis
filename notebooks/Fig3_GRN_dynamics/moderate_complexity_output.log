@@ -1,0 +1,51 @@
+================================================================================
+FINDING MODERATE COMPLEXITY CLUSTERS WITH CLEAR TEMPORAL PATTERNS
+================================================================================
+
+Loaded 60 ranked clusters
+Loaded 189 GRN combinations
+Loaded 346 cluster matrices
+
+================================================================================
+ANALYZING TEMPORAL PATTERNS...
+================================================================================
+
+Found 5 clusters with moderate complexity and clear patterns
+
+================================================================================
+PATTERN TYPE DISTRIBUTION:
+================================================================================
+INCREASING: 0 clusters
+DECREASING: 0 clusters
+PEAK: 1 clusters
+VALLEY: 0 clusters
+COMPLEX: 4 clusters
+
+================================================================================
+TOP CANDIDATES BY PATTERN TYPE:
+================================================================================
+
+PEAK PATTERN (showing top 3):
+--------------------------------------------------------------------------------
+
+Cluster 29_3 - PSM
+  Avg nodes: 13.2, Avg edges: 13.5
+  Pattern score: 0.80
+  Edge counts: [10, 19, 15, 7, 10, 9]
+  Node counts: [11, 17, 15, 8, 10, 9]
+  Dev TFs (7): ['sox10', 'sox19a', 'sox19b', 'sox2', 'sox3', 'sox9a', 'sox9b']
+
+================================================================================
+TOP 10 DIVERSE CANDIDATES FOR MANUSCRIPT:
+================================================================================
+
+1. Cluster 29_3 - PSM (PEAK)
+   Dynamics score: 0.916
+   Avg nodes: 13.2, Avg edges: 13.5
+   Pattern score: 0.80
+   Edge trajectory: [10, 19, 15, 7, 10, 9]
+   Dev TFs (7): ['sox10', 'sox19a', 'sox19b', 'sox2', 'sox3', 'sox9a', 'sox9b']
+
+================================================================================
+Results saved to: /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/zebrahub-multiome-analysis/figures/sub_GRNs_reg_programs/moderate_complexity_candidates.csv
+================================================================================

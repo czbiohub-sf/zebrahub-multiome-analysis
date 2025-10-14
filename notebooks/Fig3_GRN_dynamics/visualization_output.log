@@ -1,0 +1,259 @@
+================================================================================
+VISUALIZING TOP DYNAMIC CLUSTERS
+================================================================================
+
+1. Loading ranking results...
+   ✓ Loaded 223 ranked clusters
+
+2. Loading analysis data...
+   ✓ Loaded GRN dictionary: 189 combinations
+   ✓ Loaded cluster_tf_gene_matrices: 346 clusters
+
+3. Defining visualization function...
+
+4. Generating visualizations for top 5 clusters...
+================================================================================
+
+================================================================================
+Rank #1: cluster 12_12 in enteric_neurons
+Dynamics score: 1.124
+Developmental TFs: gata1a
+================================================================================
+
+Generating PNG for 12_12/enteric_neurons...
+Found enteric_neurons at timepoints: ['00', '05', '10', '15', '20', '30']
+Timepoint 00: 0 edges
+Timepoint 05: 0 edges
+Timepoint 10: 0 edges
+Timepoint 15: 1 edges
+Timepoint 20: 0 edges
+Timepoint 30: 0 edges
+Master GRN: 2 total nodes, 1 total edges
+Computing master layout for 2 nodes, 1 edges...
+Calculating node dynamics across timepoints...
+Top 10 most dynamic nodes:
+   1. gata1a: score=66 (edges=1) in ['15']
+   2. gfi1aa: score=66 (edges=1) in ['15']
+Timepoint 15: 1 activation, 0 repression edges
+Timepoint 15: Showing labels for 2 out of 2 nodes
+✓ Saved: /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/zebrahub-multiome-analysis/figures/sub_GRNs_reg_programs/subGRN_rank1_12_12_enteric_neurons.png
+   ✓ Saved: subGRN_rank1_12_12_enteric_neurons.png
+
+Generating PDF for 12_12/enteric_neurons...
+Found enteric_neurons at timepoints: ['00', '05', '10', '15', '20', '30']
+Timepoint 00: 0 edges
+Timepoint 05: 0 edges
+Timepoint 10: 0 edges
+Timepoint 15: 1 edges
+Timepoint 20: 0 edges
+Timepoint 30: 0 edges
+Master GRN: 2 total nodes, 1 total edges
+Computing master layout for 2 nodes, 1 edges...
+Calculating node dynamics across timepoints...
+Top 10 most dynamic nodes:
+   1. gata1a: score=66 (edges=1) in ['15']
+   2. gfi1aa: score=66 (edges=1) in ['15']
+Timepoint 15: 1 activation, 0 repression edges
+Timepoint 15: Showing labels for 2 out of 2 nodes
+✓ Saved: /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/zebrahub-multiome-analysis/figures/sub_GRNs_reg_programs/subGRN_rank1_12_12_enteric_neurons.pdf
+   ✓ Saved: subGRN_rank1_12_12_enteric_neurons.pdf
+
+================================================================================
+Rank #2: cluster 24_7 in endocrine_pancreas
+Dynamics score: 1.124
+Developmental TFs: gata5
+================================================================================
+
+Generating PNG for 24_7/endocrine_pancreas...
+Found endocrine_pancreas at timepoints: ['00', '05', '10', '15', '20', '30']
+Timepoint 00: 0 edges
+Timepoint 05: 4 edges
+Timepoint 10: 0 edges
+Timepoint 15: 0 edges
+Timepoint 20: 0 edges
+Timepoint 30: 0 edges
+Master GRN: 5 total nodes, 4 total edges
+Computing master layout for 5 nodes, 4 edges...
+Calculating node dynamics across timepoints...
+Top 10 most dynamic nodes:
+   1. zgc:174855: score=74 (edges=4) in ['05']
+   2. foxc1a: score=71 (edges=1) in ['05']
+   3. foxi3b: score=71 (edges=1) in ['05']
+   4. foxd1: score=71 (edges=1) in ['05']
+   5. gata5: score=71 (edges=1) in ['05']
+Timepoint 05: 2 activation, 2 repression edges
+Timepoint 05: Showing labels for 5 out of 5 nodes
+✓ Saved: /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/zebrahub-multiome-analysis/figures/sub_GRNs_reg_programs/subGRN_rank2_24_7_endocrine_pancreas.png
+   ✓ Saved: subGRN_rank2_24_7_endocrine_pancreas.png
+
+Generating PDF for 24_7/endocrine_pancreas...
+Found endocrine_pancreas at timepoints: ['00', '05', '10', '15', '20', '30']
+Timepoint 00: 0 edges
+Timepoint 05: 4 edges
+Timepoint 10: 0 edges
+Timepoint 15: 0 edges
+Timepoint 20: 0 edges
+Timepoint 30: 0 edges
+Master GRN: 5 total nodes, 4 total edges
+Computing master layout for 5 nodes, 4 edges...
+Calculating node dynamics across timepoints...
+Top 10 most dynamic nodes:
+   1. zgc:174855: score=74 (edges=4) in ['05']
+   2. foxc1a: score=71 (edges=1) in ['05']
+   3. foxi3b: score=71 (edges=1) in ['05']
+   4. foxd1: score=71 (edges=1) in ['05']
+   5. gata5: score=71 (edges=1) in ['05']
+Timepoint 05: 2 activation, 2 repression edges
+Timepoint 05: Showing labels for 5 out of 5 nodes
+✓ Saved: /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/zebrahub-multiome-analysis/figures/sub_GRNs_reg_programs/subGRN_rank2_24_7_endocrine_pancreas.pdf
+   ✓ Saved: subGRN_rank2_24_7_endocrine_pancreas.pdf
+
+================================================================================
+Rank #3: cluster 29_13 in PSM
+Dynamics score: 1.124
+Developmental TFs: meox1
+================================================================================
+
+Generating PNG for 29_13/PSM...
+Found PSM at timepoints: ['00', '05', '10', '15', '20', '30']
+Timepoint 00: 0 edges
+Timepoint 05: 0 edges
+Timepoint 10: 0 edges
+Timepoint 15: 1 edges
+Timepoint 20: 0 edges
+Timepoint 30: 0 edges
+Master GRN: 2 total nodes, 1 total edges
+Computing master layout for 2 nodes, 1 edges...
+Calculating node dynamics across timepoints...
+Top 10 most dynamic nodes:
+   1. alpi.1: score=66 (edges=1) in ['15']
+   2. meox1: score=66 (edges=1) in ['15']
+Timepoint 15: 0 activation, 1 repression edges
+Timepoint 15: Showing labels for 2 out of 2 nodes
+✓ Saved: /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/zebrahub-multiome-analysis/figures/sub_GRNs_reg_programs/subGRN_rank3_29_13_PSM.png
+   ✓ Saved: subGRN_rank3_29_13_PSM.png
+
+Generating PDF for 29_13/PSM...
+Found PSM at timepoints: ['00', '05', '10', '15', '20', '30']
+Timepoint 00: 0 edges
+Timepoint 05: 0 edges
+Timepoint 10: 0 edges
+Timepoint 15: 1 edges
+Timepoint 20: 0 edges
+Timepoint 30: 0 edges
+Master GRN: 2 total nodes, 1 total edges
+Computing master layout for 2 nodes, 1 edges...
+Calculating node dynamics across timepoints...
+Top 10 most dynamic nodes:
+   1. alpi.1: score=66 (edges=1) in ['15']
+   2. meox1: score=66 (edges=1) in ['15']
+Timepoint 15: 0 activation, 1 repression edges
+Timepoint 15: Showing labels for 2 out of 2 nodes
+✓ Saved: /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/zebrahub-multiome-analysis/figures/sub_GRNs_reg_programs/subGRN_rank3_29_13_PSM.pdf
+   ✓ Saved: subGRN_rank3_29_13_PSM.pdf
+
+================================================================================
+Rank #4: cluster 7_12 in neural_crest
+Dynamics score: 1.124
+Developmental TFs: sox3
+================================================================================
+
+Generating PNG for 7_12/neural_crest...
+Found neural_crest at timepoints: ['00', '05', '10', '15', '20', '30']
+Timepoint 00: 0 edges
+Timepoint 05: 0 edges
+Timepoint 10: 0 edges
+Timepoint 15: 0 edges
+Timepoint 20: 1 edges
+Timepoint 30: 0 edges
+Master GRN: 2 total nodes, 1 total edges
+Computing master layout for 2 nodes, 1 edges...
+Calculating node dynamics across timepoints...
+Top 10 most dynamic nodes:
+   1. trpm1b: score=66 (edges=1) in ['20']
+   2. sox3: score=66 (edges=1) in ['20']
+Timepoint 20: 0 activation, 1 repression edges
+Timepoint 20: Showing labels for 2 out of 2 nodes
+✓ Saved: /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/zebrahub-multiome-analysis/figures/sub_GRNs_reg_programs/subGRN_rank4_7_12_neural_crest.png
+   ✓ Saved: subGRN_rank4_7_12_neural_crest.png
+
+Generating PDF for 7_12/neural_crest...
+Found neural_crest at timepoints: ['00', '05', '10', '15', '20', '30']
+Timepoint 00: 0 edges
+Timepoint 05: 0 edges
+Timepoint 10: 0 edges
+Timepoint 15: 0 edges
+Timepoint 20: 1 edges
+Timepoint 30: 0 edges
+Master GRN: 2 total nodes, 1 total edges
+Computing master layout for 2 nodes, 1 edges...
+Calculating node dynamics across timepoints...
+Top 10 most dynamic nodes:
+   1. trpm1b: score=66 (edges=1) in ['20']
+   2. sox3: score=66 (edges=1) in ['20']
+Timepoint 20: 0 activation, 1 repression edges
+Timepoint 20: Showing labels for 2 out of 2 nodes
+✓ Saved: /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/zebrahub-multiome-analysis/figures/sub_GRNs_reg_programs/subGRN_rank4_7_12_neural_crest.pdf
+   ✓ Saved: subGRN_rank4_7_12_neural_crest.pdf
+
+================================================================================
+Rank #5: cluster 12_2 in enteric_neurons
+Dynamics score: 1.124
+Developmental TFs: sox10, sox9b
+================================================================================
+
+Generating PNG for 12_2/enteric_neurons...
+Found enteric_neurons at timepoints: ['00', '05', '10', '15', '20', '30']
+Timepoint 00: 0 edges
+Timepoint 05: 0 edges
+Timepoint 10: 0 edges
+Timepoint 15: 6 edges
+Timepoint 20: 0 edges
+Timepoint 30: 0 edges
+Master GRN: 8 total nodes, 6 total edges
+Computing master layout for 8 nodes, 6 edges...
+Calculating node dynamics across timepoints...
+Top 10 most dynamic nodes:
+   1. nucb2b: score=69 (edges=4) in ['15']
+   2. pdgfrb: score=67 (edges=2) in ['15']
+   3. sox6: score=66 (edges=1) in ['15']
+   4. sox9b: score=66 (edges=1) in ['15']
+   5. foxd2: score=66 (edges=1) in ['15']
+   6. foxf2a: score=66 (edges=1) in ['15']
+   7. sox10: score=66 (edges=1) in ['15']
+   8. sox5: score=66 (edges=1) in ['15']
+Timepoint 15: 6 activation, 0 repression edges
+Timepoint 15: Showing labels for 8 out of 8 nodes
+✓ Saved: /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/zebrahub-multiome-analysis/figures/sub_GRNs_reg_programs/subGRN_rank5_12_2_enteric_neurons.png
+   ✓ Saved: subGRN_rank5_12_2_enteric_neurons.png
+
+Generating PDF for 12_2/enteric_neurons...
+Found enteric_neurons at timepoints: ['00', '05', '10', '15', '20', '30']
+Timepoint 00: 0 edges
+Timepoint 05: 0 edges
+Timepoint 10: 0 edges
+Timepoint 15: 6 edges
+Timepoint 20: 0 edges
+Timepoint 30: 0 edges
+Master GRN: 8 total nodes, 6 total edges
+Computing master layout for 8 nodes, 6 edges...
+Calculating node dynamics across timepoints...
+Top 10 most dynamic nodes:
+   1. nucb2b: score=69 (edges=4) in ['15']
+   2. pdgfrb: score=67 (edges=2) in ['15']
+   3. sox6: score=66 (edges=1) in ['15']
+   4. sox9b: score=66 (edges=1) in ['15']
+   5. foxd2: score=66 (edges=1) in ['15']
+   6. foxf2a: score=66 (edges=1) in ['15']
+   7. sox10: score=66 (edges=1) in ['15']
+   8. sox5: score=66 (edges=1) in ['15']
+Timepoint 15: 6 activation, 0 repression edges
+Timepoint 15: Showing labels for 8 out of 8 nodes
+✓ Saved: /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/zebrahub-multiome-analysis/figures/sub_GRNs_reg_programs/subGRN_rank5_12_2_enteric_neurons.pdf
+   ✓ Saved: subGRN_rank5_12_2_enteric_neurons.pdf
+
+================================================================================
+VISUALIZATION COMPLETE!
+================================================================================
+Output directory: /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/zebrahub-multiome-analysis/figures/sub_GRNs_reg_programs/
+Generated 10 files (5 PNG + 5 PDF)
