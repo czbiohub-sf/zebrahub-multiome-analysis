@@ -17,3 +17,7 @@ figures/peak_umap_annotated/peak_umaps_chroms_each.pdf
 *.h5ad
 *.oracle
 *.zarr
+
+# Large CSV result files
+notebooks/Fig_peak_umap/peak_umap_3d_annotated*.csv
+notebooks/Fig_peak_umap/nearest_neighbors*_peak_distance_statistics.csv
