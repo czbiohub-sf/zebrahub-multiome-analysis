@@ -1,0 +1,67 @@
+=== Improved Chromatin Velocity Analysis with Neighborhood Smoothing ===
+Starting improved chromatin velocity analysis...
+Using pre-computed connectivity from original high-dimensional space...
+
+1. Loading peak UMAP object from /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/annotated_data/objects_v2/peaks_by_pb_annotated_master.h5ad...
+
+   Loading peak data from /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/annotated_data/objects_v2/peaks_by_pb_annotated_master.h5ad...
+   ✓ Loaded peak data: (640830, 190)
+   ✓ UMAP coordinates: (640830, 2)
+   ✓ Found connectivity matrix: (640830, 640830) with 15,396,186 non-zero entries
+   No velocity found. Computing chromatin velocity from temporal data...
+
+   Computing chromatin velocity...
+   Using timepoint column: 'timepoint'
+   Raw timepoints: ['0somites' '10somites' '15somites' '20somites' '30somites' '5somites']
+   Converted to numeric: [ 0  5 10 15 20 30]
+   Timepoints: [ 0  5 10 15 20 30]
+   Computing temporal derivatives...
+   ✓ Computed velocity: mean=64.071, max=191.003
+   Projecting to 2D UMAP space...
+   ✓ Velocity projection complete
+   ✓ Raw velocity vectors: (640830, 2)
+   Velocity range: X[-9.813, 19.007], Y[-1.882, 2.733]
+
+2. Computing neighborhood-smoothed velocity using pre-computed connectivity...
+
+2. Computing neighborhood-smoothed velocity using pre-computed connectivity...
+   Using connectivity matrix: (640830, 640830)
+   Non-zero entries: 15,396,186
+   Sparsity: 99.996%
+   Computing smoothed velocity vectors...
+   Applying sparse matrix weighted averaging...
+✓ Smoothed velocity computed using pre-computed neighborhoods
+   Smoothed range: X[-9.813, 19.007], Y[-1.882, 2.686]
+   Mean smoothed magnitude: 2.975
+   Median smoothed magnitude: 1.926
+
+3. Interpolating velocity to grid for streamplot...
+
+3. Interpolating velocity to grid (resolution 40x40)...
+   Grid bounds: X[-15.15, 18.39], Y[-13.33, 15.38]
+   Interpolating velocity components...
+✓ Grid interpolation complete
+   Grid velocity range: U[-5.325, 12.777], V[-1.545, 1.631]
+
+4. Creating streamplot visualizations...
+
+4. Creating streamplot visualizations...
+✓ Comprehensive streamplot saved: chromatin_velocity_streamplot_comprehensive.png
+   Creating focused streamplot...
+✓ Focused streamplot saved: chromatin_velocity_streamplot_focused.png
+
+5. Saving results to peak_umap_chromatin_velocity_connectivity_smoothed.h5ad...
+✓ Updated data saved: peak_umap_chromatin_velocity_connectivity_smoothed.h5ad
+
+================================================================================
+✓ CHROMATIN VELOCITY ANALYSIS COMPLETE!
+================================================================================
+
+Generated files:
+- chromatin_velocity_streamplot_comprehensive.png
+- chromatin_velocity_streamplot_focused.png
+- peak_umap_chromatin_velocity_connectivity_smoothed.h5ad
+
+✓ Key: Velocity smoothing uses pre-computed connectivity from
+  adata.obsp['connectivities'] (high-dimensional PCA space)
+  rather than recomputing neighborhoods in UMAP space

@@ -1,0 +1,41 @@
+================================================================================
+CHROMATIN VELOCITY VISUALIZATION (0.1x scaling)
+================================================================================
+
+1. Loading pre-computed velocity data...
+   ✓ Loaded: (640830, 190)
+   ✓ UMAP: (640830, 2)
+   ✓ Velocity: (640830, 2)
+   Current magnitude: mean=2.975, max=19.100
+
+2. Applying 0.1x velocity scaling...
+   ✓ Scaled magnitude: mean=0.2975, max=1.9100
+
+3. Interpolating to grid for streamplot...
+   ✓ Grid velocity: U[-0.5652, 1.6203], V[-0.1714, 0.1477]
+
+4. Generating visualizations...
+================================================================================
+
+   Creating streamplot...
+   ✓ Saved: chromatin_velocity_streamplot_scaled0.1x.png
+
+   Creating arrow plot...
+   Sampled 1148 arrows
+   ✓ Saved: chromatin_velocity_arrows_scaled0.1x.png
+
+   Creating combined plot...
+   ✓ Saved: chromatin_velocity_combined_scaled0.1x.png
+
+================================================================================
+✓ VISUALIZATION COMPLETE!
+================================================================================
+
+Generated files:
+- chromatin_velocity_streamplot_scaled0.1x.png
+- chromatin_velocity_arrows_scaled0.1x.png
+- chromatin_velocity_combined_scaled0.1x.png
+
+✓ All visualizations use 0.1x velocity scaling for better directionality
+✓ Velocity smoothing uses pre-computed connectivity from
+  adata.obsp['connectivities'] (high-dimensional PCA space)
