@@ -1,0 +1,393 @@
+================================================================================
+VISUALIZING TOP DYNAMIC CLUSTERS
+================================================================================
+
+1. Loading ranking results...
+   ✓ Loaded 83 ranked clusters
+
+2. Loading analysis data...
+   ✓ Loaded GRN dictionary: 189 combinations
+   ✓ Loaded cluster_tf_gene_matrices: 346 clusters
+
+3. Defining visualization function...
+
+4. Generating visualizations for top 5 clusters...
+================================================================================
+
+================================================================================
+Rank #1: cluster 25_6 in hematopoietic_vasculature
+Dynamics score: 1.010
+Developmental TFs: gata2a, gata5, gata6
+================================================================================
+
+Generating PNG for 25_6/hematopoietic_vasculature...
+Found hematopoietic_vasculature at timepoints: ['00', '05', '10', '15', '20', '30']
+Timepoint 00: 0 edges
+Timepoint 05: 0 edges
+Timepoint 10: 6 edges
+Timepoint 15: 11 edges
+Timepoint 20: 22 edges
+Timepoint 30: 3 edges
+Master GRN: 23 total nodes, 29 total edges
+Computing master layout for 23 nodes, 29 edges...
+Calculating node dynamics across timepoints...
+Top 10 most dynamic nodes:
+   1. spi1b: score=71 (edges=6) in ['10']
+   2. si:ch211-156j16.1: score=71 (edges=6) in ['20']
+   3. adcy2b: score=71 (edges=6) in ['20']
+   4. gpr182: score=69 (edges=4) in ['20']
+   5. tgfbr2b: score=69 (edges=4) in ['20']
+   6. gata6: score=67 (edges=2) in ['10']
+   7. rps6ka3b: score=67 (edges=2) in ['15']
+   8. mafba: score=67 (edges=2) in ['20']
+   9. gata2a: score=67 (edges=2) in ['15']
+  10. kdr: score=67 (edges=2) in ['15']
+Timepoint 10: 6 activation, 0 repression edges
+Timepoint 10: Showing labels for 9 out of 9 nodes
+Timepoint 15: 11 activation, 0 repression edges
+Timepoint 15: Showing labels for 12 out of 12 nodes
+Timepoint 20: 19 activation, 3 repression edges
+Timepoint 20: Showing labels for 15 out of 15 nodes
+Timepoint 30: 3 activation, 0 repression edges
+Timepoint 30: Showing labels for 4 out of 4 nodes
+✓ Saved: /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/zebrahub-multiome-analysis/figures/sub_GRNs_reg_programs/subGRN_rank1_25_6_hematopoietic_vasculature.png
+   ✓ Saved: subGRN_rank1_25_6_hematopoietic_vasculature.png
+
+Generating PDF for 25_6/hematopoietic_vasculature...
+Found hematopoietic_vasculature at timepoints: ['00', '05', '10', '15', '20', '30']
+Timepoint 00: 0 edges
+Timepoint 05: 0 edges
+Timepoint 10: 6 edges
+Timepoint 15: 11 edges
+Timepoint 20: 22 edges
+Timepoint 30: 3 edges
+Master GRN: 23 total nodes, 29 total edges
+Computing master layout for 23 nodes, 29 edges...
+Calculating node dynamics across timepoints...
+Top 10 most dynamic nodes:
+   1. spi1b: score=71 (edges=6) in ['10']
+   2. si:ch211-156j16.1: score=71 (edges=6) in ['20']
+   3. adcy2b: score=71 (edges=6) in ['20']
+   4. gpr182: score=69 (edges=4) in ['20']
+   5. tgfbr2b: score=69 (edges=4) in ['20']
+   6. gata6: score=67 (edges=2) in ['10']
+   7. rps6ka3b: score=67 (edges=2) in ['15']
+   8. mafba: score=67 (edges=2) in ['20']
+   9. gata2a: score=67 (edges=2) in ['15']
+  10. kdr: score=67 (edges=2) in ['15']
+Timepoint 10: 6 activation, 0 repression edges
+Timepoint 10: Showing labels for 9 out of 9 nodes
+Timepoint 15: 11 activation, 0 repression edges
+Timepoint 15: Showing labels for 12 out of 12 nodes
+Timepoint 20: 19 activation, 3 repression edges
+Timepoint 20: Showing labels for 15 out of 15 nodes
+Timepoint 30: 3 activation, 0 repression edges
+Timepoint 30: Showing labels for 4 out of 4 nodes
+✓ Saved: /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/zebrahub-multiome-analysis/figures/sub_GRNs_reg_programs/subGRN_rank1_25_6_hematopoietic_vasculature.pdf
+   ✓ Saved: subGRN_rank1_25_6_hematopoietic_vasculature.pdf
+
+================================================================================
+Rank #2: cluster 22_4 in hematopoietic_vasculature
+Dynamics score: 1.004
+Developmental TFs: gata1a
+================================================================================
+
+Generating PNG for 22_4/hematopoietic_vasculature...
+Found hematopoietic_vasculature at timepoints: ['00', '05', '10', '15', '20', '30']
+Timepoint 00: 0 edges
+Timepoint 05: 0 edges
+Timepoint 10: 7 edges
+Timepoint 15: 13 edges
+Timepoint 20: 19 edges
+Timepoint 30: 2 edges
+Master GRN: 14 total nodes, 25 total edges
+Computing master layout for 14 nodes, 25 edges...
+Calculating node dynamics across timepoints...
+Top 10 most dynamic nodes:
+   1. cldn5b: score=71 (edges=6) in ['20']
+   2. morc3b: score=67 (edges=2) in ['10']
+   3. gata1a: score=67 (edges=2) in ['20']
+   4. foxg1a: score=67 (edges=2) in ['10']
+   5. phlda2: score=63 (edges=8) in ['15', '20']
+   6. elmo1: score=59 (edges=4) in ['15', '20']
+   7. elk3: score=59 (edges=4) in ['15', '20']
+   8. sox7: score=57 (edges=12) in ['10', '15', '20']
+   9. lmo2: score=55 (edges=10) in ['10', '15', '20']
+  10. etv2: score=53 (edges=8) in ['10', '15', '20']
+Timepoint 10: 6 activation, 1 repression edges
+Timepoint 10: Showing labels for 9 out of 9 nodes
+Timepoint 15: 11 activation, 2 repression edges
+Timepoint 15: Showing labels for 10 out of 10 nodes
+Timepoint 20: 18 activation, 1 repression edges
+Timepoint 20: Showing labels for 12 out of 12 nodes
+Timepoint 30: 2 activation, 0 repression edges
+Timepoint 30: Showing labels for 3 out of 3 nodes
+✓ Saved: /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/zebrahub-multiome-analysis/figures/sub_GRNs_reg_programs/subGRN_rank2_22_4_hematopoietic_vasculature.png
+   ✓ Saved: subGRN_rank2_22_4_hematopoietic_vasculature.png
+
+Generating PDF for 22_4/hematopoietic_vasculature...
+Found hematopoietic_vasculature at timepoints: ['00', '05', '10', '15', '20', '30']
+Timepoint 00: 0 edges
+Timepoint 05: 0 edges
+Timepoint 10: 7 edges
+Timepoint 15: 13 edges
+Timepoint 20: 19 edges
+Timepoint 30: 2 edges
+Master GRN: 14 total nodes, 25 total edges
+Computing master layout for 14 nodes, 25 edges...
+Calculating node dynamics across timepoints...
+Top 10 most dynamic nodes:
+   1. cldn5b: score=71 (edges=6) in ['20']
+   2. morc3b: score=67 (edges=2) in ['10']
+   3. gata1a: score=67 (edges=2) in ['20']
+   4. foxg1a: score=67 (edges=2) in ['10']
+   5. phlda2: score=63 (edges=8) in ['15', '20']
+   6. elmo1: score=59 (edges=4) in ['15', '20']
+   7. elk3: score=59 (edges=4) in ['15', '20']
+   8. sox7: score=57 (edges=12) in ['10', '15', '20']
+   9. lmo2: score=55 (edges=10) in ['10', '15', '20']
+  10. etv2: score=53 (edges=8) in ['10', '15', '20']
+Timepoint 10: 6 activation, 1 repression edges
+Timepoint 10: Showing labels for 9 out of 9 nodes
+Timepoint 15: 11 activation, 2 repression edges
+Timepoint 15: Showing labels for 10 out of 10 nodes
+Timepoint 20: 18 activation, 1 repression edges
+Timepoint 20: Showing labels for 12 out of 12 nodes
+Timepoint 30: 2 activation, 0 repression edges
+Timepoint 30: Showing labels for 3 out of 3 nodes
+✓ Saved: /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/zebrahub-multiome-analysis/figures/sub_GRNs_reg_programs/subGRN_rank2_22_4_hematopoietic_vasculature.pdf
+   ✓ Saved: subGRN_rank2_22_4_hematopoietic_vasculature.pdf
+
+================================================================================
+Rank #3: cluster 25_7 in hematopoietic_vasculature
+Dynamics score: 1.000
+Developmental TFs: gata1a, gata2a, gata3
+================================================================================
+
+Generating PNG for 25_7/hematopoietic_vasculature...
+Found hematopoietic_vasculature at timepoints: ['00', '05', '10', '15', '20', '30']
+Timepoint 00: 0 edges
+Timepoint 05: 1 edges
+Timepoint 10: 7 edges
+Timepoint 15: 17 edges
+Timepoint 20: 28 edges
+Timepoint 30: 6 edges
+Master GRN: 31 total nodes, 38 total edges
+Computing master layout for 31 nodes, 38 edges...
+Calculating node dynamics across timepoints...
+Top 10 most dynamic nodes:
+   1. esama: score=69 (edges=4) in ['20']
+   2. cldn5b: score=69 (edges=4) in ['20']
+   3. gata1a: score=69 (edges=4) in ['20']
+   4. slc4a1a: score=67 (edges=2) in ['20']
+   5. rps6ka3b: score=67 (edges=2) in ['15']
+   6. afap1l1b: score=67 (edges=2) in ['30']
+   7. ar: score=67 (edges=2) in ['15']
+   8. mafba: score=67 (edges=2) in ['20']
+   9. etv5a: score=67 (edges=2) in ['10']
+  10. stab2: score=67 (edges=2) in ['20']
+Timepoint 05: 1 activation, 0 repression edges
+Timepoint 05: Showing labels for 2 out of 2 nodes
+Timepoint 10: 7 activation, 0 repression edges
+Timepoint 10: Showing labels for 10 out of 10 nodes
+Timepoint 15: 17 activation, 0 repression edges
+Timepoint 15: Showing labels for 16 out of 16 nodes
+Timepoint 20: 23 activation, 5 repression edges
+Timepoint 20: Showing labels for 21 out of 21 nodes
+Timepoint 30: 6 activation, 0 repression edges
+Timepoint 30: Showing labels for 8 out of 8 nodes
+✓ Saved: /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/zebrahub-multiome-analysis/figures/sub_GRNs_reg_programs/subGRN_rank3_25_7_hematopoietic_vasculature.png
+   ✓ Saved: subGRN_rank3_25_7_hematopoietic_vasculature.png
+
+Generating PDF for 25_7/hematopoietic_vasculature...
+Found hematopoietic_vasculature at timepoints: ['00', '05', '10', '15', '20', '30']
+Timepoint 00: 0 edges
+Timepoint 05: 1 edges
+Timepoint 10: 7 edges
+Timepoint 15: 17 edges
+Timepoint 20: 28 edges
+Timepoint 30: 6 edges
+Master GRN: 31 total nodes, 38 total edges
+Computing master layout for 31 nodes, 38 edges...
+Calculating node dynamics across timepoints...
+Top 10 most dynamic nodes:
+   1. esama: score=69 (edges=4) in ['20']
+   2. cldn5b: score=69 (edges=4) in ['20']
+   3. gata1a: score=69 (edges=4) in ['20']
+   4. slc4a1a: score=67 (edges=2) in ['20']
+   5. rps6ka3b: score=67 (edges=2) in ['15']
+   6. afap1l1b: score=67 (edges=2) in ['30']
+   7. ar: score=67 (edges=2) in ['15']
+   8. mafba: score=67 (edges=2) in ['20']
+   9. etv5a: score=67 (edges=2) in ['10']
+  10. stab2: score=67 (edges=2) in ['20']
+Timepoint 05: 1 activation, 0 repression edges
+Timepoint 05: Showing labels for 2 out of 2 nodes
+Timepoint 10: 7 activation, 0 repression edges
+Timepoint 10: Showing labels for 10 out of 10 nodes
+Timepoint 15: 17 activation, 0 repression edges
+Timepoint 15: Showing labels for 16 out of 16 nodes
+Timepoint 20: 23 activation, 5 repression edges
+Timepoint 20: Showing labels for 21 out of 21 nodes
+Timepoint 30: 6 activation, 0 repression edges
+Timepoint 30: Showing labels for 8 out of 8 nodes
+✓ Saved: /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/zebrahub-multiome-analysis/figures/sub_GRNs_reg_programs/subGRN_rank3_25_7_hematopoietic_vasculature.pdf
+   ✓ Saved: subGRN_rank3_25_7_hematopoietic_vasculature.pdf
+
+================================================================================
+Rank #4: cluster 0_1 in enteric_neurons
+Dynamics score: 0.998
+Developmental TFs: hoxa2b
+================================================================================
+
+Generating PNG for 0_1/enteric_neurons...
+Found enteric_neurons at timepoints: ['00', '05', '10', '15', '20', '30']
+Timepoint 00: 0 edges
+Timepoint 05: 3 edges
+Timepoint 10: 5 edges
+Timepoint 15: 6 edges
+Timepoint 20: 4 edges
+Timepoint 30: 19 edges
+Master GRN: 31 total nodes, 29 total edges
+Computing master layout for 31 nodes, 29 edges...
+Calculating node dynamics across timepoints...
+Top 10 most dynamic nodes:
+   1. gsx2: score=88 (edges=3) in ['10', '30']
+   2. en2a: score=88 (edges=3) in ['05', '30']
+   3. pdlim5a: score=75 (edges=15) in ['10', '15', '30']
+   4. otpb: score=72 (edges=2) in ['05']
+   5. sox11b: score=67 (edges=2) in ['10']
+   6. sox5: score=67 (edges=2) in ['15']
+   7. emx3: score=67 (edges=2) in ['20']
+   8. pax3a: score=67 (edges=2) in ['20']
+   9. sox13: score=67 (edges=2) in ['15']
+  10. sox8a: score=67 (edges=2) in ['15']
+Timepoint 05: 3 activation, 0 repression edges
+Timepoint 05: Showing labels for 4 out of 4 nodes
+Timepoint 10: 5 activation, 0 repression edges
+Timepoint 10: Showing labels for 7 out of 7 nodes
+Timepoint 15: 2 activation, 4 repression edges
+Timepoint 15: Showing labels for 7 out of 7 nodes
+Timepoint 20: 4 activation, 0 repression edges
+Timepoint 20: Showing labels for 5 out of 5 nodes
+Timepoint 30: 18 activation, 1 repression edges
+Timepoint 30: Showing labels for 21 out of 21 nodes
+✓ Saved: /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/zebrahub-multiome-analysis/figures/sub_GRNs_reg_programs/subGRN_rank4_0_1_enteric_neurons.png
+   ✓ Saved: subGRN_rank4_0_1_enteric_neurons.png
+
+Generating PDF for 0_1/enteric_neurons...
+Found enteric_neurons at timepoints: ['00', '05', '10', '15', '20', '30']
+Timepoint 00: 0 edges
+Timepoint 05: 3 edges
+Timepoint 10: 5 edges
+Timepoint 15: 6 edges
+Timepoint 20: 4 edges
+Timepoint 30: 19 edges
+Master GRN: 31 total nodes, 29 total edges
+Computing master layout for 31 nodes, 29 edges...
+Calculating node dynamics across timepoints...
+Top 10 most dynamic nodes:
+   1. gsx2: score=88 (edges=3) in ['10', '30']
+   2. en2a: score=88 (edges=3) in ['05', '30']
+   3. pdlim5a: score=75 (edges=15) in ['10', '15', '30']
+   4. otpb: score=72 (edges=2) in ['05']
+   5. sox11b: score=67 (edges=2) in ['10']
+   6. sox5: score=67 (edges=2) in ['15']
+   7. emx3: score=67 (edges=2) in ['20']
+   8. pax3a: score=67 (edges=2) in ['20']
+   9. sox13: score=67 (edges=2) in ['15']
+  10. sox8a: score=67 (edges=2) in ['15']
+Timepoint 05: 3 activation, 0 repression edges
+Timepoint 05: Showing labels for 4 out of 4 nodes
+Timepoint 10: 5 activation, 0 repression edges
+Timepoint 10: Showing labels for 7 out of 7 nodes
+Timepoint 15: 2 activation, 4 repression edges
+Timepoint 15: Showing labels for 7 out of 7 nodes
+Timepoint 20: 4 activation, 0 repression edges
+Timepoint 20: Showing labels for 5 out of 5 nodes
+Timepoint 30: 18 activation, 1 repression edges
+Timepoint 30: Showing labels for 21 out of 21 nodes
+✓ Saved: /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/zebrahub-multiome-analysis/figures/sub_GRNs_reg_programs/subGRN_rank4_0_1_enteric_neurons.pdf
+   ✓ Saved: subGRN_rank4_0_1_enteric_neurons.pdf
+
+================================================================================
+Rank #5: cluster 34_0 in neural_crest
+Dynamics score: 0.998
+Developmental TFs: meox1, sox10, sox9b
+================================================================================
+
+Generating PNG for 34_0/neural_crest...
+Found neural_crest at timepoints: ['00', '05', '10', '15', '20', '30']
+Timepoint 00: 0 edges
+Timepoint 05: 1 edges
+Timepoint 10: 5 edges
+Timepoint 15: 12 edges
+Timepoint 20: 7 edges
+Timepoint 30: 1 edges
+Master GRN: 18 total nodes, 21 total edges
+Computing master layout for 18 nodes, 21 edges...
+Calculating node dynamics across timepoints...
+Top 10 most dynamic nodes:
+   1. rarab: score=72 (edges=2) in ['05']
+   2. sox6: score=69 (edges=4) in ['15']
+   3. nr6a1b: score=67 (edges=2) in ['15']
+   4. hoxa4a: score=67 (edges=2) in ['15']
+   5. sox9b: score=67 (edges=2) in ['10']
+   6. tgfbr3: score=67 (edges=2) in ['15']
+   7. inka1a: score=67 (edges=2) in ['15']
+   8. meox1: score=67 (edges=2) in ['20']
+   9. rxrab: score=67 (edges=2) in ['15']
+  10. sox11a: score=67 (edges=2) in ['20']
+Timepoint 05: 1 activation, 0 repression edges
+Timepoint 05: Showing labels for 2 out of 2 nodes
+Timepoint 10: 5 activation, 0 repression edges
+Timepoint 10: Showing labels for 7 out of 7 nodes
+Timepoint 15: 10 activation, 2 repression edges
+Timepoint 15: Showing labels for 14 out of 14 nodes
+Timepoint 20: 6 activation, 1 repression edges
+Timepoint 20: Showing labels for 9 out of 9 nodes
+Timepoint 30: 1 activation, 0 repression edges
+Timepoint 30: Showing labels for 2 out of 2 nodes
+✓ Saved: /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/zebrahub-multiome-analysis/figures/sub_GRNs_reg_programs/subGRN_rank5_34_0_neural_crest.png
+   ✓ Saved: subGRN_rank5_34_0_neural_crest.png
+
+Generating PDF for 34_0/neural_crest...
+Found neural_crest at timepoints: ['00', '05', '10', '15', '20', '30']
+Timepoint 00: 0 edges
+Timepoint 05: 1 edges
+Timepoint 10: 5 edges
+Timepoint 15: 12 edges
+Timepoint 20: 7 edges
+Timepoint 30: 1 edges
+Master GRN: 18 total nodes, 21 total edges
+Computing master layout for 18 nodes, 21 edges...
+Calculating node dynamics across timepoints...
+Top 10 most dynamic nodes:
+   1. rarab: score=72 (edges=2) in ['05']
+   2. sox6: score=69 (edges=4) in ['15']
+   3. nr6a1b: score=67 (edges=2) in ['15']
+   4. hoxa4a: score=67 (edges=2) in ['15']
+   5. sox9b: score=67 (edges=2) in ['10']
+   6. tgfbr3: score=67 (edges=2) in ['15']
+   7. inka1a: score=67 (edges=2) in ['15']
+   8. meox1: score=67 (edges=2) in ['20']
+   9. rxrab: score=67 (edges=2) in ['15']
+  10. sox11a: score=67 (edges=2) in ['20']
+Timepoint 05: 1 activation, 0 repression edges
+Timepoint 05: Showing labels for 2 out of 2 nodes
+Timepoint 10: 5 activation, 0 repression edges
+Timepoint 10: Showing labels for 7 out of 7 nodes
+Timepoint 15: 10 activation, 2 repression edges
+Timepoint 15: Showing labels for 14 out of 14 nodes
+Timepoint 20: 6 activation, 1 repression edges
+Timepoint 20: Showing labels for 9 out of 9 nodes
+Timepoint 30: 1 activation, 0 repression edges
+Timepoint 30: Showing labels for 2 out of 2 nodes
+✓ Saved: /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/zebrahub-multiome-analysis/figures/sub_GRNs_reg_programs/subGRN_rank5_34_0_neural_crest.pdf
+   ✓ Saved: subGRN_rank5_34_0_neural_crest.pdf
+
+================================================================================
+VISUALIZATION COMPLETE!
+================================================================================
+Output directory: /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/zebrahub-multiome-analysis/figures/sub_GRNs_reg_programs/
+Generated 10 files (5 PNG + 5 PDF)

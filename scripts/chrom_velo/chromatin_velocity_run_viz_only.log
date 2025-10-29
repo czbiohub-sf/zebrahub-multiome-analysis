@@ -1,0 +1,76 @@
+Setup complete!
+Configuration:
+  GPU acceleration: True
+  Alpha (temporal weight): 0.7
+  Min co-accessibility: 0.5
+  Max connections: 100
+  Subset peaks: Full dataset
+  Run comparison: True
+  Load from checkpoint: True
+Loading peaks-by-pseudobulk data...
+  Shape: (640830, 190) (peaks × pseudobulks)
+  Pseudobulk names: ['0_0somites', '0_5somites', '0_10somites', '0_15somites', '0_20somites'] ... ['9_15somites', '9_20somites', '9_30somites']
+  Peak annotations: ['n_cells_by_counts', 'mean_counts', 'pct_dropout_by_counts', 'total_counts', 'accessibility_neural_optic', 'accessibility_endoderm', 'accessibility_enteric_neurons', 'accessibility_notochord', 'accessibility_pharyngeal_arches', 'accessibility_floor_plate', 'accessibility_epidermis', 'accessibility_pronephros', 'accessibility_neural_floor_plate', 'accessibility_lateral_plate_mesoderm', 'accessibility_midbrain_hindbrain_boundary', 'accessibility_neural', 'accessibility_neurons', 'accessibility_neural_posterior', 'accessibility_neural_crest', 'accessibility_PSM', 'accessibility_fast_muscle', 'accessibility_endocrine_pancreas', 'accessibility_heart_myocardium', 'accessibility_neural_telencephalon', 'accessibility_optic_cup', 'accessibility_primordial_germ_cells', 'accessibility_differentiating_neurons', 'accessibility_muscle', 'accessibility_tail_bud', 'accessibility_hindbrain', 'accessibility_somites', 'accessibility_spinal_cord', 'accessibility_NMPs', 'accessibility_hatching_gland', 'accessibility_hematopoietic_vasculature', 'accessibility_hemangioblasts', 'accessibility_10somites', 'accessibility_15somites', 'accessibility_0somites', 'accessibility_30somites', 'accessibility_20somites', 'accessibility_5somites', 'timepoint', 'timepoint_contrast', 'celltype', 'celltype_contrast', 'leiden_0.2', 'leiden_0.3', 'leiden_0.5', 'leiden_0.7', 'leiden_0.9', 'leiden_1', 'leiden_1.2', 'leiden_1.5', 'leiden_5', 'chrom', 'start', 'end', 'peak_type', 'length', 'gene_body_overlaps', 'nearest_gene', 'distance_to_tss', 'leiden_coarse', 'linked_gene', 'link_score', 'link_zscore', 'link_pvalue', 'associated_gene', 'association_type', 'leiden_unified', 'peak_type_argelaguet', 'accessibility_lineage_CNS', 'accessibility_lineage_Neural Crest', 'accessibility_lineage_Paraxial Mesoderm', 'accessibility_lineage_Lateral Mesoderm', 'accessibility_lineage_Endoderm', 'accessibility_lineage_Epiderm', 'accessibility_lineage_Germline', 'lineage', 'lineage_contrast']
+  UMAP coordinates: (640830, 2)
+
+Loading co-accessibility data...
+  Shape: (5405656, 3)
+  Columns: ['Peak1', 'Peak2', 'coaccess']
+  Co-accessibility range: -0.442 - 0.897
+  Connections with score >= 0.5: 1,910
+
+============================================================
+LOADING FROM CHECKPOINT
+============================================================
+Loading precomputed velocities from: ../../data/processed_data/15_chrom_velo_processed/chromatin_velocity_computed.h5ad
+GPU check failed: No module named 'cupy'
+⚠ GPU requested but not available, using CPU
+✓ Loaded from checkpoint. Skipping computation, proceeding to visualization.
+  Temporal velocity shape: (640830, 190)
+  Regularized velocity shape: (640830, 190)
+  2D velocity shape: (640830, 2)
+
+============================================================
+STEP 4: Creating Visualizations
+============================================================
+
+Creating streamplot...
+  Saved to ../../figures/chrom_velocity/01_streamplot_peak_type.png
+
+Creating arrow plot...
+  Saved to ../../figures/chrom_velocity/02_arrows_peak_type.png
+
+Creating magnitude distribution plot...
+  Saved to ../../figures/chrom_velocity/03_magnitude_distribution.png
+
+Creating temporal vs regularized comparison...
+  Saved to ../../figures/chrom_velocity/04_temporal_vs_regularized.png
+
+Creating comprehensive summary figure...
+Figure saved to ../../figures/chrom_velocity/05_comprehensive_summary.png
+
+============================================================
+STEP 5: Saving Results
+============================================================
+
+Saving results to ../../figures/chrom_velocity/chromatin_velocity_results.h5ad...
+✓ Done!
+
+Results saved to: ../../figures/chrom_velocity/chromatin_velocity_results.h5ad
+  Layers added:
+    - 'temporal_velocity': Raw temporal velocity
+    - 'regularized_velocity': Co-accessibility regularized velocity
+  Obsm added:
+    - 'velocity_umap': 2D velocity vectors
+
+============================================================
+ANALYSIS COMPLETE
+============================================================
+
+Results summary:
+  Total peaks analyzed: 640,830
+  Timepoints: [0, 5, 10, 15, 20, 30]
+Traceback (most recent call last):
+  File "/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/zebrahub-multiome-analysis/scripts/chrom_velo/01_chrom_velo_notebook.py", line 441, in <module>
+    print(f"  Mean temporal velocity magnitude: {np.abs(temporal_velocity).mean():.4f}")
+NameError: name 'temporal_velocity' is not defined

@@ -1,0 +1,190 @@
+================================================================================
+VISUALIZING FINAL 5 BIOLOGICALLY VALIDATED CLUSTERS
+================================================================================
+
+1. Loading data...
+   ✓ Loaded 60 ranked clusters
+   ✓ Loaded 9 candidate clusters
+   ✓ Loaded GRN dictionary: 189 combinations
+   ✓ Loaded cluster_tf_gene_matrices: 346 clusters
+
+2. Defining visualization function...
+
+3. Generating visualizations for 5 final clusters...
+================================================================================
+
+================================================================================
+RANK #1: Hemangioblasts - GATA-mediated fate specification
+Cluster 26_11 in hemangioblasts (INCREASING pattern)
+Dynamics score: 0.961
+Developmental TFs: gata1a, gata2a, gata5, gata6
+================================================================================
+
+Generating PNG for 26_11/hemangioblasts...
+Found hemangioblasts at timepoints: ['05', '10', '15', '20', '30']
+Timepoint 05: 0 edges
+Timepoint 10: 16 edges
+Timepoint 15: 21 edges
+Timepoint 20: 23 edges
+Timepoint 30: 9 edges
+Master GRN: 28 total nodes, 42 total edges
+Computing master layout for 28 nodes...
+✓ Saved: /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/zebrahub-multiome-analysis/figures/sub_GRNs_reg_programs/subGRN_final1_26_11_hemangioblasts.png
+   ✓ Saved: subGRN_final1_26_11_hemangioblasts.png
+
+Generating PDF for 26_11/hemangioblasts...
+Found hemangioblasts at timepoints: ['05', '10', '15', '20', '30']
+Timepoint 05: 0 edges
+Timepoint 10: 16 edges
+Timepoint 15: 21 edges
+Timepoint 20: 23 edges
+Timepoint 30: 9 edges
+Master GRN: 28 total nodes, 42 total edges
+Computing master layout for 28 nodes...
+✓ Saved: /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/zebrahub-multiome-analysis/figures/sub_GRNs_reg_programs/subGRN_final1_26_11_hemangioblasts.pdf
+   ✓ Saved: subGRN_final1_26_11_hemangioblasts.pdf
+
+================================================================================
+RANK #2: Enteric Neurons - Progressive ENS colonization
+Cluster 28_11 in enteric_neurons (INCREASING pattern)
+Dynamics score: 0.956
+Developmental TFs: sox10, sox2, sox3, sox9b
+================================================================================
+
+Generating PNG for 28_11/enteric_neurons...
+Found enteric_neurons at timepoints: ['00', '05', '10', '15', '20', '30']
+Timepoint 00: 4 edges
+Timepoint 05: 1 edges
+Timepoint 10: 14 edges
+Timepoint 15: 13 edges
+Timepoint 20: 15 edges
+Timepoint 30: 17 edges
+Master GRN: 48 total nodes, 48 total edges
+Computing master layout for 48 nodes...
+✓ Saved: /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/zebrahub-multiome-analysis/figures/sub_GRNs_reg_programs/subGRN_final2_28_11_enteric_neurons.png
+   ✓ Saved: subGRN_final2_28_11_enteric_neurons.png
+
+Generating PDF for 28_11/enteric_neurons...
+Found enteric_neurons at timepoints: ['00', '05', '10', '15', '20', '30']
+Timepoint 00: 4 edges
+Timepoint 05: 1 edges
+Timepoint 10: 14 edges
+Timepoint 15: 13 edges
+Timepoint 20: 15 edges
+Timepoint 30: 17 edges
+Master GRN: 48 total nodes, 48 total edges
+Computing master layout for 48 nodes...
+✓ Saved: /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/zebrahub-multiome-analysis/figures/sub_GRNs_reg_programs/subGRN_final2_28_11_enteric_neurons.pdf
+   ✓ Saved: subGRN_final2_28_11_enteric_neurons.pdf
+
+================================================================================
+RANK #3: Lateral Plate Mesoderm - Transient specification
+Cluster 17_8 in lateral_plate_mesoderm (PEAK pattern)
+Dynamics score: 0.942
+Developmental TFs: gata1a, gata5, gata6
+================================================================================
+
+Generating PNG for 17_8/lateral_plate_mesoderm...
+Found lateral_plate_mesoderm at timepoints: ['00', '05', '10', '15', '20', '30']
+Timepoint 00: 14 edges
+Timepoint 05: 12 edges
+Timepoint 10: 19 edges
+Timepoint 15: 22 edges
+Timepoint 20: 19 edges
+Timepoint 30: 3 edges
+Master GRN: 40 total nodes, 54 total edges
+Computing master layout for 40 nodes...
+✓ Saved: /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/zebrahub-multiome-analysis/figures/sub_GRNs_reg_programs/subGRN_final3_17_8_lateral_plate_mesoderm.png
+   ✓ Saved: subGRN_final3_17_8_lateral_plate_mesoderm.png
+
+Generating PDF for 17_8/lateral_plate_mesoderm...
+Found lateral_plate_mesoderm at timepoints: ['00', '05', '10', '15', '20', '30']
+Timepoint 00: 14 edges
+Timepoint 05: 12 edges
+Timepoint 10: 19 edges
+Timepoint 15: 22 edges
+Timepoint 20: 19 edges
+Timepoint 30: 3 edges
+Master GRN: 40 total nodes, 54 total edges
+Computing master layout for 40 nodes...
+✓ Saved: /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/zebrahub-multiome-analysis/figures/sub_GRNs_reg_programs/subGRN_final3_17_8_lateral_plate_mesoderm.pdf
+   ✓ Saved: subGRN_final3_17_8_lateral_plate_mesoderm.pdf
+
+================================================================================
+RANK #4: Differentiating Neurons - Neurogenesis wave
+Cluster 33_8 in differentiating_neurons (PEAK pattern)
+Dynamics score: 0.854
+Developmental TFs: neurod1, neurod4, olig2, sox3, sox9a, sox9b
+================================================================================
+
+Generating PNG for 33_8/differentiating_neurons...
+Found differentiating_neurons at timepoints: ['00', '05', '10', '15', '20', '30']
+Timepoint 00: 6 edges
+Timepoint 05: 5 edges
+Timepoint 10: 13 edges
+Timepoint 15: 23 edges
+Timepoint 20: 19 edges
+Timepoint 30: 15 edges
+Master GRN: 30 total nodes, 41 total edges
+Computing master layout for 30 nodes...
+✓ Saved: /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/zebrahub-multiome-analysis/figures/sub_GRNs_reg_programs/subGRN_final4_33_8_differentiating_neurons.png
+   ✓ Saved: subGRN_final4_33_8_differentiating_neurons.png
+
+Generating PDF for 33_8/differentiating_neurons...
+Found differentiating_neurons at timepoints: ['00', '05', '10', '15', '20', '30']
+Timepoint 00: 6 edges
+Timepoint 05: 5 edges
+Timepoint 10: 13 edges
+Timepoint 15: 23 edges
+Timepoint 20: 19 edges
+Timepoint 30: 15 edges
+Master GRN: 30 total nodes, 41 total edges
+Computing master layout for 30 nodes...
+✓ Saved: /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/zebrahub-multiome-analysis/figures/sub_GRNs_reg_programs/subGRN_final4_33_8_differentiating_neurons.pdf
+   ✓ Saved: subGRN_final4_33_8_differentiating_neurons.pdf
+
+================================================================================
+RANK #5: PSM - Sox factor dynamics (novel)
+Cluster 29_3 in PSM (DECREASING pattern)
+Dynamics score: 0.916
+Developmental TFs: sox10, sox19a, sox19b, sox2, sox3, sox9a, sox9b
+================================================================================
+
+Generating PNG for 29_3/PSM...
+Found PSM at timepoints: ['00', '05', '10', '15', '20', '30']
+Timepoint 00: 10 edges
+Timepoint 05: 19 edges
+Timepoint 10: 15 edges
+Timepoint 15: 7 edges
+Timepoint 20: 10 edges
+Timepoint 30: 9 edges
+Master GRN: 26 total nodes, 33 total edges
+Computing master layout for 26 nodes...
+✓ Saved: /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/zebrahub-multiome-analysis/figures/sub_GRNs_reg_programs/subGRN_final5_29_3_PSM.png
+   ✓ Saved: subGRN_final5_29_3_PSM.png
+
+Generating PDF for 29_3/PSM...
+Found PSM at timepoints: ['00', '05', '10', '15', '20', '30']
+Timepoint 00: 10 edges
+Timepoint 05: 19 edges
+Timepoint 10: 15 edges
+Timepoint 15: 7 edges
+Timepoint 20: 10 edges
+Timepoint 30: 9 edges
+Master GRN: 26 total nodes, 33 total edges
+Computing master layout for 26 nodes...
+✓ Saved: /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/zebrahub-multiome-analysis/figures/sub_GRNs_reg_programs/subGRN_final5_29_3_PSM.pdf
+   ✓ Saved: subGRN_final5_29_3_PSM.pdf
+
+================================================================================
+VISUALIZATION COMPLETE!
+================================================================================
+Output directory: /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/zebrahub-multiome-analysis/figures/sub_GRNs_reg_programs/
+Generated 10 files (5 PNG + 5 PDF)
+
+FINAL 5 CLUSTERS FOR MANUSCRIPT:
+  1. Hemangioblasts - GATA-mediated fate specification
+  2. Enteric Neurons - Progressive ENS colonization
+  3. Lateral Plate Mesoderm - Transient specification
+  4. Differentiating Neurons - Neurogenesis wave
+  5. PSM - Sox factor dynamics (novel)
