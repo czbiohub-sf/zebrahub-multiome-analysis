@@ -25,6 +25,7 @@ from mpl_toolkits.axes_grid1.inset_locator import InsetPosition
 # output_path = "/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/05_SEACells_processed/"
 # data_id = "TDR118_ATAC" # filename = f"{data_id}_SEACells.h5ad"
 # annotation_class = "global_annotation"
+# dim_reduction = "X_lsi"
 # figpath = ""
 # metadata_path = "/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/01_Signac_processed/master_rna_atac_metadata.csv" 
 # NOTE. we'll filter out the "low_quality_cells" from each timepoint/dataset, as they will not be helpful for computing the metacells
@@ -51,6 +52,7 @@ parser.add_argument('input_path', type=str, help='A filepath to an input anndata
 parser.add_argument('output_path', type=str, help='A filepath to save the output')
 parser.add_argument('data_id', type=str, help='Name of the output file.')
 parser.add_argument('annotation_class', type=str, help='Annotation class for the cell type assignment')
+parser.add_argument('dim_reduction', type=str, help='Dimensionality reduction method used for the input data')
 parser.add_argument('figpath', type=str, help='Path for the plots/figures')
 # add the n_cells (for the number of cells per SEACells)
 parser.add_argument('n_cells', type=int, help='Number of cells per SEACells')
@@ -64,6 +66,7 @@ input_path = args.input_path
 output_path = args.output_path
 data_id = args.data_id
 annotation_class = args.annotation_class
+dim_reduction = args.dim_reduction
 figpath = args.figpath
 n_cells = args.n_cells
 #metadata_path = args.metadata_path
@@ -199,16 +202,16 @@ def plot_SEACell_sizes_modified(
 dataset_name = data_id.replace("reseq", "")
 
 # # NOTE. The original adata object should contain the "X_lsi" embedding
-# adata = sc.read_h5ad(input_path + f"{data_id}/{dataset_name}_processed_peaks_merged.h5ad")
-adata = sc.read_h5ad(input_path + f"{dataset_name}_nmps_manual_annotation.h5ad")
+adata = sc.read_h5ad(input_path + f"{data_id}/{dataset_name}_processed_peaks_merged.h5ad")
+# adata = sc.read_h5ad(input_path + f"{dataset_name}_nmps_manual_annotation.h5ad")
 print(adata)
 
 # load the original adata ("X_lsi_integrated")
 # import the master_metadata (cell annotations, cell_ids from the integrated object)
 master_metadata = pd.read_csv("/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/01_Signac_processed/master_rna_atac_metadata.csv", index_col=0)
 
-# import the "X_lsi_integrated" from the integrated object
-lsi_integrated = pd.read_csv("/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/01_Signac_processed/integrated_lsi.csv", index_col=0)
+# # import the "X_lsi_integrated" from the integrated object
+# lsi_integrated = pd.read_csv("/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/01_Signac_processed/integrated_lsi.csv", index_col=0)
 
 # filter out the "low_quality_cells"
 lsi_integrated = lsi_integrated[lsi_integrated.index.isin(master_metadata.index)]
@@ -233,7 +236,7 @@ lsi_integrated_sub_filtered.head()
 # adata.obs.head()
 
 # copy the "X_lsi" embedding from the original adata object
-adata.obsm["X_lsi_integrated"] = lsi_integrated_sub_filtered.iloc[:,0:39].to_numpy()
+adata.obsm["X_lsi"] = lsi_integrated_sub_filtered.iloc[:,0:39].to_numpy()
 
 # optional. cleaning up the adata.obs fields
 # List of columns to keep (those not starting with "prediction")

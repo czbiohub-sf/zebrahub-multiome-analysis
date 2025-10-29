@@ -3,8 +3,8 @@
 #SBATCH --output=/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/cicero_slurm_outputs/cicero_analysis_%j.out
 #SBATCH --error=/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/cicero_slurm_outputs/cicero_analysis_%j.err
 #SBATCH --time=48:00:00
-#SBATCH --mem=125G
-#SBATCH --cpus-per-task=25
+#SBATCH --mem=512G
+#SBATCH --cpus-per-task=4
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=yang-joon.kim@czbiohub.org
 
@@ -31,4 +31,4 @@ mkdir -p "$SHELL_SCRIPT_DIR"
 module load R/4.3
 
 # Run the R script
-Rscript /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/zebrahub-multiome-analysis/scripts/run_02_compute_CCANs_cicero_parallelized.R $SEURAT_OBJ_PATH $ASSAY $DIM_REDUCED $OUTPUT_PATH $DATA_ID $PEAKTYPE $SHELL_SCRIPT_DIR
+Rscript /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/zebrahub-multiome-analysis/scripts/run_02_compute_CCANs_cicero_parallelized_improved.R $SEURAT_OBJ_PATH $ASSAY $DIM_REDUCED $OUTPUT_PATH $DATA_ID $PEAKTYPE $SHELL_SCRIPT_DIR

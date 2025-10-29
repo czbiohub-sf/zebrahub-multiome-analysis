@@ -52,12 +52,13 @@ peaktype <- args[6]
 # capitalize the dim_reduced, as the single.cell.experiment data format capitalizes all the fields
 dim_reduced <- toupper(dim_reduced)
 
-
 # Step 1. Import the Seurat object
 seurat_object <- readRDS(seurat_object_path)
-
 # print out the assays in the seurat object
-#print(seurat_object@assays) 
+print("Available assays:")
+print(names(seurat_object@assays))
+print(paste("Working with assay:", assay))
+
 
 # define the default assay
 # We will pick which peak profiles we will use.
@@ -66,9 +67,16 @@ seurat_object <- readRDS(seurat_object_path)
 DefaultAssay(seurat_object) <- assay
 print(paste0("default assay is ", assay))
 
+
+
 # conver to CellDataSet (CDS) format
 seurat_object.cds <- as.cell_data_set(x=seurat_object) # a function from SeuratWrappers\
 print("cds object created") 
+
+# print out the dim.reduced in the seurat object
+print("Available reduced dimensions:")
+print(names(reducedDims(seurat_object.cds)))
+print(paste("Using reduced dimension:", dim_reduced))
 
 # Step 2. make the cicero object
 # default: we will use the ATAC.UMAP here for the sampling of the neighborhoods - as we'll treat this dataset as if we only had scATAC-seq.
@@ -76,18 +84,42 @@ print("cds object created")
 seurat_object.cicero <- make_cicero_cds(seurat_object.cds, reduced_coordinates = reducedDims(seurat_object.cds)$UMAP.ATAC)
 print("cicero object created")
 
+# check the structure of the assay
+print("Checking assay structure:")
+print(paste("Class of assay object:", class(seurat_object@assays[[assay]])))
+
+
 # define the genomic length dataframe (chromosome number ; length)
-df_seqinfo <- as.data.frame(seurat_object@assays$ATAC@seqinfo)
-# zebrafish has 25 chromosomes and 1 MT chromosome
-seurat_object@assays$ATAC@annotation@seqinfo@seqlengths <- df_seqinfo$seqlengths[1:26] 
+# Check if seqinfo exists
+if (is.null(seurat_object@assays[[assay]]@seqinfo)) {
+    print("Warning: seqinfo is NULL")
+    # Try to get seqinfo from annotation if available
+    if (!is.null(seurat_object@assays[[assay]]@annotation)) {
+        print("Attempting to get seqinfo from annotation")
+        df_seqinfo <- as.data.frame(seurat_object@assays[[assay]]@annotation@seqinfo)
+    } else {
+        stop("Neither seqinfo nor annotation available in assay")
+    }
+} else {
+    df_seqinfo <- as.data.frame(seurat_object@assays[[assay]]@seqinfo)
+}
+
+print("Chromosome lengths:")  # NEW: Added print
+print(df_seqinfo$seqlengths[1:26])  # NEW: Added print
+# df_seqinfo <- as.data.frame(seurat_object@assays[[assay]]@seqinfo)
+# df_seqinfo <- as.data.frame(seurat_object@assays$ATAC@seqinfo)
+# # zebrafish has 25 chromosomes and 1 MT chromosome
+# seurat_object@assays$ATAC@annotation@seqinfo@seqlengths <- df_seqinfo$seqlengths[1:26] 
 
 # create a dataframe for chromsomes and their lengths
 # get the chromosome sizes from the Seurat object
-genome <- seqlengths(seurat_object@assays$ATAC@annotation)
+# genome <- seqlengths(seurat_object@assays$ATAC@annotation)
+genome <- seqlengths(seurat_object@assays[[assay]]@annotation)
 
 # convert chromosome sizes to a dataframe
 genome.df <- data.frame("chr" = names(genome), "length" = genome)
-print(genome.df)
+print("Genome dataframe created:")
+print(head(genome.df))
 
 # Step 3. Run Cicero (This part can be parallelized)
 
@@ -100,7 +132,9 @@ print("CCANs computed")
 
 # saves the Cicero results 
 # (1.all peaks as well as 2. pairwise cicero result)
-all_peaks <- row.names(seurat_object@assays$ATAC@data)
+all_peaks <- row.names(seurat_object@assays[[assay]]@data)
+# all_peaks <- row.names(seurat_object@assays$ATAC@data)
+
 #output_path <- "/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data"
 write.csv(x = all_peaks, file = paste0(output_path, "01_", data_id, "_",peaktype, "_peaks.csv"))
 write.csv(x = conns, file = paste0(output_path, "02_", data_id, "_cicero_connections_",peaktype, "_peaks.csv"))
