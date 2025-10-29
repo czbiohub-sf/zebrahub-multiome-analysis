@@ -22,5 +22,6 @@ figures/peak_umap_annotated/peak_umaps_chroms_each.pdf
 notebooks/Fig_peak_umap/peak_umap_3d_annotated*.csv
 notebooks/Fig_peak_umap/nearest_neighbors*_peak_distance_statistics.csv
 
-# Chromatin velocity exploration figures
+# Chromatin velocity exploration (deprecated)
 figures/chrom_velocity/
+notebooks/Fig_peak_umap/chrom_velo/
