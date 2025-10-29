@@ -18,9 +18,12 @@ figures/peak_umap_annotated/peak_umaps_chroms_each.pdf
 *.oracle
 *.zarr
 
-# Large CSV result files
+# Large CSV result files (moved to output/ directory)
 notebooks/Fig_peak_umap/peak_umap_3d_annotated*.csv
 notebooks/Fig_peak_umap/nearest_neighbors*_peak_distance_statistics.csv
+
+# Output files
+notebooks/Fig_peak_umap/output/
 
 # Chromatin velocity exploration (deprecated)
 figures/chrom_velocity/
