@@ -1,6 +1,0 @@
-peak_type,exonic,intergenic,intronic,promoter,All
-exonic,118234,0,0,2,118236
-intergenic,0,221262,0,0,221262
-intronic,0,0,257818,0,257818
-promoter,2843,11739,2512,26420,43514
-All,121077,233001,260330,26422,640830
