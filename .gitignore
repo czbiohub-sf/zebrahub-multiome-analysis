@@ -24,6 +24,7 @@ notebooks/Fig_peak_umap/nearest_neighbors*_peak_distance_statistics.csv
 
 # Output files
 notebooks/Fig_peak_umap/output/
+notebooks/Fig3_GRN_dynamics/output/
 
 # Chromatin velocity exploration (deprecated)
 figures/chrom_velocity/
