@@ -25,6 +25,12 @@ notebooks/Fig_peak_umap/nearest_neighbors*_peak_distance_statistics.csv
 # Output files
 notebooks/Fig_peak_umap/output/
 notebooks/Fig3_GRN_dynamics/output/
+notebooks/Fig2_ATAC_RNA_correlation_metacells/output/
+notebooks/Fig_GRN_zoom_in/output/
+
+# Large archived notebooks and data
+notebooks/Fig1_atlas_QC/data/
+notebooks/Fig2_ATAC_RNA_correlation_metacells/archive/
 
 # LLM-generated prompts (large generated outputs - 186MB)
 notebooks/Fig_peak_umap/llm_annotation/prompts/
