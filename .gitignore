@@ -26,6 +26,10 @@ notebooks/Fig_peak_umap/nearest_neighbors*_peak_distance_statistics.csv
 notebooks/Fig_peak_umap/output/
 notebooks/Fig3_GRN_dynamics/output/
 
+# LLM-generated prompts (large generated outputs - 186MB)
+notebooks/Fig_peak_umap/llm_annotation/prompts/
+notebooks/Fig_peak_umap/llm_annotation/litemind_prompt_leiden_coarse/
+
 # Chromatin velocity exploration (deprecated)
 figures/chrom_velocity/
 notebooks/Fig_peak_umap/chrom_velo/
