@@ -12,6 +12,7 @@ __pycache__/
 
 # Specific files
 figures/peak_umap_annotated/peak_umaps_chroms_each.pdf
+REFACTOR.md
 
 # Large data files - not tracked in git
 *.h5ad
