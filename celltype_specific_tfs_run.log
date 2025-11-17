@@ -1,0 +1,47 @@
+================================================================================
+CELLTYPE-SPECIFIC TF ANALYSIS
+================================================================================
+
+Loading all data...
+   ✓ Loaded peak info for 346 clusters
+   ✓ Loaded 346 TF-gene matrices
+   ✓ Loaded 189 celltype×timepoint GRN combinations
+
+Building TF-celltype presence matrix...
+   Processing cluster 50/346...
+   Processing cluster 100/346...
+   Processing cluster 150/346...
+   Processing cluster 200/346...
+   Processing cluster 250/346...
+   Processing cluster 300/346...
+   ✓ Found 252 unique TFs across all celltypes
+
+Calculating specificity metrics...
+   ✓ Computed metrics for 252 TFs
+
+Filtering for celltype-specific TFs...
+   Criteria: 3-5 celltypes, ≥60% lineage coherence, ≥1 clusters
+   ✓ Found 11 celltype-specific TFs
+
+Generating outputs...
+✓ Saved: /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/zebrahub-multiome-analysis/figures/sub_GRNs_reg_programs/celltype_specific_tfs_summary.csv
+✓ Saved: /hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/zebrahub-multiome-analysis/figures/sub_GRNs_reg_programs/CELLTYPE_SPECIFIC_TFS_REPORT.md
+
+================================================================================
+ANALYSIS COMPLETE
+================================================================================
+
+Total TFs analyzed: 252
+Celltype-specific TFs found: 11
+  - Ultra-specific (3 CTs): 7
+  - Moderately specific (4-5 CTs): 4
+
+Distribution by lineage:
+  - mesoderm: 4 TFs
+  - neuroectoderm: 4 TFs
+  - other: 3 TFs
+
+Generated files:
+  - celltype_specific_tfs_summary.csv
+  - CELLTYPE_SPECIFIC_TFS_REPORT.md
+

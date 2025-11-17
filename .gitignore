@@ -12,15 +12,31 @@ __pycache__/
 
 # Specific files
 figures/peak_umap_annotated/peak_umaps_chroms_each.pdf
+REFACTOR.md
 
 # Large data files - not tracked in git
 *.h5ad
 *.oracle
 *.zarr
 
-# Large CSV result files
+# Large CSV result files (moved to output/ directory)
 notebooks/Fig_peak_umap/peak_umap_3d_annotated*.csv
 notebooks/Fig_peak_umap/nearest_neighbors*_peak_distance_statistics.csv
 
-# Chromatin velocity exploration figures
+# Output files
+notebooks/Fig_peak_umap/output/
+notebooks/Fig3_GRN_dynamics/output/
+notebooks/Fig2_ATAC_RNA_correlation_metacells/output/
+notebooks/Fig_GRN_zoom_in/output/
+
+# Large archived notebooks and data
+notebooks/Fig1_atlas_QC/data/
+notebooks/Fig2_ATAC_RNA_correlation_metacells/archive/
+
+# LLM-generated prompts (large generated outputs - 186MB)
+notebooks/Fig_peak_umap/llm_annotation/prompts/
+notebooks/Fig_peak_umap/llm_annotation/litemind_prompt_leiden_coarse/
+
+# Chromatin velocity exploration (deprecated)
 figures/chrom_velocity/
+notebooks/Fig_peak_umap/chrom_velo/

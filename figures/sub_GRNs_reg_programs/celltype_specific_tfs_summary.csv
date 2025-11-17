@@ -1,0 +1,12 @@
+tf_name,n_celltypes,celltypes_list,n_clusters,cluster_ids,dominant_lineage,lineage_coherence
+alx1,3,"floor_plate,optic_cup,primordial_germ_cells",2,"2_2,3_1",other,1.0
+neurod6a,5,"PSM,fast_muscle,muscle,somites,tail_bud",2,"1_5,21_2",mesoderm,0.8
+zic4,4,"NMPs,PSM,fast_muscle,muscle",4,"10_2,21_0,32_0,33_5",mesoderm,0.75
+foxi3b,4,"differentiating_neurons,enteric_neurons,fast_muscle,neural",6,"13_12,19_10,1_3,21_4,32_13,5_5",neuroectoderm,0.75
+foxd5,3,"enteric_neurons,lateral_plate_mesoderm,muscle",3,"1_2,7_3,7_6",mesoderm,0.6666666666666666
+dmrt2b,3,"PSM,neural_telencephalon,notochord",1,26_9,mesoderm,0.6666666666666666
+uncx,3,"heart_myocardium,neural_posterior,spinal_cord",1,2_2,neuroectoderm,0.6666666666666666
+lhx8a,3,"lateral_plate_mesoderm,primordial_germ_cells,tail_bud",1,2_2,other,0.6666666666666666
+lhx4,3,"enteric_neurons,pharyngeal_arches,pronephros",1,2_2,other,0.6666666666666666
+nr2e1,3,"neural,neural_posterior,pharyngeal_arches",1,5_2,neuroectoderm,0.6666666666666666
+hoxc3a,5,"differentiating_neurons,floor_plate,lateral_plate_mesoderm,neural_floor_plate,neural_posterior",5,"0_1,28_0,28_7,2_2,3_9",neuroectoderm,0.6

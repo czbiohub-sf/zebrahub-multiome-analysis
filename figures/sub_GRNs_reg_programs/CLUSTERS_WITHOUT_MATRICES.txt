@@ -1,0 +1,69 @@
+# Clusters Without TF-Gene Matrices
+# Generated: 2025-11-05 12:09:37
+#
+# Total: 56 clusters
+# These clusters do not have predicted TF-gene regulatory meshes
+# and therefore cannot be analyzed for subGRN dynamics.
+#
+# Possible reasons:
+# - No enriched TF motifs detected
+# - No linked genes identified
+# - Did not pass quality filters during mesh construction
+#
+
+11_3
+12_1
+12_11
+12_5
+12_7
+13_11
+14_8
+15_0
+15_10
+15_13
+15_3
+15_6
+16_4
+16_5
+19_1
+19_15
+19_17
+19_3
+19_4
+19_5
+1_0
+1_11
+1_12
+20_1
+20_5
+22_10
+22_17
+22_3
+24_12
+24_3
+24_5
+24_8
+27_2
+29_10
+29_11
+29_5
+29_9
+2_10
+2_4
+30_3
+30_4
+31_2
+31_4
+32_11
+32_3
+32_8
+35_10
+35_13
+35_2
+35_6
+35_7
+6_0
+7_0
+7_8
+9_0
+9_1
