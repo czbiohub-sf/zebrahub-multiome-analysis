@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.16.7
+#       jupytext_version: 1.16.5
 #   kernelspec:
 #     display_name: celloracle_env
 #     language: python

@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.16.7
+#       jupytext_version: 1.16.5
 #   kernelspec:
 #     display_name: sc_rapids
 #     language: python
@@ -15,7 +15,7 @@
 
 # %% [markdown]
 # ## pre-processing the peak UMAP
-# - last updated: 04/01/2025
+# - last updated: 03/23/2025
 # - pseudobulk the scATAC-seq dataset
 
 # %%
@@ -31,7 +31,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import scanpy as sc
-import muon as mu # added muon
+# import muon as mu # added muon
 import seaborn as sns
 import scipy.sparse
 from scipy.io import mmread
@@ -39,8 +39,6 @@ from scipy.io import mmread
 # rapids-singlecell
 import cupy as cp
 import rapids_singlecell as rsc
-
-# %%
 
 # %%
 # figure parameter setting
@@ -131,12 +129,6 @@ adata_peaks.write_h5ad("/hpc/projects/data.science/yangjoon.kim/zebrahub_multiom
 # %% [markdown]
 # ## 1. raw counts with pseudo-bulking with old strategy
 #
-
-# %% [markdown] jp-MarkdownHeadingCollapsed=true
-# ## 1-1. [old] scaling factor = total number of counts per pseudobulk group
-#
-# - in this case, the normalized counts will be very very small digits, so might affect numerical roundup.
-# - Also, the over-dispersion will be much smaller than 1.
 
 # %%
 # def analyze_peaks_with_normalization(adata, celltype_key='annotation_ML_coarse', 
@@ -249,9 +241,6 @@ peaks_50k_obj
 # %%
 adata_pseudo_filt = adata_pseudo[:, adata_pseudo.var_names.isin(peaks_50k_obj.obs_names)]
 adata_pseudo_filt
-
-# %% [markdown] jp-MarkdownHeadingCollapsed=true
-# ## 1-2. computing the UMAP - 50K highly variable peaks
 
 # %%
 # # compute the highly variable genes using "sum" counts layer
@@ -1042,169 +1031,6 @@ sc.pl.umap(peaks_pb_norm, color=["n_cells_by_counts", "mean_norm","var_norm"], v
 peaks_pb_norm.write_h5ad("/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/annotated_data/objects_v2/peaks_by_ct_tp_raw_counts_pseudobulked_median_scaled_wo_log_all_peaks.h5ad")
 
 # %%
-# import the peaks_pb_norm
-peaks_pb_norm = sc.read_h5ad("/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/annotated_data/objects_v2/peaks_by_ct_tp_raw_counts_pseudobulked_median_scaled_wo_log_all_peaks.h5ad")
-peaks_pb_norm
-
-# %%
-sc.pl.umap(peaks_pb_norm)
-# Plot with corrected contrast scores
-sc.pl.umap(peaks_pb_norm, 
-           color='timepoint',
-           # size=peaks_pb.obs['timepoint_contrast'],
-           palette=timepoint_colors,
-           save='_allpeaks_norm_timepoint_viridis.png')
-
-# %%
-# Plot with corrected contrast scores
-sc.pl.umap(peaks_pb_norm, 
-           color='celltype',
-           #size=peaks_pb.obs['celltype_contrast'],
-           palette=cell_type_color_dict,
-           save='_allpeaks_norm_celltype.png')
-
-
-# %%
-# 3D UMAP of the peaks_pb_norm
-peaks_pb_norm.obsm["X_umap_2d"] = peaks_pb_norm.obsm["X_umap"]
-
-rsc.tl.umap(peaks_pb_norm, n_components=3, min_dist=0.1, random_state=42)
-peaks_pb_norm.obsm["X_umap_3d"] = peaks_pb_norm.obsm["X_umap"]
-
-# %%
-# save the peaks_pb_norm with 3D UMAP
-peaks_pb_norm.write_h5ad("/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/annotated_data/objects_v2/peaks_by_ct_tp_raw_counts_pseudobulked_median_scaled_wo_log_all_peaks_3d_umap.h5ad")
-# %%
-# plot the 3D UMAP
-import plotly.express as px
-import plotly.graph_objects as go
-def plot_3d_umap(umap_array, 
-                 color_array=None,
-                 color_label='cluster',
-                 title='3D UMAP',
-                 point_size=3,
-                 opacity=0.7,
-                 height=800,
-                 width=1000):
-    """
-    Create an interactive 3D UMAP visualization using plotly.
-    
-    Parameters:
-    -----------
-    umap_array : np.array
-        Array of shape (n_cells, 3) containing 3D UMAP coordinates
-    color_array : array-like, optional
-        Array of values/categories to color the points by
-    color_label : str, optional
-        Label for the color legend
-    title : str, optional
-        Title of the plot
-    point_size : int, optional
-        Size of the scatter points
-    opacity : float, optional
-        Opacity of the points (0-1)
-    height : int, optional
-        Height of the plot in pixels
-    width : int, optional
-        Width of the plot in pixels
-        
-    Returns:
-    --------
-    plotly.graph_objects.Figure
-    """
-    
-    # Create a DataFrame with UMAP coordinates
-    df = pd.DataFrame(
-        umap_array,
-        columns=['UMAP1', 'UMAP2', 'UMAP3']
-    )
-    
-    if color_array is not None:
-        df[color_label] = color_array.values  # aligns by position, not index
-        
-        # Create figure with color
-        fig = px.scatter_3d(
-            df,
-            x='UMAP1',
-            y='UMAP2',
-            z='UMAP3',
-            color=color_label,
-            title=title,
-            opacity=opacity,
-            height=height,
-            width=width
-        )
-    else:
-        # Create figure without color
-        fig = px.scatter_3d(
-            df,
-            x='UMAP1',
-            y='UMAP2',
-            z='UMAP3',
-            title=title,
-            opacity=opacity,
-            height=height,
-            width=width
-        )
-    
-    # Update marker size
-    fig.update_traces(marker_size=point_size)
-    
-    # Update layout for better visualization
-    fig.update_layout(
-        scene = dict(
-            xaxis_title='UMAP1',
-            yaxis_title='UMAP2',
-            zaxis_title='UMAP3',
-            aspectmode='cube'  # This ensures equal aspect ratio
-        ),
-        showlegend=True
-    )
-    
-    return fig
-
-# %%
-# Example usage with your data:
-umap_coords = peaks_pb_norm.obsm['X_umap_3d']  # Your UMAP coordinates
-# If you have clusters or other metadata to color by:
-celltype = peaks_pb_norm.obs['celltype']  # or whatever your metadata column is
-timepoint = peaks_pb_norm.obs['timepoint'] 
-
-# %%
-# First create a dataframe with your UMAP coordinates and metadata
-df = pd.DataFrame(
-    peaks_pb_norm.obsm['X_umap_3d'],  # Your 3D UMAP coordinates
-    columns=['UMAP1', 'UMAP2', 'UMAP3']
-)
-
-# Add your celltype data as a new column
-df['celltype'] = peaks_pb_norm.obs['celltype'].values
-df['timepoint'] = peaks_pb_norm.obs['timepoint'].values
-# %%
-# Create the 3D plot
-fig = px.scatter_3d(
-    df,
-    x='UMAP1',
-    y='UMAP2', 
-    z='UMAP3',
-    color='celltype',  # Color by celltype
-    labels={'color': 'Cell Type'},  # Legend title
-    title='3D UMAP',
-    opacity=0.3
-)
-
-# # Optional: update the layout for better visualization
-# fig.update_layout(
-#     scene=dict(
-#         aspectmode='cube'  # This ensures equal aspect ratio
-#     )
-# )
-fig.show()
-# %%
-
-plot_3d_umap(umap_coords, color_array=celltype, color_label='celltype', 
-             point_size=3, opacity=0.5, title='3D UMAP')
-
 
 # %% [markdown]
 # ## 4. TF-IDF normalization (muon)
@@ -1225,136 +1051,20 @@ adata_pseudo
 # %%
 # bring back the common scale factor (median of total counts - pseudobulks)
 common_scale_factor = adata_pseudo.uns["common_scale_factor"]
-print(common_scale_factor)
+
 # %%
 # TF-IDF normalization
-mu.atac.pp.tfidf(adata_pseudo, scale_factor=common_scale_factor, from_layer="sum", to_layer="tfidf")
-# NOTE that the tf-idf normalization is very memory-intenstive, requiring 3TB of memory in the case of 640K peaks.
+# mu.atac.pp.tfidf(adata_pseudo, scale_factor=common_scale_factor, from_layer="sum", to_layer="tfidf")
 
 # %%
-from scipy.sparse import csr_matrix
-
-X = adata_pseudo.layers["sum"]  # shape (n_groups, n_peaks), presumably sparse
-
-# Term Frequency = row-normalized. 
-# row_sums has shape (n_groups,).
-row_sums = np.asarray(X.sum(axis=1)).ravel()
-# Avoid division by zero
-row_sums[row_sums == 0] = 1
-
-# If X is CSR, row-sum normalization can be done with spdiags or multiply:
-tf = csr_matrix(X).copy()  # ensure a copy if we want to preserve original
-for i in range(tf.shape[0]):
-    start = tf.indptr[i]
-    end = tf.indptr[i+1]
-    if end > start:
-        tf.data[start:end] /= row_sums[i]
-
-# Optionally multiply by scale_factor if you want "CP10k"
-scale_factor = common_scale_factor
-tf.data *= scale_factor
-
-# Then log TF if desired
-tf.data = np.log1p(tf.data)
-
-# IDF
-idf = X.shape[0] / np.asarray(X.sum(axis=0)).ravel()  # #groups / sum_of_counts_in_col
-idf = np.log1p(idf)  # if log_idf
-
-# Finally do column-wise multiply in a memory-friendly manner:
-# tf is row-major (CSR), so column multiplication is less direct. If it’s CSC, it’s simpler.
-# One approach: convert to CSC for efficient column multiplication:
-tf = tf.tocsc()
-for j in range(tf.shape[1]):
-    start = tf.indptr[j]
-    end = tf.indptr[j+1]
-    if end > start:
-        tf.data[start:end] *= idf[j]
-
-tf = tf.tocsr()  # convert back to CSR if you prefer
-
-# Now `tf` is your TF-IDF matrix. Assign it to a new layer:
-adata_pseudo.layers["tfidf"] = tf
 
 # %%
-# transpose the adata_pseudo to make it peaks-by-cells
-peaks_pb_tfidf = adata_pseudo.copy().T
-
-# make sure the TF-IDF matrix is in .X
-peaks_pb_tfidf.X = peaks_pb_tfidf.layers["tfidf"]
-
-# compute the LSI (Latent Semantic Indexing) for the TF-IDF matrix
-mu.atac.tl.lsi(peaks_pb_tfidf, n_comps=40)
-
-# %% 
-peaks_pb_tfidf
-# Row sums = coverage of each peak across all pseudobulk columns.
-peak_coverage = np.asarray(peaks_pb_tfidf.X.sum(axis=1)).ravel()
-
-# (Optional) Store it in obs for convenience:
-peaks_pb_tfidf.obs["peak_coverage"] = peak_coverage
-# %%
-# plot the LSI components
-plt.scatter(peaks_pb_tfidf.obsm["X_lsi"][:,0],
-peaks_pb_tfidf.obs["peak_coverage"])
 
 # %%
-# plot the LSI components
-plt.scatter(peaks_pb_tfidf.obsm["X_lsi"][:,0],
-            peaks_pb_tfidf.obsm["X_lsi"][:,1],
-            c=peak_coverage,
-            cmap="viridis")
 
 # %%
-# remove the first LSI component (as it's highly correlated with the sequencing depth)
-X_lsi = peaks_pb_tfidf.obsm["X_lsi"]  # shape (n_peaks, n_comps)
-X_lsi_no_first = X_lsi[:, 1:]     # keep comps 2..n_comps
-peaks_pb_tfidf.obsm["X_lsi_filtered"] = X_lsi_no_first
 
 # %%
-# Use the LSI components to compute the UMAP
-peaks_pb_tfidf
-# move the count matrix to the GPU
-rsc.get.anndata_to_GPU(peaks_pb_tfidf)
-# compute the neighbors
-rsc.pp.neighbors(peaks_pb_tfidf, n_neighbors=15, n_pcs=39, use_rep="X_lsi_filtered")
-# compute the UMAP      
-rsc.tl.umap(peaks_pb_tfidf, min_dist=0.3, random_state=42)
-# plot the UMAP
-sc.pl.umap(peaks_pb_tfidf)
-
-# %%
-# copy over the obs from the original peaks_pb_norm
-peaks_pb_tfidf.obs = peaks_pb_norm.obs.copy()
-peaks_pb_tfidf
-# %%
-# generate some plots
-sc.pl.umap(peaks_pb_tfidf, color=["celltype", "timepoint", "total_counts"])
-# %%
-# Plot with viridis colormap for timepoints
-timepoint_order = ['0somites', '5somites', '10somites', '15somites', '20somites', '30somites']
-n_timepoints = len(timepoint_order)
-viridis_colors = plt.cm.viridis(np.linspace(0, 1, n_timepoints))
-timepoint_colors = dict(zip(timepoint_order, viridis_colors))
-peaks_pb_tfidf.uns['timepoint_colors'] = [timepoint_colors[t] for t in timepoint_order]
-
-# Plot with corrected contrast scores
-sc.pl.umap(peaks_pb_tfidf, 
-           color='timepoint',
-           # size=peaks_pb.obs['timepoint_contrast'],
-           palette=timepoint_colors,
-           save='_allpeaks_tf_idf_timepoint_viridis.png')
-
-# %%
-# Plot with corrected contrast scores
-sc.pl.umap(peaks_pb_tfidf, 
-           color='celltype',
-           #size=peaks_pb.obs['celltype_contrast'],
-           palette=cell_type_color_dict,
-           save='_allpeaks_tf_idf_celltype.png')
-
-# %%
-peaks_pb_tfidf.write_h5ad("/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/annotated_data/objects_v2/peaks_by_ct_tp_raw_counts_pseudobulked_median_scaled_tf_idf_all_peaks.h5ad")
 
 # %% [markdown]
 # ### check if sc.pp.scale changes the UMAP -> NO, it does not
@@ -1388,7 +1098,7 @@ sc.pl.umap(peaks_pb_norm_v2)
 
 # %%
 
-# %% [markdown] jp-MarkdownHeadingCollapsed=true
+# %% [markdown]
 # ### UMAP without log(1+p)
 
 # %%
@@ -1417,9 +1127,6 @@ peaks_pb.obs = adata.obs.copy()
 sc.pl.umap(peaks_pb, color="timepoint")
 
 # %%
-
-# %% [markdown] jp-MarkdownHeadingCollapsed=true
-# ### Old count matrix (normalized by the 1/total_counts, then log(1+p) transformation, and sc.pp.scale)
 
 # %%
 adata_pseudo
@@ -1600,5 +1307,177 @@ sc.pl.umap(peaks_pb,
 
 # %%
 peaks_pb.write_h5ad("/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/annotated_data/objects_v2/peaks_by_ct_tp_raw_counts_pseudobulked_median_scaled_all_peaks.h5ad")
+
+# %%
+
+# %%
+
+# %%
+
+# %% [markdown]
+# ## UPDATE: re-normalize the counts with the peak width
+# - the rationale here is that the longer/wider peaks will likely have more reads captured, so there might need to be a peak width normalization.
+
+# %%
+# pseudobulk-by-peaks object
+adata_pseudo
+
+# %%
+# 1) normalize the counts
+
+# %%
+peaks_pb = sc.read_h5ad("/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/annotated_data/objects_v2/peaks_by_ct_tp_master.h5ad")
+peaks_pb
+
+# %%
+# normalize the peak counts by "peak width(length)"
+# Step 1: Start with normalized counts (already depth-normalized)
+peaks_pb.X = peaks_pb.layers["normalized"]
+
+# Step 2: Normalize by peak length to get "reads per kilobase" equivalent
+# Divide by peak width, then multiply by median width to maintain scale
+peak_widths = peaks_pb.obs["length"].values[:, np.newaxis]  # Shape: (n_peaks, 1)
+median_width = np.median(peaks_pb.obs["length"])
+
+# Perform width normalization
+peaks_pb.X = peaks_pb.X / peak_widths * median_width
+
+# Alternative: if you want to store the intermediate steps
+peaks_pb.layers["width_normalized"] = peaks_pb.X.copy()
+
+
+# %%
+rsc.get.anndata_to_GPU(peaks_pb) # moves `.X` to the GPU
+
+# Compute UMAP
+rsc.pp.scale(peaks_pb) # scale is for each "features" to have similar importance...
+rsc.pp.pca(peaks_pb, n_comps=100, use_highly_variable=False)
+rsc.pp.neighbors(peaks_pb, n_neighbors=15, n_pcs=40)
+rsc.tl.umap(peaks_pb, min_dist=0.3)#, random_state=42)
+
+# plot the UMAP
+sc.pl.umap(peaks_pb)
+
+# %%
+sc.pl.umap(peaks_pb, color="celltype")
+
+# %%
+
+# %%
+len(np.sum(peaks_pb.layers["normalized"],axis=1))
+
+# %%
+# subset for the peaks <=1000 bp (most of the peaks)
+peaks_pb_subset = peaks_pb[peaks_pb.obs["length"]<=1000]
+plt.scatter(peaks_pb_subset.obs["length"],np.sum(peaks_pb_subset.layers["normalized"],axis=1), alpha=0.2, s=0.1)
+plt.xlabel("peak width")
+plt.ylabel("aggregated read counts (normalized)")
+plt.ylim([0, 2000])
+plt.grid(False)
+plt.show()
+
+# %%
+peaks_pb_subset
+# subset for the peaks <=1000 bp (most of the peaks)
+peaks_pb_subset = peaks_pb[peaks_pb.obs["length"]<=1000]
+plt.scatter(peaks_pb_subset.obs["length"],np.sum(peaks_pb_subset.layers["normalized"],axis=1), alpha=0.2, s=0.1)
+plt.xlabel("peak width")
+plt.ylabel("aggregated read counts (normalized)")
+plt.ylim([0, 2000])
+plt.grid(False)
+plt.show()
+
+
+# %%
+plt.scatter(peaks_pb.obs["length"],np.sum(peaks_pb.layers["sum"],axis=1), alpha=0.05, s=0.1)
+plt.xlabel("peak width")
+plt.ylabel("aggregated read counts (normalized)")
+plt.grid(False)
+plt.show()
+
+# %%
+from scipy.interpolate import UnivariateSpline
+from scipy.stats import binned_statistic
+
+# Extract your data
+peak_widths = peaks_pb_subset.obs["length"].values
+aggregated_counts = np.array(np.sum(peaks_pb_subset.layers["sum"], axis=1)).flatten()
+
+# Method 1: Quantile-based spline (RECOMMENDED)
+# Bin the data and compute quantiles
+n_bins = 50
+bin_edges = np.linspace(peak_widths.min(), peak_widths.max(), n_bins + 1)
+
+# Compute median and other quantiles per bin
+median_vals, bin_edges, _ = binned_statistic(
+    peak_widths, aggregated_counts, statistic='median', bins=bin_edges
+)
+q25_vals, _, _ = binned_statistic(
+    peak_widths, aggregated_counts, 
+    statistic=lambda x: np.percentile(x, 25), bins=bin_edges
+)
+q75_vals, _, _ = binned_statistic(
+    peak_widths, aggregated_counts, 
+    statistic=lambda x: np.percentile(x, 75), bins=bin_edges
+)
+
+# Get bin centers for x-values
+bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
+
+# Remove any NaN values (from empty bins)
+valid = ~np.isnan(median_vals)
+bin_centers_valid = bin_centers[valid]
+median_vals_valid = median_vals[valid]
+q25_vals_valid = q25_vals[valid]
+q75_vals_valid = q75_vals[valid]
+
+# Fit splines with appropriate smoothing
+# s parameter controls smoothing (higher = smoother)
+median_spline = UnivariateSpline(bin_centers_valid, median_vals_valid, s=1e6, k=3)
+q25_spline = UnivariateSpline(bin_centers_valid, q25_vals_valid, s=1e6, k=3)
+q75_spline = UnivariateSpline(bin_centers_valid, q75_vals_valid, s=1e6, k=3)
+
+# Generate smooth curve for plotting
+x_smooth = np.linspace(peak_widths.min(), peak_widths.max(), 1000)
+y_median_smooth = median_spline(x_smooth)
+y_q25_smooth = q25_spline(x_smooth)
+y_q75_smooth = q75_spline(x_smooth)
+
+# Calculate correlation
+from scipy.stats import pearsonr, spearmanr
+pearson_r, pearson_p = pearsonr(peak_widths, aggregated_counts)
+spearman_r, spearman_p = spearmanr(peak_widths, aggregated_counts)
+
+print(f"Pearson correlation: r = {pearson_r:.4f}, p = {pearson_p:.2e}")
+print(f"Spearman correlation: r = {spearman_r:.4f}, p = {spearman_p:.2e}")
+
+# Plot
+fig, ax = plt.subplots(figsize=(10, 6))
+
+# Scatter plot
+ax.scatter(peak_widths, aggregated_counts, alpha=0.05, s=0.1, color='blue', 
+           label='Individual peaks', rasterized=True)
+
+# Spline fits
+ax.plot(x_smooth, y_median_smooth, 'r-', linewidth=2.5, label='Median spline', zorder=10)
+ax.fill_between(x_smooth, y_q25_smooth, y_q75_smooth, 
+                alpha=0.3, color='red', label='25th-75th percentile', zorder=5)
+
+# Add correlation text
+ax.text(0.05, 0.95, 
+        f'Pearson r = {pearson_r:.3f}\nSpearman ρ = {spearman_r:.3f}',
+        transform=ax.transAxes, fontsize=11,
+        verticalalignment='top',
+        bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
+
+ax.set_xlabel('Peak Width (bp)', fontsize=12)
+ax.set_ylabel('Aggregated Read Counts (normalized)', fontsize=12)
+ax.set_title('Relationship Between Peak Width and Read Counts', fontsize=14)
+ax.legend(loc='lower right')
+ax.grid(False)
+
+plt.tight_layout()
+plt.savefig('peak_width_spline_fit.pdf', dpi=300, bbox_inches='tight')
+plt.show()
 
 # %%
