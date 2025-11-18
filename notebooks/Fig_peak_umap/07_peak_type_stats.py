@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.17.1
+#       jupytext_version: 1.16.5
 #   kernelspec:
 #     display_name: sc_rapids
 #     language: python
@@ -74,6 +74,19 @@ adata_peaks_ct_tp = sc.read_h5ad("/hpc/projects/data.science/yangjoon.kim/zebrah
 adata_peaks_ct_tp
 
 # %%
+adata = sc.read_h5ad("/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/annotated_data/objects_v2/")
+
+
+# %%
+# peak_type annotation using "Argelaguet 2022 style" (500bp upstream and 100bp downstream)
+anno = pd.read_csv("/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/annotated_data/all_peaks_annotated.csv",
+                   index_col=0)
+anno.head()
+
+# %%
+anno["peak_type_argelaguet"].values
+
+# %%
 adata_peaks_ct_tp.obs["n_cells_by_counts"]
 
 # %%
@@ -122,11 +135,18 @@ print(f"Matrix dtype: {adata_peaks_ct_tp.X.dtype}")
 adata_peaks_ct_tp.obs = adata_peaks.obs.copy()
 adata_peaks_ct_tp.obsm = adata_peaks.obsm.copy()
 
+# %%
+# # copy over the "peak_type_argelaguet"
+adata_peaks.obs["peak_type_argelaguet"] = anno["peak_type_argelaguet"].values
+adata_peaks_ct_tp.obs["peak_type_argelaguet"] = anno["peak_type_argelaguet"].values
+
+adata_peaks.obs.head()
+
 # %% [markdown]
 # ## Step 1. Check the "binarized" chrom.accessibility distribution grouped by "peak_type"
 
 # %%
-adata_peaks_ct_tp.obs["peak_type"].value_counts()
+adata_peaks_ct_tp.obs["peak_type_argelaguet"].value_counts()
 
 # %%
 adata_peaks_ct_tp.obs["n_cells_by_counts"].hist(bins=40, density=True)
@@ -148,7 +168,7 @@ color_map = {
 }
 
 for peak_type in ['exonic', 'intergenic', 'intronic', 'promoter']:
-    subset = adata_peaks_ct_tp.obs[adata_peaks_ct_tp.obs['peak_type'] == peak_type]
+    subset = adata_peaks_ct_tp.obs[adata_peaks_ct_tp.obs['peak_type_argelaguet'] == peak_type]
     plt.hist(subset['n_cells_by_counts'], bins=50, alpha=0.7, density=True,
              label=f'{peak_type} (n={len(subset):,})', 
              color=color_map[peak_type], edgecolor='white', linewidth=0.5)
@@ -159,7 +179,7 @@ plt.legend()
 # plt.yscale("log")
 plt.title('Distribution of regulatory programs by peak type')
 plt.grid(False)
-plt.savefig(figpath + "hist_num_accessible_groups_by_peak_type.pdf")
+plt.savefig(figpath + "hist_num_accessible_groups_by_peak_type_argelaguet.pdf")
 plt.show()
 
 # %% [markdown]
@@ -1134,7 +1154,6 @@ plt.show()
 # %%
 adata_peaks_ct_tp.obs["log_total_accessibility"] = np.log(adata_peaks_ct_tp.obs["total_celltype_accessibility"])
 
-
 # %%
 sc.pl.umap(adata_peaks_ct_tp, color="total_celltype_accessibility", vmin=0, vmax=5000, color_map="cividis")
 
@@ -1164,8 +1183,8 @@ plt.show()
 
 # %%
 sc.pl.umap(adata_peaks_ct_tp, color="log_total_accessibility", 
-           vmin=4, vmax=10, color_map="cividis",
-           save="_log_total_access.png")
+           vmin=4, vmax=10, color_map="cividis")#,
+           # save="_log_total_access.png")
 
 # %%
 # Your color scheme
@@ -1194,7 +1213,7 @@ plt.title('Distribution of Cell Type Aggregated Accessibility by Peak Type (Log 
 # plt.yscale('log')  # Remove this since we're now plotting log-transformed data
 plt.grid(False)
 # plt.grid(True, alpha=0.3)  # Uncomment if you want grid
-plt.savefig(figpath + "log_total_accessibility_by_peak_type.pdf")
+# plt.savefig(figpath + "log_total_accessibility_by_peak_type.pdf")
 plt.show()
 
 # Print summary statistics for comparison
@@ -1213,6 +1232,18 @@ for peak_type in ['exonic', 'intergenic', 'intronic', 'promoter']:
     print(f"  Log  - Range: {log_values.min():.3f} to {log_values.max():.3f}")
 
 # %%
+peaks_promoters = adata_peaks_ct_tp.obs[adata_peaks_ct_tp.obs['peak_type'] == "promoter"]
+peaks_promoters.head()
+
+# %%
+promoters_low = peaks_promoters[peaks_promoters.log_total_accessibility<9]
+promoters_low["gene_body_overlaps"].unique()
+
+# %%
+promoteres_high = peaks_promoters[peaks_promoters.log_total_accessibility>=9]
+promoteres_high["gene_body_overlaps"].unique()
+
+# %%
 sc.pl.umap(adata_peaks, color="celltype", save="_most_access_celltype.png")
 
 # %%
@@ -1221,10 +1252,247 @@ sc.pl.umap(adata_peaks, color="timepoint", save="_most_access_timepoint.png")
 # %%
 adata_peaks_ct_tp
 
+
 # %%
 
 # %% [markdown]
-# ### OLD EDA
+# ## Take 2: 
+
+# %%
+# Analyze accessibility vs distance for each peak type
+def analyze_distance_accessibility_relationship(adata_peaks_ct_tp):
+    """Examine how distance to TSS affects accessibility patterns"""
+    
+    # Create distance bins
+    distance_bins = [0, 1000, 5000, 10000, 50000, 100000, float('inf')]
+    bin_labels = ['<1kb', '1-5kb', '5-10kb', '10-50kb', '50-100kb', '>100kb']
+    
+    adata_peaks_ct_tp.obs['distance_bin'] = pd.cut(
+        adata_peaks_ct_tp.obs['distance_to_tss'], 
+        bins=distance_bins, 
+        labels=bin_labels
+    )
+    
+    # Analyze accessibility by distance and peak type
+    accessibility_by_distance = []
+    for peak_type in ['promoter', 'exonic', 'intronic', 'intergenic']:
+        for dist_bin in bin_labels:
+            mask = (adata_peaks_ct_tp.obs['peak_type'] == peak_type) & \
+                   (adata_peaks_ct_tp.obs['distance_bin'] == dist_bin)
+            
+            if mask.sum() > 0:
+                mean_access = adata_peaks_ct_tp.obs[mask]['total_celltype_accessibility'].mean()
+                accessibility_by_distance.append({
+                    'peak_type': peak_type,
+                    'distance_bin': dist_bin,
+                    'mean_accessibility': mean_access,
+                    'n_peaks': mask.sum()
+                })
+    
+    return pd.DataFrame(accessibility_by_distance)
+
+accessibility_by_distance = analyze_distance_accessibility_relationship(adata_peaks_ct_tp)
+accessibility_by_distance.head()
+
+# %%
+accessibility_by_distance
+
+
+# %%
+
+# %%
+def create_accessibility_comparison_panel(adata_peaks_ct_tp):
+    """Statistical comparison showing promoters are more accessible"""
+    
+    fig, axes = plt.subplots(2, 2, figsize=(12, 10))
+    
+    # D1: Box plots with statistical tests
+    ax = axes[0,0]
+    plot_data = pd.DataFrame({
+        'peak_type': adata_peaks_ct_tp.obs['peak_type'],
+        'log_accessibility': adata_peaks_ct_tp.obs['log_total_accessibility']
+    })
+    
+    sns.boxplot(data=plot_data, x='peak_type', y='log_accessibility', ax=ax)
+    ax.set_title('Accessibility Distribution by Peak Type')
+    ax.set_ylabel('Log(Total Accessibility + 1)')
+    
+    # Add statistical annotations
+    from scipy.stats import mannwhitneyu
+    promoter_vals = plot_data[plot_data['peak_type'] == 'promoter']['log_accessibility']
+    
+    for i, peak_type in enumerate(['exonic', 'intergenic', 'intronic']):
+        other_vals = plot_data[plot_data['peak_type'] == peak_type]['log_accessibility']
+        stat, p_val = mannwhitneyu(promoter_vals, other_vals, alternative='greater')
+        ax.text(i, ax.get_ylim()[1] * 0.9, f'p={p_val:.2e}', ha='center', fontsize=8)
+    
+    # D2: Cumulative Distribution Functions
+    ax = axes[0,1]
+    colors = {'exonic': '#4472C4', 'intergenic': '#E07C24', 'intronic': '#70AD47', 'promoter': '#C65854'}
+    
+    for peak_type in ['exonic', 'intergenic', 'intronic', 'promoter']:
+        mask = adata_peaks_ct_tp.obs['peak_type'] == peak_type
+        values = adata_peaks_ct_tp.obs[mask]['log_total_accessibility'].sort_values()
+        y = np.arange(1, len(values) + 1) / len(values)
+        ax.plot(values, y, label=peak_type, color=colors[peak_type], linewidth=2)
+    
+    ax.set_xlabel('Log(Total Accessibility + 1)')
+    ax.set_ylabel('Cumulative Probability')
+    ax.set_title('Cumulative Distribution Functions')
+    ax.legend()
+    ax.grid(True, alpha=0.3)
+    
+    # D3: High accessibility thresholds
+    ax = axes[1,0]
+    thresholds = [6, 7, 8, 9, 10]  # Based on your log scale
+    threshold_data = []
+    
+    for threshold in thresholds:
+        for peak_type in colors.keys():
+            mask = adata_peaks_ct_tp.obs['peak_type'] == peak_type
+            high_access_count = (adata_peaks_ct_tp.obs[mask]['log_total_accessibility'] > threshold).sum()
+            total_count = mask.sum()
+            percentage = (high_access_count / total_count) * 100
+            
+            threshold_data.append({
+                'threshold': f'>{threshold}',
+                'peak_type': peak_type,
+                'percentage': percentage
+            })
+    
+    threshold_df = pd.DataFrame(threshold_data)
+    pivot_df = threshold_df.pivot(index='threshold', columns='peak_type', values='percentage')
+    
+    pivot_df.plot(kind='bar', ax=ax, color=[colors[col] for col in pivot_df.columns])
+    ax.set_title('Percentage of Peaks Above Accessibility Thresholds')
+    ax.set_ylabel('Percentage of Peaks (%)')
+    ax.set_xlabel('Log Accessibility Threshold')
+    plt.setp(ax.get_xticklabels(), rotation=45)
+    
+    # D4: Distance vs Accessibility
+    ax = axes[1,1]
+    for peak_type in colors.keys():
+        mask = adata_peaks_ct_tp.obs['peak_type'] == peak_type
+        x = np.abs(adata_peaks_ct_tp.obs[mask]['distance_to_tss'])
+        y = adata_peaks_ct_tp.obs[mask]['log_total_accessibility']
+        
+        # Subsample for plotting if too many points
+        if len(x) > 5000:
+            idx = np.random.choice(len(x), 5000, replace=False)
+            x, y = x.iloc[idx], y.iloc[idx]
+        
+        ax.scatter(x, y, alpha=0.5, s=1, label=peak_type, color=colors[peak_type])
+    
+    ax.set_xscale('log')
+    ax.set_xlabel('Distance to TSS (bp)')
+    ax.set_ylabel('Log(Total Accessibility + 1)')
+    ax.set_title('Accessibility vs Distance to TSS')
+    ax.legend()
+    
+    plt.tight_layout()
+    return fig
+
+fig = create_accessibility_comparison_panel(adata_peaks_ct_tp)
+
+
+# %%
+# Check how promoter peaks were defined
+def analyze_promoter_annotation(adata_peaks_ct_tp):
+    """Analyze how promoter peaks were annotated"""
+    
+    # Look at distance distribution for promoter peaks
+    promoter_mask = adata_peaks_ct_tp.obs['peak_type'] == 'promoter'
+    promoter_distances = adata_peaks_ct_tp.obs[promoter_mask]['distance_to_tss']
+    
+    print("PROMOTER PEAK DISTANCE ANALYSIS:")
+    print(f"Total promoter peaks: {promoter_mask.sum():,}")
+    print(f"Exactly at TSS (distance=0): {(promoter_distances == 0).sum():,}")
+    print(f"Within 500bp: {(abs(promoter_distances) <= 500).sum():,}")
+    print(f"Within 1kb: {(abs(promoter_distances) <= 1000).sum():,}")
+    print(f"Within 2kb: {(abs(promoter_distances) <= 2000).sum():,}")
+    print(f"Beyond 2kb: {(abs(promoter_distances) > 2000).sum():,}")
+    
+    # Plot distribution
+    plt.figure(figsize=(10, 6))
+    plt.hist(promoter_distances, bins=100, alpha=0.7, edgecolor='black')
+    plt.axvline(0, color='red', linestyle='--', label='TSS')
+    plt.axvline(-1000, color='orange', linestyle='--', label='±1kb')
+    plt.axvline(1000, color='orange', linestyle='--')
+    plt.xlabel('Distance to TSS (bp)')
+    plt.ylabel('Number of Promoter Peaks')
+    plt.title('Distribution of Promoter Peak Distances to TSS')
+    plt.legend()
+    plt.show()
+    
+    return promoter_distances
+
+promoter_distances = analyze_promoter_annotation(adata_peaks_ct_tp)
+
+# %%
+
+# %% [markdown]
+# ## Using the Argelaguet definition of "promoter" peaks (500bp upstream, 100bp downstream from the TSS)
+#
+# - 
+
+# %%
+anno = pd.read_csv("/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/annotated_data/all_peaks_annotated.csv")
+anno.head()
+
+# %%
+adata_peaks_ct_tp.obs["peak_type_argelaguet"] = anno["peak_type_argelaguet"].values
+
+# %%
+adata_peaks_ct_tp.obs["peak_type_argelaguet"]
+
+# %%
+# Your color scheme
+color_map = {
+    'exonic': '#4472C4',      # blue
+    'intergenic': '#E07C24',  # orange  
+    'intronic': '#70AD47',    # green
+    'promoter': '#C65854'     # red
+}
+
+# Log-transform the accessibility values
+adata_peaks_ct_tp.obs['log_total_accessibility'] = np.log1p(adata_peaks_ct_tp.obs['total_celltype_accessibility'])
+
+# Plot 1: Cell type aggregated accessibility (LOG-TRANSFORMED)
+plt.figure(figsize=(4, 3))
+for peak_type in ['exonic', 'intergenic', 'intronic', 'promoter']:
+    subset = adata_peaks_ct_tp.obs[adata_peaks_ct_tp.obs['peak_type_argelaguet'] == peak_type]
+    plt.hist(subset['log_total_accessibility'], bins=50, alpha=0.7, density=True,
+             label=f'{peak_type} (n={len(subset):,})', 
+             color=color_map[peak_type], edgecolor="none", linewidth=0)
+
+plt.xlabel('Log(Total Accessibility + 1)')
+plt.ylabel('Density')
+plt.legend()
+plt.title('Distribution of Cell Type Aggregated Accessibility by Peak Type (Log Scale)')
+# plt.yscale('log')  # Remove this since we're now plotting log-transformed data
+plt.grid(False)
+# plt.grid(True, alpha=0.3)  # Uncomment if you want grid
+plt.savefig(figpath + "log_total_accessibility_by_peak_type_argelaguet.pdf")
+plt.show()
+
+# Print summary statistics for comparison
+print("SUMMARY STATISTICS (Log-transformed vs Raw):")
+print("="*60)
+for peak_type in ['exonic', 'intergenic', 'intronic', 'promoter']:
+    subset = adata_peaks_ct_tp.obs[adata_peaks_ct_tp.obs['peak_type_argelaguet'] == peak_type]
+    raw_values = subset['total_celltype_accessibility']
+    log_values = subset['log_total_accessibility']
+    
+    print(f"\n{peak_type.upper()}:")
+    print(f"  Count: {len(subset):,}")
+    print(f"  Raw  - Mean: {raw_values.mean():.1f}, Median: {raw_values.median():.1f}")
+    print(f"  Log  - Mean: {log_values.mean():.3f}, Median: {log_values.median():.3f}")
+    print(f"  Raw  - Range: {raw_values.min():.0f} to {raw_values.max():.0f}")
+    print(f"  Log  - Range: {log_values.min():.3f} to {log_values.max():.3f}")
+
+# %%
+
+# %%
 
 # %%
 # (1) use k-means clusterin with n=3
@@ -1462,7 +1730,7 @@ print(f"\nTimepoint summary saved to: timepoint_accessibility_summary_threshold{
 # %%
 sc.pl.umap(adata_peaks_ct_tp, color=["n_cells_by_counts"])
 
-# %% [markdown]
+# %% [markdown] jp-MarkdownHeadingCollapsed=true
 # ### [Optional] the magnitude of accessibility (summed over groups, celltypes, or timepoints) 
 
 # %%
