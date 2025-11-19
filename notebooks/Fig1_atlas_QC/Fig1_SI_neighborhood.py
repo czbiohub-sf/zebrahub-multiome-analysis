@@ -50,20 +50,25 @@ sns.set(style='whitegrid', context='paper')
 # Set default DPI for saved figures
 mpl.rcParams['savefig.dpi'] = 600
 
-# Plotting style function (run this before plotting the final figure)
-def set_plotting_style():
-    plt.style.use('seaborn-paper')
-    plt.rc('axes', labelsize=12)
-    plt.rc('axes', titlesize=12)
-    plt.rc('xtick', labelsize=10)
-    plt.rc('ytick', labelsize=10)
-    plt.rc('legend', fontsize=10)
-    plt.rc('text.latex', preamble=r'\usepackage{sfmath}')
-    plt.rc('xtick.major', pad=2)
-    plt.rc('ytick.major', pad=2)
-    plt.rc('mathtext', fontset='stixsans', sf='sansserif')
-    plt.rc('figure', figsize=[8,8])
-    plt.rc('svg', fonttype='none')
+# Import refactored utilities from fig1_utils modules
+from scripts.fig1_utils.plotting_utils import (
+    set_plotting_style,
+    plot_comprehensive_neighborhood_purity,
+    plot_rna_weights_by_celltype
+)
+from scripts.fig1_utils.integration_metrics import (
+    load_wnn_graph,
+    load_rna_atac_weights,
+    compute_comprehensive_neighborhood_purity_wrapper as compute_comprehensive_neighborhood_purity
+)
+from scripts.fig1_utils.trajectory_analysis import (
+    compute_trajectory_ordering_score,
+    robust_diffmap_and_dpt,
+    compute_bifurcated_trajectory_conservation_robust,
+    compute_simple_bifurcation_score,
+    run_robust_bifurcated_trajectory_analysis,
+    plot_trajectory_conservation_results
+)
 
 
 # %%
