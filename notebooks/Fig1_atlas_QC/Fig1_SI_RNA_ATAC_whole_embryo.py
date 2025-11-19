@@ -72,20 +72,10 @@ mpl.rcParams.update(mpl.rcParamsDefault) #Reset rcParams to default
 mpl.rcParams['pdf.fonttype'] = 42
 sns.set(style='whitegrid', context='paper')
 
-# Plotting style function (run this before plotting the final figure)
-def set_plotting_style():
-    plt.style.use('seaborn-paper')
-    plt.rc('axes', labelsize=12)
-    plt.rc('axes', titlesize=12)
-    plt.rc('xtick', labelsize=10)
-    plt.rc('ytick', labelsize=10)
-    plt.rc('legend', fontsize=10)
-    plt.rc('text.latex', preamble=r'\usepackage{sfmath}')
-    plt.rc('xtick.major', pad=2)
-    plt.rc('ytick.major', pad=2)
-    plt.rc('mathtext', fontset='stixsans', sf='sansserif')
-    plt.rc('figure', figsize=[10,9])
-    plt.rc('svg', fonttype='none')
+# Import utilities from refactored modules
+from scripts.fig1_utils.plotting_utils import set_plotting_style
+from scripts.fig1_utils.data_processing import replace_periods_with_underscores
+from scripts.fig1_utils.normalization import normalize_minmax as normalize
 
 
 
@@ -124,11 +114,6 @@ adata_ATAC.obs = adata_ATAC.obs.drop(columns=columns_to_drop)
 adata_ATAC
 
 # replace the "." within the strings in adata.obs.columns to "_" (this is for exCellxgene)
-# Function to replace periods with underscores in column names
-def replace_periods_with_underscores(df):
-    df.columns = df.columns.str.replace('.', '_', regex=False)
-    return df
-
 # Apply the function to obs
 adata_ATAC.obs = replace_periods_with_underscores(adata_ATAC.obs)
 
@@ -541,9 +526,6 @@ for gene in list_genes:
 
 # %%
 # Just to monitor the trend over time, we can normalize each modality
-
-def normalize(series):
-    return (series - series.min()) / (series.max() - series.min())
 
 for gene in list_genes:
     

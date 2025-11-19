@@ -45,20 +45,8 @@ sns.set(style='whitegrid', context='paper')
 # Set default DPI for saved figures
 mpl.rcParams['savefig.dpi'] = 600
 
-# Plotting style function (run this before plotting the final figure)
-def set_plotting_style():
-    plt.style.use('seaborn-paper')
-    plt.rc('axes', labelsize=12)
-    plt.rc('axes', titlesize=12)
-    plt.rc('xtick', labelsize=10)
-    plt.rc('ytick', labelsize=10)
-    plt.rc('legend', fontsize=10)
-    plt.rc('text.latex', preamble=r'\usepackage{sfmath}')
-    plt.rc('xtick.major', pad=2)
-    plt.rc('ytick.major', pad=2)
-    plt.rc('mathtext', fontset='stixsans', sf='sansserif')
-    plt.rc('figure', figsize=[8,8])
-    plt.rc('svg', fonttype='none')
+# Import plotting utilities from refactored modules
+from scripts.fig1_utils.plotting_utils import set_plotting_style
 
 
 # %%
@@ -147,97 +135,11 @@ sc.pl.embedding(adata, basis="X_wnn.umap", color="annotation_ML")
 # %%
 sc.pl.embedding(adata, basis="X_wnn.umap", color="annotation_ML_coarse")
 
-# %%
-celltype_to_lineage = {
-    "CNS": [
-        "neural", 
-        "neural_optic", 
-        "neural_optic2", 
-        "neural_posterior", 
-        "neural_telencephalon",
-        "neurons",
-        "hindbrain",
-        "midbrain_hindbrain_boundary",
-        "midbrain_hindbrain_boundary2",
-        "optic_cup",
-        "spinal_cord",
-        "differentiating_neurons",
-        "floor_plate",
-        "neural_floor_plate",
-        "enteric_neurons",
-    ],
-    
-    "Neural Crest": [
-        "neural_crest",
-        "neural_crest2"
-    ],
-    
-    "Paraxial Mesoderm": [
-        "somites",
-        "fast_muscle",
-        "muscle",
-        "PSM",  # Presomitic mesoderm
-        "floor_plate2",
-        "NMPs",  # Neuromesodermal progenitors
-        "tail_bud", 
-        "notochord",
-    ],
-    
-    "Lateral Mesoderm": [
-        "lateral_plate_mesoderm",
-        "heart_myocardium",
-        "hematopoietic_vasculature",
-        "pharyngeal_arches",
-        "pronephros",
-        "pronephros2",
-        "hemangioblasts",
-        "hatching_gland",
-    ],
-    
-    "Endoderm": [
-        "endoderm",
-        "endocrine_pancreas",
-        # "hatching_gland"
-    ],
-    
-    "Epiderm": [
-        "epidermis",
-        "epidermis2",
-        "epidermis3",
-        "epidermis4"
-    ],
-    
-    "Germline": [
-        "primordial_germ_cells"
-    ],
-}
-
-# Display results to user
-# tools.display_dataframe_to_user(name="Cell Type to Lineage Mapping", dataframe=pd.DataFrame.from_dict(celltype_to_lineage, orient='index', columns=['Lineage']))
-# tools.display_dataframe_to_user(name="Marker Genes for Each Lineage", dataframe=pd.DataFrame.from_dict(marker_genes_by_lineage, orient='index').T)
-
-
-# %%
-def map_celltype_to_tissue(cell_type, tissue_dict):
-    """
-    Maps a cell type to its corresponding tissue group.
-    
-    Parameters:
-    -----------
-    cell_type : str
-        The cell type to map
-    tissue_dict : dict
-        Dictionary mapping tissue groups to lists of cell types
-        
-    Returns:
-    --------
-    str
-        The tissue group the cell type belongs to
-    """
-    for tissue, cell_types in tissue_dict.items():
-        if cell_type in cell_types:
-            return tissue
-    return "Unknown"  # Return Unknown if cell type not found in dictionary
+# Import cell type mapping utilities from refactored modules
+from scripts.fig1_utils.cell_type_mappings import (
+    CELLTYPE_TO_LINEAGE as celltype_to_lineage,
+    map_celltype_to_tissue
+)
 
 
 # %%

@@ -71,20 +71,10 @@ mpl.rcParams.update(mpl.rcParamsDefault) #Reset rcParams to default
 mpl.rcParams['pdf.fonttype'] = 42
 sns.set(style='whitegrid', context='paper')
 
-# Plotting style function (run this before plotting the final figure)
-def set_plotting_style():
-    plt.style.use('seaborn-paper')
-    plt.rc('axes', labelsize=12)
-    plt.rc('axes', titlesize=12)
-    plt.rc('xtick', labelsize=10)
-    plt.rc('ytick', labelsize=10)
-    plt.rc('legend', fontsize=10)
-    plt.rc('text.latex', preamble=r'\usepackage{sfmath}')
-    plt.rc('xtick.major', pad=2)
-    plt.rc('ytick.major', pad=2)
-    plt.rc('mathtext', fontset='stixsans', sf='sansserif')
-    plt.rc('figure', figsize=[10,9])
-    plt.rc('svg', fonttype='none')
+# Import utilities from refactored modules
+from scripts.fig1_utils.plotting_utils import set_plotting_style, plot_umap, compare_normalizations_single_plot
+from scripts.fig1_utils.data_processing import process_matrices, create_adata_and_umap, print_matrix_info
+from scripts.fig1_utils.normalization import compute_gene_zscores, normalize_genes
 
 
 
@@ -191,43 +181,6 @@ df_RNA_common
 df_ATAC_common
 
 
-# %%
-def process_matrices(df_RNA, df_ATAC):
-    """
-    Process RNA and ATAC matrices by transposing, renaming columns, and concatenating.
-    
-    Parameters:
-    df_RNA (pd.DataFrame): RNA expression matrix
-    df_ATAC (pd.DataFrame): ATAC expression matrix
-    
-    Returns:
-    pd.DataFrame: Combined genes-by-features matrix
-    """
-    # 1. Transpose both matrices
-    df_RNA_t = df_RNA.transpose()
-    df_ATAC_t = df_ATAC.transpose()
-    
-    # 2. Rename columns to include data type
-    df_RNA_t.columns = [f'{col}-RNA' for col in df_RNA_t.columns]
-    df_ATAC_t.columns = [f'{col}-ATAC' for col in df_ATAC_t.columns]
-    
-    # 3. Concatenate the matrices horizontally
-    result = pd.concat([df_RNA_t, df_ATAC_t], axis=1)
-    
-    return result
-
-# Example usage:
-# Assuming your data is already in DataFrames df_RNA_common and df_ATAC_common
-# result_df = process_matrices(df_RNA_common, df_ATAC_common)
-
-# To verify the results:
-def print_matrix_info(df):
-    """Helper function to print information about the matrix"""
-    print("Shape:", df.shape)
-    print("\nFirst few column names:")
-    print(df.columns[:6])
-    print("\nFirst few rows:")
-    print(df.head(3))
 
 
 # %%
