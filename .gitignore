@@ -10,6 +10,9 @@ __pycache__/
 # Jupyter notebook checkpoints
 .ipynb_checkpoints/
 
+# Jupyter notebooks (use .py files via jupytext pairing instead)
+*.ipynb
+
 # Specific files
 figures/peak_umap_annotated/peak_umaps_chroms_each.pdf
 REFACTOR.md
