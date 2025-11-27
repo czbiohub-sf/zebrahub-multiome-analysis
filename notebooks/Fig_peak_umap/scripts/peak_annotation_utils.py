@@ -190,8 +190,8 @@ def associate_peaks_to_genes(adata_peaks, gtf_file, max_distance=50000, chunk_si
             
             for _, row in nearest_df.iterrows():
                 peak_center = (row['Start'] + row['End']) // 2
-                # Use the regular Strand column instead of Strand_tss
-                tss_pos = row['Start_tss'] if row['Strand_tss'] == '+' else row['End_tss']
+                # Use Strand (not Strand_tss) since apply_strand_suffix=False
+                tss_pos = row['Start_tss'] if row['Strand'] == '+' else row['End_tss']
                 distance = abs(peak_center - tss_pos)
                 
                 if distance <= max_distance:
@@ -200,7 +200,8 @@ def associate_peaks_to_genes(adata_peaks, gtf_file, max_distance=50000, chunk_si
                         (result_df['Start'] == row['Start']) &
                         (result_df['End'] == row['End'])
                     ].index
-                    result_df.loc[idx, 'nearest_gene'] = row['gene_name_tss']
+                    # Use gene_name (not gene_name_tss) since apply_strand_suffix=False
+                    result_df.loc[idx, 'nearest_gene'] = row['gene_name']
                     result_df.loc[idx, 'distance_to_tss'] = distance
     
     # Reset the index to match the original AnnData
