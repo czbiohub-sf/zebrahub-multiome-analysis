@@ -518,11 +518,18 @@ peaks_by_pseudobulk = sc.read_h5ad("/hpc/projects/data.science/yangjoon.kim/zebr
 # %% Import necessary functions from the annotation script
 import re
 import sys
+import importlib
 sys.path.append("../Fig_peak_umap/scripts/")
+
+# Import and reload to get latest version
+import peak_accessibility_utils
+importlib.reload(peak_accessibility_utils)
 from peak_accessibility_utils import (
     create_cluster_celltype_profiles,
     create_cluster_timepoint_profiles,
-    get_top_annotations
+    get_top_annotations,
+    classify_cluster_specificity,
+    add_specificity_to_adata
 )
 
 # %% Perform leiden clustering on the peak UMAP
@@ -596,6 +603,29 @@ cluster_timepoint_profiles_fine = create_cluster_timepoint_profiles(
     peaks_by_pseudobulk,
     cluster_col='leiden_fine',
     verbose=True
+)
+
+# %% Classify clusters by accessibility specificity
+print("\n" + "="*60)
+print("Classifying cluster specificity patterns...")
+print("="*60)
+
+# Classify coarse clusters
+specificity_classifications = classify_cluster_specificity(
+    cluster_celltype_profiles_coarse,
+    entropy_threshold=0.75,          # High entropy = ubiquitous
+    dominance_threshold=0.5,         # Top celltype has >50% of accessibility = specific
+    n_specific_min=2,                # At least 2 celltypes
+    n_specific_max=5,                # At most 5 celltypes for "specific"
+    accessibility_threshold_percentile=50,  # Above median = "high"
+    verbose=True
+)
+
+# Add classifications to adata
+add_specificity_to_adata(
+    peaks_by_pseudobulk,
+    specificity_classifications,
+    cluster_col='leiden_coarse'
 )
 
 # %% Get top annotations for each cluster
@@ -679,6 +709,56 @@ print(peaks_by_pseudobulk.obs['top_celltype'].value_counts())
 
 print("\nOverall top timepoint distribution:")
 print(peaks_by_pseudobulk.obs['top_timepoint'].value_counts())
+
+# %% Visualize accessibility specificity patterns on UMAP
+print("\n" + "="*60)
+print("Visualizing specificity patterns...")
+print("="*60)
+
+# Create color palette for specificity patterns
+specificity_colors = {
+    'ubiquitous': '#e41a1c',     # Red
+    'specific': '#377eb8',       # Blue
+    'moderate': '#4daf4a'        # Green
+}
+
+fig, axes = plt.subplots(1, 3, figsize=(24, 7))
+
+# Plot 1: Accessibility pattern
+sc.pl.umap(peaks_by_pseudobulk, color='accessibility_pattern',
+           ax=axes[0], show=False, 
+           title='Accessibility Specificity Pattern',
+           palette=specificity_colors)
+
+# Plot 2: Entropy (continuous)
+sc.pl.umap(peaks_by_pseudobulk, color='accessibility_entropy',
+           ax=axes[1], show=False,
+           title='Accessibility Entropy\n(high = ubiquitous, low = specific)',
+           cmap='RdYlBu_r', vmin=0, vmax=1)
+
+# Plot 3: Top celltype for context
+sc.pl.umap(peaks_by_pseudobulk, color='top_celltype',
+           ax=axes[2], show=False,
+           title='Most Accessible Celltype')
+
+plt.tight_layout()
+plt.savefig(figure_path + 'mouse_peak_umap_specificity_patterns.png',
+            dpi=300, bbox_inches='tight')
+plt.savefig(figure_path + 'mouse_peak_umap_specificity_patterns.pdf',
+            bbox_inches='tight')
+plt.show()
+
+# Print detailed breakdown
+print("\n=== Specificity Pattern Details ===")
+for pattern in ['ubiquitous', 'specific', 'moderate']:
+    pattern_peaks = peaks_by_pseudobulk.obs[peaks_by_pseudobulk.obs['accessibility_pattern'] == pattern]
+    n_peaks = len(pattern_peaks)
+    if n_peaks > 0:
+        print(f"\n{pattern.upper()} peaks (n={n_peaks:,}):")
+        print(f"  Mean entropy: {pattern_peaks['accessibility_entropy'].mean():.3f}")
+        print(f"  Median entropy: {pattern_peaks['accessibility_entropy'].median():.3f}")
+        print(f"  Top celltypes:")
+        print(pattern_peaks['top_celltype'].value_counts().head(5))
 
 # %% Plot accessibility profiles for selected clusters
 def plot_cluster_accessibility_profile(cluster_id, celltype_profiles, timepoint_profiles,
