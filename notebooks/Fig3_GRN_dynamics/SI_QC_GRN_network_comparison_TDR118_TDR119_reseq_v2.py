@@ -57,6 +57,11 @@ import logging
 logging.getLogger().setLevel(logging.WARNING)
 
 import matplotlib as mpl
+
+# Import project-specific utilities
+from scripts.fig2_utils.plotting_utils import set_plotting_style
+from scripts.fig3_utils.grn_comparison import compute_corr_betwn_GRNs
+
 mpl.rcParams.update(mpl.rcParamsDefault) #Reset rcParams to default
 
 # Set the default font to Arial
@@ -73,24 +78,6 @@ mpl.rcParams['pdf.fonttype'] = 42
 sns.set(style='whitegrid', context='paper')
 
 # Plotting style function (run this before plotting the final figure)
-def set_plotting_style():
-    plt.style.use('seaborn-paper')
-    plt.rc('axes', labelsize=12)
-    plt.rc('axes', titlesize=12)
-    plt.rc('xtick', labelsize=10)
-    plt.rc('ytick', labelsize=10)
-    plt.rc('legend', fontsize=10)
-    plt.rc('text.latex', preamble=r'\usepackage{sfmath}')
-    plt.rc('xtick.major', pad=2)
-    plt.rc('ytick.major', pad=2)
-    plt.rc('mathtext', fontset='stixsans', sf='sansserif')
-    plt.rc('figure', figsize=[10,9])
-    plt.rc('svg', fonttype='none')
-
-    # Override any previously set font settings to ensure Arial is used
-    plt.rc('font', family='Arial')
-
-
 # %%
 set_plotting_style()
 
@@ -310,39 +297,6 @@ zipped_df.sort_values("degree_centrality_all_df2", ascending=False)
 # GRN1, GRN2: two GRNs (filtered Links object)
 # celltype1, celltype2: cell-types
 # network_metric: network topology metrics, i.e. degree_centrality_all
-
-def compute_corr_betwn_GRNs(df_GRN1, df_GRN2, celltype1, celltype2, network_metric):
-    df1 = df_GRN1[df_GRN1.cluster==celltype1]
-    df2 = df_GRN2[df_GRN2.cluster==celltype2]
-
-    # Step 1. Get a union of gene_names
-    gene_names = set(df1.index).union(df2.index)
-    len(gene_names)
-
-    # Step 2. Create a new dataframe with matching indices
-    new_df1 = df1[df1.index.isin(gene_names)]
-    new_df2 = df2[df2.index.isin(gene_names)]
-
-    # Step 3. Fill missing values with NaNs
-    new_df1 = new_df1.reindex(gene_names) #fill_value=0
-    new_df2 = new_df2.reindex(gene_names)
-
-    # Step 4. Create the zipped DataFrame
-    zipped_df = pd.DataFrame({'metric_df1': new_df1[network_metric], 'metric_df2': new_df2[network_metric]})
-    zipped_df
-
-#     # Step 5. Generate scatter plots, with Pearson correlation coeff.
-#     plt.scatter(x=zipped_df.metric_df1,
-#                 y=zipped_df.metric_df2)
-#     plt.xlabel("TDR118: "+ network_metric + "_" + celltype1)
-#     plt.ylabel("TDR119: "+ network_metric + "_" + celltype2)
-#     plt.title(network_metric)
-
-
-    # Annotate the plot with the correlation coefficient
-    corr = zipped_df.metric_df1.corr(zipped_df.metric_df2,
-                                    method = "pearson")
-    return corr
 
 # %% [markdown]
 # ### Step 2-1. degree_centrality_all
