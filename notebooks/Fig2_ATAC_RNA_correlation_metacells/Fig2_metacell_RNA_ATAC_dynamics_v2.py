@@ -47,7 +47,7 @@ import os
 
 sns.set_style('ticks')
 matplotlib.rcParams['figure.figsize'] = [4, 4]
-matplotlib.rcParams['figure.dpi'] = 600
+matplotlib.rcParams['figure.dpi'] = 300
 
 # %%
 import logging
@@ -71,24 +71,32 @@ mpl.rcParams['font.family'] = 'Arial'
 mpl.rcParams['pdf.fonttype'] = 42
 sns.set(style='whitegrid', context='paper')
 
-# Plotting style function (run this before plotting the final figure)
-def set_plotting_style():
-    plt.style.use('seaborn-paper')
-    plt.rc('axes', labelsize=12)
-    plt.rc('axes', titlesize=12)
-    plt.rc('xtick', labelsize=10)
-    plt.rc('ytick', labelsize=10)
-    plt.rc('legend', fontsize=10)
-    plt.rc('text.latex', preamble=r'\usepackage{sfmath}')
-    plt.rc('xtick.major', pad=2)
-    plt.rc('ytick.major', pad=2)
-    plt.rc('mathtext', fontset='stixsans', sf='sansserif')
-    plt.rc('figure', figsize=[10,9])
-    plt.rc('svg', fonttype='none')
+# %%
+# Import from fig2_utils modules (refactored utilities)
+import sys
+# add the path to the fig2_utils modules
+sys.path.append("/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/zebrahub-multiome-analysis/scripts/fig2_utils/")
 
-    # Override any previously set font settings to ensure Arial is used
-    plt.rc('font', family='Arial')
+# import the functions from the fig2_utils modules
+from plotting_utils import set_plotting_style
+from metacell_utils import compute_prevalent_celltype_per_metacell
+from data_concatenation import (
+    find_shared_genes,
+    concatenate_data
+)   
+from temporal_analysis import (
+    parse_var_names,
+    split_by_modality,
+    average_over_celltypes,
+    median_over_celltypes,
+    compute_peaks_and_range,
+    normalize_for_alpha,
+    normalize_for_alpha_robust,
+    compute_peak_metrics
+)
 
+# %% [markdown]
+# **Note:** Analysis functions refactored into `scripts/fig2_utils/` modules
 
 # %% [markdown]
 # ## NOTES
@@ -103,7 +111,7 @@ def set_plotting_style():
 # ## Step 1. Load the datasets
 
 # %%
-figpath = "/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/zebrahub-multiome-analysis/figures/RNA_ATAC_seacells_dynamics/"
+figpath = "/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/zebrahub-multiome-analysis/figures/RNA_ATAC_seacells_dynamics_v2/"
 os.makedirs(figpath, exist_ok=True)
 
 # %%
@@ -186,88 +194,6 @@ sc.pl.embedding(adata, basis="X_umap.joint", color="annotation_ML_coarse", palet
 # %% [markdown]
 # ### plot the metacells on top of the single-cells
 
-# %%
-def compute_prevalent_celltype_per_metacell(adata, celltype_key="annotation_ML_coarse", metacell_key="SEACell"):
-    """
-    Compute the most prevalent cell type in each metacell.
-    
-    :param adata: AnnData object containing the cell type and metacell information in .obs.
-    :param celltype_key: (str) Key in adata.obs for cell types (e.g., 'annotation_ML_coarse').
-    :param metacell_key: (str) Key in adata.obs for metacells (e.g., 'SEACell').
-    :return: A pandas Series where the index is the metacell and the value is the most prevalent cell type.
-    """
-    
-    # Extract the relevant columns from adata.obs
-    df = adata.obs[[celltype_key, metacell_key]].copy()
-
-    # Group by metacell and count occurrences of each cell type
-    prevalent_celltypes = df.groupby(metacell_key)[celltype_key] \
-                            .apply(lambda x: x.value_counts().idxmax())
-    
-    return prevalent_celltypes
-
-def plot_2D_with_metacells(
-    ad,
-    key="X_umap.joint",  # Adjusted to your embedding
-    hue="annotation_ML_coarse",  # Categorical variable for cell type
-    metacell_key="SEACell",  # Key for metacells
-    title="UMAP with Metacells",
-    palette=None,  # Custom palette
-    SEACell_size=50,  # Adjusted size for metacells
-    cell_size=10,  # Size for cells
-):
-    """Plot 2D visualization of cells colored by their type and overlay metacells.
-    
-    :param ad: AnnData object
-    :param key: (str) 2D embedding of data. Default: 'X_umap.joint'
-    :param hue: (str) Categorical variable in .obs for coloring cells
-    :param metacell_key: (str) Categorical variable for metacell assignment in .obs
-    :param title: (str) Title for the plot
-    :param palette: (dict or str) Color palette for cell types
-    :param SEACell_size: (int) Size for metacell points
-    :param cell_size: (int) Size for cell points
-    """
-
-    # Prepare data
-    umap = pd.DataFrame(ad.obsm[key]).set_index(ad.obs_names).join(ad.obs[[hue, metacell_key]])
-    umap[hue] = umap[hue].astype("category")
-    umap[metacell_key] = umap[metacell_key].astype("category")
-
-    # Get metacell centroids
-    mcs = umap.groupby(metacell_key).mean().reset_index()
-
-    # Compute the most prevalent cell type for each metacell
-    prevalent_celltypes = compute_prevalent_celltype_per_metacell(ad, celltype_key=hue, metacell_key=metacell_key)
-
-    # Add the most prevalent cell type to the metacell dataframe
-    mcs[hue] = mcs[metacell_key].map(prevalent_celltypes)
-
-    # Create figure
-    fig, ax = plt.subplots(figsize=(8, 8))
-
-    # Plot cells by annotation_ML_coarse (cell types)
-    sns.scatterplot(
-        x=0, y=1, hue=hue, data=umap, s=cell_size, 
-        palette=palette, legend=None, ax=ax
-    )
-
-    # Overlay metacells on top of the UMAP plot
-    sns.scatterplot(
-        x=0, y=1, hue=hue, data=mcs, s=SEACell_size, 
-        palette=palette, edgecolor="black", linewidth=1.25, legend=None, ax=ax
-    )
-
-    # Adjust plot
-    ax.set_xlabel(f"{key}-0")
-    ax.set_ylabel(f"{key}-1")
-    # ax.set_title(title)
-    ax.set_axis_off()
-
-    return fig
-
-
-# %%
-
 # %% [markdown]
 # ## Step 2. generate a genes-by-metacells matrix (concatenated over all time points)
 #
@@ -282,104 +208,6 @@ atac_meta_ad = sc.read_h5ad(metacell_path + f"{data_id}/{data_id}_ATAC_seacells_
 
 
 # %%
-def find_shared_genes(list_datasets, metacell_path):
-    """
-    Find genes that are shared across all RNA and ATAC datasets.
-    
-    Parameters:
-    -----------
-    list_datasets : list
-        List of dataset IDs to process
-    metacell_path : str
-        Base path to the metacell data files
-        
-    Returns:
-    --------
-    all_shared_genes : np.array
-        Array of gene names shared across all datasets
-    """
-    all_shared_genes = None
-    
-    for data_id in list_datasets:
-        data_name = data_id.strip("reseq")
-        
-        # Read the data
-        rna_meta_ad = sc.read_h5ad(metacell_path + f"{data_id}/{data_name}_RNA_seacells_aggre.h5ad")
-        atac_meta_ad = sc.read_h5ad(metacell_path + f"{data_id}/{data_name}_ATAC_seacells_aggre.h5ad")
-        
-        # Find shared genes between RNA and ATAC for this dataset
-        shared_genes = np.intersect1d(rna_meta_ad.var_names, atac_meta_ad.var_names)
-        
-        # Update the set of genes shared across all datasets
-        if all_shared_genes is None:
-            all_shared_genes = set(shared_genes)
-        else:
-            all_shared_genes = all_shared_genes.intersection(set(shared_genes))
-    
-    all_shared_genes = np.array(list(all_shared_genes))
-    print(f"Number of genes shared across ALL datasets: {len(all_shared_genes)}")
-    
-    return all_shared_genes
-
-def concatenate_data(list_datasets, list_timepoints, metacell_path, shared_genes):
-    """
-    Concatenate RNA and ATAC data across multiple timepoints using pre-determined shared genes.
-    
-    Parameters:
-    -----------
-    list_datasets : list
-        List of dataset IDs to process
-    metacell_path : str
-        Base path to the metacell data files
-    shared_genes : np.array
-        Array of gene names to use for all datasets
-        
-    Returns:
-    --------
-    combined_rna : AnnData
-        Combined RNA data across all timepoints
-    combined_atac : AnnData
-        Combined ATAC data across all timepoints
-    """
-    rna_matrices = []
-    atac_matrices = []
-    
-    for i, data_id in enumerate(list_datasets):
-        data_name = data_id.strip("reseq")
-        
-        # Read the data
-        rna_meta_ad = sc.read_h5ad(metacell_path + f"{data_name}_RNA_seacells_aggre.h5ad")
-        atac_meta_ad = sc.read_h5ad(metacell_path + f"{data_name}_ATAC_seacells_aggre.h5ad")
-        
-        # Subset to shared genes
-        rna_meta_ad = rna_meta_ad[:, shared_genes]
-        atac_meta_ad = atac_meta_ad[:, shared_genes]
-        
-        # Add timepoint information to obs
-        timepoint = list_timepoints[i]
-        rna_meta_ad.obs['timepoint'] = timepoint
-        atac_meta_ad.obs['timepoint'] = timepoint
-        
-        # Make unique indices by adding timepoint
-        rna_meta_ad.obs_names = [f"{idx}_{timepoint}" for idx in rna_meta_ad.obs_names]
-        atac_meta_ad.obs_names = [f"{idx}_{timepoint}" for idx in atac_meta_ad.obs_names]
-        
-        # Store the subsetted data
-        rna_matrices.append(rna_meta_ad)
-        atac_matrices.append(atac_meta_ad)
-    
-    # Concatenate all matrices
-    # combined_rna = sc.concat(rna_matrices, join='outer', label='batch', keys=list_timepoints)
-    # combined_atac = sc.concat(atac_matrices, join='outer', label='batch', keys=list_timepoints)
-    combined_rna = sc.concat(rna_matrices, join='outer')
-    combined_atac = sc.concat(atac_matrices, join='outer')
-    
-    # Verify the shapes
-    print("\nFinal data shapes:")
-    print(f"RNA: {combined_rna.shape} (metacells × genes)")
-    print(f"ATAC: {combined_atac.shape} (metacells × genes)")
-    
-    return combined_rna, combined_atac
 
 
 # %%
@@ -420,59 +248,6 @@ combined_rna.obs.head()
 
 # %%
 import scipy
-
-def compute_group_averages(adata, group_by=['celltype', 'timepoint']):
-    """
-    Compute average expression grouped by cell type and timepoint, filling NaNs with 0.
-    
-    Parameters:
-    -----------
-    adata : AnnData
-        Input AnnData object with observations containing group_by columns
-    group_by : list
-        Columns to group by (default: ['celltype', 'timepoint'])
-        
-    Returns:
-    --------
-    adata_grouped : AnnData
-        New AnnData object with averaged expression values
-    """
-    # Convert sparse matrix to dense if needed
-    X = adata.X.toarray() if scipy.sparse.issparse(adata.X) else adata.X
-    
-    # Create DataFrame with expression values
-    exp_df = pd.DataFrame(
-        X,
-        index=adata.obs.index,
-        columns=adata.var_names
-    )
-    
-    # Add metadata columns for grouping
-    for col in group_by:
-        exp_df[col] = adata.obs[col]
-    
-    # Compute averages and fill NaNs with 0
-    grouped_means = exp_df.groupby(group_by)[adata.var_names].mean().fillna(0)
-    
-    # Create new AnnData object with averaged values
-    adata_grouped = sc.AnnData(
-        X=grouped_means.values,
-        obs=grouped_means.index.to_frame(index=True),
-        var=adata.var.copy()
-    )
-    
-    # Add group info to obs names
-    adata_grouped.obs_names = [f"{ct}_{tp}" for ct, tp in grouped_means.index]
-    
-    # Print summary
-    print("\nGrouping summary:")
-    print(f"Original shape: {adata.shape}")
-    print(f"Grouped shape: {adata_grouped.shape}")
-    print(f"Number of zeros from NaN filling: {(adata_grouped.X == 0).sum()}")
-    
-    return adata_grouped
-
-
 
 # %%
 # define the example gene and celltype
@@ -605,33 +380,6 @@ list_datasets
 from collections import Counter
 import scipy as sci
 
-# Function to compute the top 2 cell types based on combined RNA + ATAC expression
-def compute_top_two_celltypes_by_combined_expression(rna_meta_ad, atac_meta_ad):
-    # Convert sparse matrices to dense if necessary
-    if sci.sparse.issparse(rna_meta_ad.X):
-        rna_expr_values = pd.DataFrame(rna_meta_ad.X.toarray(), index=rna_meta_ad.obs.index, columns=rna_meta_ad.var.index)
-    else:
-        rna_expr_values = pd.DataFrame(rna_meta_ad.X, index=rna_meta_ad.obs.index, columns=rna_meta_ad.var.index)
-
-    if sci.sparse.issparse(atac_meta_ad.X):
-        atac_expr_values = pd.DataFrame(atac_meta_ad.X.toarray(), index=atac_meta_ad.obs.index, columns=atac_meta_ad.var.index)
-    else:
-        atac_expr_values = pd.DataFrame(atac_meta_ad.X, index=atac_meta_ad.obs.index, columns=atac_meta_ad.var.index)
-
-    # Add the RNA and ATAC expression values for each gene
-    combined_expr_values = rna_expr_values + atac_expr_values
-    
-    # Add the cell type information to the combined expression matrix
-    combined_expr_values["celltype"] = rna_meta_ad.obs["celltype"]
-
-    # Compute the mean expression of the combined values by cell type for each gene
-    mean_combined_expr_by_celltype = combined_expr_values.groupby("celltype").mean().T  # Transpose to make genes the rows
-
-    # For each gene, find the top 2 cell types by combined RNA + ATAC expression
-    top_two_celltypes_per_gene = mean_combined_expr_by_celltype.apply(lambda row: row.nlargest(2).index.tolist(), axis=1)
-
-    return top_two_celltypes_per_gene
-
 # Initialize a dictionary to store the cell type counts for each gene
 celltype_counts = {}
 
@@ -691,35 +439,6 @@ print(final_df)
 # from sklearn.utils.extmath import median_absolute_deviation
 import scipy.sparse as sp
 from scipy.stats import median_abs_deviation
-
-# Function to compute gene statistics
-def compute_gene_stats(adata):
-    # Compute mean and variance for each gene
-    means = adata.X.mean(axis=0)  # across rows (celltype&timepoints)
-    vars = adata.X.var(axis=0)
-    
-    # Convert to dense if needed, but only for median calculation
-    X_dense = adata.X.toarray() if sp.issparse(adata.X) else adata.X
-    # Compute medians (need dense representation)
-    medians = np.median(X_dense, axis=0)
-    # robust variance (median absolute deviation**2)
-    mads = median_abs_deviation(X_dense, axis=0)
-    robust_variance = mads ** 2
-    
-    # Create DataFrame with statistics
-    stats_df = pd.DataFrame({
-        'mean': means,
-        'median': medians,
-        'variance': vars,
-        'robust_variance': robust_variance,
-        'var_mean_ratio': vars / means,
-        'var_median_ratio':vars/medians,
-        'robust_var_median_ratio':robust_variance/medians,
-        'cv': np.sqrt(vars) / means  # coefficient of variation
-    }, index=adata.var_names)
-    
-    return stats_df
-
 
 # %%
 # compute the mean/variance for each gene across time, metacell concatenated vectors

@@ -57,6 +57,24 @@ co.__version__
 import cellrank as cr
 import scvelo as scv
 
+# %%
+# Import project-specific utilities
+from scripts.fig2_utils.plotting_utils import set_plotting_style
+from scripts.fig4_utils.knockout_analysis import (
+    compute_celltype_transitions,
+    compute_metacell_transitions,
+    get_top_genes_for_celltype
+)
+from scripts.fig4_utils.vector_field_utils import (
+    average_2D_trans_vecs_metacells,
+    plot_metacell_transitions,
+    plot_metacell_cosine_sims
+)
+from scripts.fig4_utils.similarity_metrics import (
+    compute_row_cosine_similarities,
+    compute_row_euclidean_dist
+)
+
 # %% [markdown]
 # ### Plotting parameter setting
 
@@ -92,24 +110,6 @@ mpl.rcParams['pdf.fonttype'] = 42
 sns.set(style='whitegrid', context='paper')
 
 # Plotting style function (run this before plotting the final figure)
-def set_plotting_style():
-    plt.style.use('seaborn-paper')
-    plt.rc('axes', labelsize=12)
-    plt.rc('axes', titlesize=12)
-    plt.rc('xtick', labelsize=10)
-    plt.rc('ytick', labelsize=10)
-    plt.rc('legend', fontsize=10)
-    plt.rc('text.latex', preamble=r'\usepackage{sfmath}')
-    plt.rc('xtick.major', pad=2)
-    plt.rc('ytick.major', pad=2)
-    plt.rc('mathtext', fontset='stixsans', sf='sansserif')
-    plt.rc('figure', figsize=[10,9])
-    plt.rc('svg', fonttype='none')
-
-    # Override any previously set font settings to ensure Arial is used
-    plt.rc('font', family='Arial')
-
-
 # %%
 data_id = "TDR126"
 figpath = f"/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/zebrahub-multiome-analysis/figures/in_silico_KO_NMPs_subsets_metacells/{data_id}/"
@@ -159,106 +159,6 @@ cell_type_color_dict = {
 }
 
 # computing the average of 2D transition vectors @Metacell level
-def average_2D_trans_vecs_metacells(adata, metacell_col="SEACell", 
-                                    basis='umap_aligned',key_added='WT'):
-    
-    # # WT
-    # if key_added=="WT":
-    #     key_added = "WT_global_nmps_umap_aligned"
-    # else:
-    #     key_added = key_added
-    
-    X_umap = adata.obsm[f'X_{basis}']
-    # Your cell-level 2D transition vectors
-    # V_cell = adata.obsm[f'{key_added}_{basis}'] 
-    V_cell = adata.obsm[f"{key_added}_{basis}"]
-
-    # metacells = adata.obs[metacell_col].cat.codes
-    
-    # Convert metacell column to categorical if it's not already
-    if not pd.api.types.is_categorical_dtype(adata.obs[metacell_col]):
-        metacells = pd.Categorical(adata.obs[metacell_col])
-    else:
-        metacells = adata.obs[metacell_col]
-    # number of metacells    
-    n_metacells = len(metacells.categories)
-    
-    # X_metacell is the average UMAP position of the metacells
-    # V_metacell is the average transition vector of the metacells
-    X_metacell = np.zeros((n_metacells, 2))
-    V_metacell = np.zeros((n_metacells, 2))
-    
-    for i, category in enumerate(metacells.categories):
-        mask = metacells == category
-        X_metacell[i] = X_umap[mask].mean(axis=0)
-        V_metacell[i] = V_cell[mask].mean(axis=0)
-    
-    return X_metacell, V_metacell
-
-# plotting function for the averaged trans_vectors
-# metacell_col = 'SEACell'  # Replace with your metacell column name
-# basis="umap_aligned"
-def plot_metacell_transitions(adata, X_metacell, V_metacell, data_id,
-                                figpath=None,
-                                metacell_col="SEACell", 
-                                annotation_class="manual_annotation",
-                                basis='umap_aligned', genotype="WT",
-                                cell_type_color_dict = cell_type_color_dict,
-                                cell_size=10, SEACell_size=20,
-                                scale=1, arrow_scale=15, arrow_width=0.002, dpi=120):
-    
-    # create a figure object (matplotlib)
-    fig, ax = plt.subplots(figsize=(8, 6), dpi=600)
-
-    # Prepare data for plotting
-    umap_coords = pd.DataFrame(adata.obsm[f'X_{basis}'], columns=[0, 1], index=adata.obs_names)
-    umap_data = umap_coords.join(adata.obs[[metacell_col, annotation_class]])
-    umap_data = umap_data.rename(columns={annotation_class: 'celltype'})
-
-    # Plot single cells
-    sns.scatterplot(
-        x=0, y=1, hue='celltype', data=umap_data, s=cell_size, 
-        palette=cell_type_color_dict, legend=None, ax=ax, alpha=0.7
-    )
-
-    # Calculate most prevalent cell type for each metacell
-    most_prevalent = adata.obs.groupby(metacell_col)[annotation_class].agg(lambda x: x.value_counts().idxmax())
-
-    # Prepare metacell data
-    mcs = umap_data.groupby(metacell_col).mean().reset_index()
-    mcs['celltype'] = most_prevalent.values
-
-    # Plot metacells
-    sns.scatterplot(
-        x=0, y=1, s=SEACell_size, hue='celltype', data=mcs,
-        palette=cell_type_color_dict, edgecolor='black', linewidth=1.25,
-        legend=None, ax=ax
-    )
-
-    # Plot transition vectors
-    Q = ax.quiver(X_metacell[:, 0], X_metacell[:, 1], V_metacell[:, 0], V_metacell[:, 1],
-                angles='xy', scale_units='xy', scale=1/arrow_scale, width=arrow_width,
-                color='black', alpha=0.8)
-
-    # Customize the plot
-    ax.set_xlabel('UMAP 1')
-    ax.set_ylabel('UMAP 2')
-    # Remove x and y ticks
-    ax.set_xticks([])
-    ax.set_yticks([])
-    ax.grid(False)
-
-    plt.title(f'Metacell Transitions on {basis.upper()}')
-    plt.tight_layout()
-    plt.grid(False)
-    
-    if figpath:
-        plt.savefig(figpath + f"umap_{genotype}_metacell_aggre_trans_probs_{data_id}.png")
-        plt.savefig(figpath + f"umap_{genotype}_metacell_aggre_trans_probs_{data_id}.pdf")
-    # plt.show()
-    return fig
-
-
 # %% [markdown]
 # ### plotting the 2D projection of cell-cell transitions (pseudotime)
 #
@@ -481,43 +381,6 @@ oracle.adata.obs.SEACell
 
 
 # %%
-def compute_celltype_transitions(adata, trans_key="T_fwd_WT", celltype_key="manual_annotation"):
-    # Get the cell-cell transition matrix
-    T_cell = adata.obsp[trans_key]
-    
-    # Get celltype labels
-    celltypes = adata.obs[celltype_key]
-    
-    # Get unique celltypes
-    unique_celltypes = celltypes.cat.categories
-    
-    # Initialize the celltype transition matrix
-    n_celltypes = len(unique_celltypes)
-    T_celltype = np.zeros((n_celltypes, n_celltypes))
-    
-    # Create a mapping of celltype to cell indices
-    celltype_to_indices = {ct: np.where(celltypes == ct)[0] for ct in unique_celltypes}
-    
-    # Compute celltype transitions
-    for i, source_type in enumerate(unique_celltypes):
-        source_indices = celltype_to_indices[source_type]
-        for j, target_type in enumerate(unique_celltypes):
-            target_indices = celltype_to_indices[target_type]
-            
-            # Extract the submatrix of transitions from source to target celltype
-            submatrix = T_cell[source_indices][:, target_indices]
-            
-            # Sum all transitions and normalize by the number of source cells
-            T_celltype[i, j] = submatrix.sum() / len(source_indices)
-    
-    # Create a DataFrame for easier interpretation
-    T_celltype_df = pd.DataFrame(T_celltype, index=unique_celltypes, columns=unique_celltypes)
-    
-    # Normalize rows to sum to 1
-    T_celltype_df = T_celltype_df.div(T_celltype_df.sum(axis=1), axis=0)
-    
-    return T_celltype_df
-# Usage
 celltype_transitions = compute_celltype_transitions(oracle.adata)
 celltype_transitions
 # # Visualize the result
@@ -535,40 +398,6 @@ np.sum(celltype_transitions,1)
 
 
 # %%
-def compute_row_cosine_similarities(df_wt, df_ko):
-    """
-    Compute cosine similarities between corresponding rows of two dataframes.
-    
-    Parameters:
-    df_wt (pd.DataFrame): Transition probability matrix for WT
-    df_ko (pd.DataFrame): Transition probability matrix for KO
-    
-    Returns:
-    pd.Series: Cosine similarities for each row
-    """
-    # Ensure both dataframes have the same index and columns
-    assert df_wt.index.equals(df_ko.index), "Dataframes must have the same index"
-    assert df_wt.columns.equals(df_ko.columns), "Dataframes must have the same columns"
-    
-    similarities = {}
-    for idx in df_wt.index:
-        wt_row = df_wt.loc[idx].values
-        ko_row = df_ko.loc[idx].values
-        
-        # Compute cosine similarity (1 - cosine distance)
-        similarity = 1 - cosine(wt_row, ko_row)
-        similarities[idx] = similarity
-    
-    return pd.Series(similarities, name="cos_sim")
-
-# Assuming you have your dataframes loaded as df_wt and df_ko
-# df_wt = pd.read_csv('wt_transitions.csv', index_col=0)
-# df_ko = pd.read_csv('ko_transitions.csv', index_col=0)
-
-# Compute cosine similarities
-# cosine_similarities = compute_row_cosine_similarities(df_wt, df_ko)
-
-
 # %%
 # generate the UMAP plots overlaid with 2D trans.vectors (averaged @metacell level)
 
@@ -612,25 +441,6 @@ cosine_sim_df.loc["somites"].sort_values(ascending=False)
 
 
 # %%
-def get_top_genes_for_celltype(df, celltype, n=10):
-    """
-    Get the top n genes with the lowest cosine similarity scores for a given celltype.
-    
-    Parameters:
-    df (pd.DataFrame): The cosine similarity DataFrame
-    celltype (str): The celltype to analyze
-    n (int): Number of top genes to return (default 10)
-    
-    Returns:
-    pd.Series: Top n genes with their scores, sorted from lowest to highest
-    """
-    # Sort the row for the given celltype
-    sorted_genes = df.loc[celltype].sort_values()
-    
-    # Return the top n genes
-    return sorted_genes.head(n)
-
-# Example usage:
 celltype = "fast_muscle"  # Replace with your celltype of interest
 top_genes = get_top_genes_for_celltype(cosine_sim_df, celltype, n=20)
 
@@ -670,47 +480,6 @@ print(top_genes)
 #
 
 # %%
-def compute_metacell_transitions(adata, trans_key="T_fwd_WT", metacell_key="SEACell"):
-    # Get the cell-cell transition matrix
-    T_cell = adata.obsp[trans_key]
-    
-    # Get metacell labels
-    metacells = adata.obs[metacell_key]
-    
-    # Get unique metacells
-    unique_metacells = metacells.unique()
-    
-    # Initialize the metacell transition matrix
-    n_metacells = len(unique_metacells)
-    T_metacell = np.zeros((n_metacells, n_metacells))
-    
-    # Create a mapping of metacell to cell indices
-    metacell_to_indices = {mc: np.where(metacells == mc)[0] for mc in unique_metacells}
-    
-    # Compute metacell transitions
-    for i, source_metacell in enumerate(unique_metacells):
-        source_indices = metacell_to_indices[source_metacell]
-        for j, target_metacell in enumerate(unique_metacells):
-            target_indices = metacell_to_indices[target_metacell]
-            
-            # Extract the submatrix of transitions from source to target metacell
-            submatrix = T_cell[source_indices][:, target_indices]
-            
-            # Sum all transitions and normalize by the number of source cells
-            T_metacell[i, j] = submatrix.sum() / len(source_indices)
-    
-    # Create a DataFrame for easier interpretation
-    T_metacell_df = pd.DataFrame(T_metacell, index=unique_metacells, columns=unique_metacells)
-    
-    # Normalize rows to sum to 1
-    T_metacell_df = T_metacell_df.div(T_metacell_df.sum(axis=1), axis=0)
-    
-    return T_metacell_df
-
-# Usage
-# metacell_transitions = compute_metacell_transitions(oracle.adata)
-
-
 # %%
 metacell_transitions
 
@@ -809,78 +578,6 @@ mcs_merged
 
 
 # %%
-def plot_metacell_cosine_sims(adata, X_metacell, cosine_sim_df, gene="",
-                              vmin=0, vmax=1,
-                                figpath=None,
-                                metacell_col="SEACell", 
-                                annotation_class="manual_annotation",
-                                basis='umap_aligned',
-                                cmap = "viridis",
-                                cell_size=10, SEACell_size=20, dpi=120):
-    
-    # create a figure object (matplotlib)
-    fig, ax = plt.subplots(figsize=(8, 6), dpi=600)
-
-    # Prepare data for plotting
-    umap_coords = pd.DataFrame(adata.obsm[f'X_{basis}'], columns=[0, 1], index=adata.obs_names)
-    umap_data = umap_coords.join(adata.obs[[metacell_col, annotation_class]])
-    umap_data = umap_data.rename(columns={annotation_class: 'celltype'})
-
-    # Plot single cells
-    sns.scatterplot(
-        x=0, y=1, hue='celltype', data=umap_data, s=cell_size, 
-        palette=cell_type_color_dict, legend=None, ax=ax, alpha=0.7
-    )
-
-    # Calculate most prevalent cell type for each metacell
-    most_prevalent = adata.obs.groupby(metacell_col)[annotation_class].agg(lambda x: x.value_counts().idxmax())
-
-    # Prepare metacell data
-    mcs = umap_data.groupby(metacell_col).mean().reset_index()
-    mcs['celltype'] = most_prevalent.values
-    mcs.set_index("SEACell", inplace=True)
-    
-    mcs_merged = pd.concat([mcs, cosine_sim_df], axis=1)
-
-    # Plot metacells
-    scatter = sns.scatterplot(
-        x=0, y=1, s=20, hue='meox1', data=mcs_merged, edgecolor='black', linewidth=1.25,
-        legend=None, palette="viridis", vmin=vmin, vmax=vmax)
-
-    # Add a colorbar
-    # scatter.collections[0].set_cmap("viridis")
-
-    # Set the colormap and the color limits
-    norm = plt.Normalize(vmin=vmin, vmax=vmax)
-    scatter.collections[0].set_cmap("viridis")
-    scatter.collections[0].set_norm(norm)
-    plt.colorbar(scatter.collections[0])
-
-    # Customize the plot
-    ax.set_xlabel('UMAP 1')
-    ax.set_ylabel('UMAP 2')
-    # Remove x and y ticks
-    ax.set_xticks([])
-    ax.set_yticks([])
-    ax.grid(False)
-
-    # # Create custom legend
-    # handles = [mpatches.Patch(color=color, label=label) 
-    #         for label, color in cell_type_color_dict.items() 
-    #         if label in umap_data['celltype'].unique()]
-    # ax.legend(handles=handles, title='Cell Types', bbox_to_anchor=(1.05, 1), loc='upper left')
-
-    plt.title(f'Metacell Transitions on {basis.upper()}')
-    plt.tight_layout()
-    plt.grid(False)
-    # if figpath:
-    #     plt.savefig(figpath + f"umap_{genotype}_metacell_aggre_trans_probs_{data_id}.png")
-    #     plt.savefig(figpath + f"umap_{genotype}_metacell_aggre_trans_probs_{data_id}.pdf")
-    # plt.show()
-    # plt.show()
-    return fig
-
-
 # %%
 plot_metacell_cosine_sims(adata, X_metacell, cosine_sim_df, gene="tbx16", vmin=0, vmax=1)
 
@@ -1631,40 +1328,6 @@ df_averaged_meso.sort_values(ascending=False)
 # ## Step 5. Euclidean distances
 
 # %%
-def compute_row_euclidean_dist(df_wt, df_ko):
-    """
-    Compute euclidean distances between corresponding rows of two dataframes.
-    
-    Parameters:
-    df_wt (pd.DataFrame): Transition probability matrix for WT
-    df_ko (pd.DataFrame): Transition probability matrix for KO
-    
-    Returns:
-    pd.Series: Cosine similarities for each row
-    """
-    # Ensure both dataframes have the same index and columns
-    assert df_wt.index.equals(df_ko.index), "Dataframes must have the same index"
-    assert df_wt.columns.equals(df_ko.columns), "Dataframes must have the same columns"
-    
-    euclidean_distance = {}
-    for idx in df_wt.index:
-        wt_row = df_wt.loc[idx].values
-        ko_row = df_ko.loc[idx].values
-        
-        # Compute euclidean distance
-        euclid_dist = euclidean(wt_row, ko_row)
-        euclidean_distance[idx] = euclid_dist
-    
-    return pd.Series(euclidean_distance, name="euclid_dist")
-
-# Assuming you have your dataframes loaded as df_wt and df_ko
-# df_wt = pd.read_csv('wt_transitions.csv', index_col=0)
-# df_ko = pd.read_csv('ko_transitions.csv', index_col=0)
-
-# Compute cosine similarities
-# cosine_similarities = compute_row_cosine_similarities(df_wt, df_ko)
-
-
 # %%
 from tqdm import tqdm
 

@@ -43,6 +43,14 @@ import sys
 sys.path.append("/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/zebrahub-multiome-analysis/scripts/SEACells_metacell/")
 from module_compute_seacells import * # import all functions
 
+# Import from fig2_utils modules (refactored utilities)
+from scripts.fig2_utils.metacell_utils import (
+    plot_2D_modified,
+    plot_SEACell_sizes_modified,
+    compute_prevalent_celltype_per_metacell,
+    plot_2D_with_metacells
+)
+
 # %%
 # Some plotting aesthetics
 sns.set_style('ticks')
@@ -93,108 +101,8 @@ input_path
 seurat_path = "/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/01_Signac_processed/"
 
 
-# %%
-# SEACells.plot.plot_2D modified
-def plot_2D_modified(
-    ad,
-    ax,
-    key="X_umap",
-    colour_metacells=True,
-    title="Metacell Assignments",
-    palette="Set2",
-    SEACell_size=20,
-    cell_size=10,
-):
-    """Plot 2D visualization of metacells using the embedding provided in 'key'.
-
-    :param ad: annData containing 'Metacells' label in .obs
-    :param ax: Axes object where the plot will be drawn
-    :param key: (str) 2D embedding of data. Default: 'X_umap'
-    :param colour_metacells: (bool) whether to colour cells by metacell assignment. Default: True
-    :param title: (str) title for figure
-    :param palette: (str) matplotlib colormap for metacells. Default: 'Set2'
-    :param SEACell_size: (int) size of SEACell points
-    :param cell_size: (int) size of cell points
-    """
-    umap = pd.DataFrame(ad.obsm[key]).set_index(ad.obs_names).join(ad.obs["SEACell"])
-    umap["SEACell"] = umap["SEACell"].astype("category")
-    mcs = umap.groupby("SEACell").mean().reset_index()
-
-    if colour_metacells:
-        sns.scatterplot(
-            x=0, y=1, hue="SEACell", data=umap, s=cell_size, palette=sns.color_palette(palette), legend=None, ax=ax
-        )
-        sns.scatterplot(
-            x=0,
-            y=1,
-            s=SEACell_size,
-            hue="SEACell",
-            data=mcs,
-            palette=sns.color_palette(palette),
-            edgecolor="black",
-            linewidth=1.25,
-            legend=None,
-            ax=ax
-        )
-    else:
-        sns.scatterplot(
-            x=0, y=1, color="grey", data=umap, s=cell_size, legend=None, ax=ax
-        )
-        sns.scatterplot(
-            x=0,
-            y=1,
-            s=SEACell_size,
-            color="red",
-            data=mcs,
-            edgecolor="black",
-            linewidth=1.25,
-            legend=None,
-            ax=ax
-        )
-
-    ax.set_xlabel(f"{key}-0")
-    ax.set_ylabel(f"{key}-1")
-    ax.set_title(title)
-    ax.set_axis_off()
-
-# SEACells.plot.plot_SEACell_sizes modified
-def plot_SEACell_sizes_modified(
-    ad,
-    ax,
-    # save_as=None,
-    show=True,
-    title="Distribution of Metacell Sizes",
-    bins=None,
-    figsize=(5, 5),
-):
-    """Plot distribution of number of cells contained per metacell.
-
-    :param ad: annData containing 'Metacells' label in .obs
-    :param ax: Axes object where the plot will be drawn
-    :param save_as: (str) path to which figure is saved. If None, figure is not saved.
-    :param show: (bool) whether to show the plot
-    :param title: (str) title of figure.
-    :param bins: (int) number of bins for histogram
-    :param figsize: (int,int) tuple of integers representing figure size
-    :return: None.
-    """
-    assert "SEACell" in ad.obs, 'AnnData must contain "SEACell" in obs DataFrame.'
-    label_df = ad.obs[["SEACell"]].reset_index()
-    
-    sns.histplot(label_df.groupby("SEACell").count().iloc[:, 0], bins=bins, ax=ax)
-    sns.despine()
-    ax.set_xlabel("Number of Cells per SEACell")
-    ax.set_title(title)
-
-    # if save_as is not None:
-    #     plt.savefig(save_as)
-    # if show:
-    #     plt.show()
-    # plt.close()
-    return pd.DataFrame(label_df.groupby("SEACell").count().iloc[:, 0]).rename(
-        columns={"index": "size"}
-    )
-
+# %% [markdown]
+# **Note:** SEACells plotting functions (`plot_2D_modified`, `plot_SEACell_sizes_modified`, etc.) are now imported from scripts.fig2_utils.metacell_utils
 
 # %%
 list_objects = ['TDR124reseq_seacells_annotation_ML_coarse.h5ad',
@@ -702,86 +610,6 @@ cell_type_color_dict = {
     'spinal_cord': '#d95f02',
     'tail_bud': '#7570b3'
 }
-
-
-# %%
-def compute_prevalent_celltype_per_metacell(adata, celltype_key="annotation_ML_coarse", metacell_key="SEACell"):
-    """
-    Compute the most prevalent cell type in each metacell.
-    
-    :param adata: AnnData object containing the cell type and metacell information in .obs.
-    :param celltype_key: (str) Key in adata.obs for cell types (e.g., 'annotation_ML_coarse').
-    :param metacell_key: (str) Key in adata.obs for metacells (e.g., 'SEACell').
-    :return: A pandas Series where the index is the metacell and the value is the most prevalent cell type.
-    """
-    
-    # Extract the relevant columns from adata.obs
-    df = adata.obs[[celltype_key, metacell_key]].copy()
-
-    # Group by metacell and count occurrences of each cell type
-    prevalent_celltypes = df.groupby(metacell_key)[celltype_key] \
-                            .apply(lambda x: x.value_counts().idxmax())
-    
-    return prevalent_celltypes
-
-def plot_2D_with_metacells(
-    ad,
-    key="X_umap.joint",  # Adjusted to your embedding
-    hue="annotation_ML_coarse",  # Categorical variable for cell type
-    metacell_key="SEACell",  # Key for metacells
-    title="UMAP with Metacells",
-    palette=None,  # Custom palette
-    SEACell_size=50,  # Adjusted size for metacells
-    cell_size=10,  # Size for cells
-):
-    """Plot 2D visualization of cells colored by their type and overlay metacells.
-    
-    :param ad: AnnData object
-    :param key: (str) 2D embedding of data. Default: 'X_umap.joint'
-    :param hue: (str) Categorical variable in .obs for coloring cells
-    :param metacell_key: (str) Categorical variable for metacell assignment in .obs
-    :param title: (str) Title for the plot
-    :param palette: (dict or str) Color palette for cell types
-    :param SEACell_size: (int) Size for metacell points
-    :param cell_size: (int) Size for cell points
-    """
-
-    # Prepare data
-    umap = pd.DataFrame(ad.obsm[key]).set_index(ad.obs_names).join(ad.obs[[hue, metacell_key]])
-    umap[hue] = umap[hue].astype("category")
-    umap[metacell_key] = umap[metacell_key].astype("category")
-
-    # Get metacell centroids
-    mcs = umap.groupby(metacell_key).mean().reset_index()
-
-    # Compute the most prevalent cell type for each metacell
-    prevalent_celltypes = compute_prevalent_celltype_per_metacell(ad, celltype_key=hue, metacell_key=metacell_key)
-
-    # Add the most prevalent cell type to the metacell dataframe
-    mcs[hue] = mcs[metacell_key].map(prevalent_celltypes)
-
-    # Create figure
-    fig, ax = plt.subplots(figsize=(8, 8))
-
-    # Plot cells by annotation_ML_coarse (cell types)
-    sns.scatterplot(
-        x=0, y=1, hue=hue, data=umap, s=cell_size, 
-        palette=palette, legend=None, ax=ax
-    )
-
-    # Overlay metacells on top of the UMAP plot
-    sns.scatterplot(
-        x=0, y=1, hue=hue, data=mcs, s=SEACell_size, 
-        palette=palette, edgecolor="black", linewidth=1.25, legend=None, ax=ax
-    )
-
-    # Adjust plot
-    ax.set_xlabel(f"{key}-0")
-    ax.set_ylabel(f"{key}-1")
-    # ax.set_title(title)
-    ax.set_axis_off()
-
-    return fig
 
 
 # %%
