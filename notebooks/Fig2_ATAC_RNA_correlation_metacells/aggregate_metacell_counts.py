@@ -41,6 +41,12 @@ import sys
 sys.path.append("/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/zebrahub-multiome-analysis/scripts/SEACells_metacell/")
 from module_compute_seacells import * # import all functions
 
+# Import from fig2_utils modules (refactored utilities)
+from scripts.fig2_utils.metacell_utils import (
+    aggregate_counts_multiome,
+    compute_prevalent_celltype_per_metacell
+)
+
 # %%
 # Some plotting aesthetics
 # %matplotlib inline
@@ -109,20 +115,8 @@ list_datasets = ["TDR126","TDR127","TDR128",
                  "TDR118reseq","TDR119reseq","TDR125reseq","TDR124reseq"]
 
 
-# %%
-def aggregate_counts_multiome(adata_rna, adata_atac):
-    """
-    This function aggregates counts over SEACells
-    """
-    # Aggregate counts over SEACells
-    SEACell_ad = SEACells.aggregate_counts(adata, groupby=groupby)
-    # Add celltype information
-    SEACell_ad.obs["celltype"] = celltype
-    # Add the aggregated counts to the original adata object
-    adata.obs["SEACell"] = SEACell_ad.obs["SEACell"]
-    adata.obs["celltype"] = celltype
-    return adata, SEACell_ad
-
+# %% [markdown]
+# **Note:** `aggregate_counts_multiome()` is now imported from scripts.fig2_utils.metacell_utils
 
 # %% [markdown]
 # ## NOTES
@@ -379,26 +373,8 @@ cell_type_color_dict = {
 }
 
 
-# %%
-def compute_prevalent_celltype_per_metacell(adata, celltype_key="annotation_ML_coarse", metacell_key="SEACell"):
-    """
-    Compute the most prevalent cell type in each metacell.
-    
-    :param adata: AnnData object containing the cell type and metacell information in .obs.
-    :param celltype_key: (str) Key in adata.obs for cell types (e.g., 'annotation_ML_coarse').
-    :param metacell_key: (str) Key in adata.obs for metacells (e.g., 'SEACell').
-    :return: A pandas Series where the index is the metacell and the value is the most prevalent cell type.
-    """
-    
-    # Extract the relevant columns from adata.obs
-    df = adata.obs[[celltype_key, metacell_key]].copy()
-
-    # Group by metacell and count occurrences of each cell type
-    prevalent_celltypes = df.groupby(metacell_key)[celltype_key] \
-                            .apply(lambda x: x.value_counts().idxmax())
-    
-    return prevalent_celltypes
-
+# %% [markdown]
+# **Note:** `compute_prevalent_celltype_per_metacell()` is now imported from scripts.fig2_utils.metacell_utils
 
 # %%
 filepath = "/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/processed_data/01_Signac_processed/"

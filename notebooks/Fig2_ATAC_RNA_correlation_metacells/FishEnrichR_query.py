@@ -127,6 +127,10 @@ import os
 sys.path.append('/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/zebrahub-multiome-analysis/scripts/utils/')
 from FishEnrichR import *
 
+# Import from fig2_utils modules (refactored utilities)
+from scripts.fig2_utils.plotting_utils import set_plotting_style
+from scripts.fig2_utils.enrichment_utils import plot_pathway_enrichment
+
 # %%
 # go through the gene_lists from each leiden cluster, then run FishEnrichR, and save the results
 
@@ -174,40 +178,8 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 
-# %%
-def plot_pathway_enrichment(file_path, output_path, top_n=10):
-    # Read the tab-separated file
-    df = pd.read_csv(file_path, sep='\t')
-    
-    # Sort by Combined Score and get top N pathways
-    df = df.sort_values('Combined Score', ascending=True).tail(top_n)
-    
-    # Create color list based on p-value
-    colors = ['grey' if p > 0.05 else 'purple' for p in df['P-value']]
-    
-    # Create the plot
-    plt.figure(figsize=(12, 8))
-    bars = plt.barh(df['Term'], df['Combined Score'], color=colors, alpha=0.6)
-    
-    # Customize the plot
-    plt.title('WikiPathways 2018 Enrichment', fontsize=14, pad=20)
-    plt.xlabel('Combined Score', fontsize=12)
-    
-    # Remove pathway prefix for cleaner labels
-    plt.yticks(range(len(df['Term'])), 
-              [term.split('_WP')[0] for term in df['Term']], 
-              fontsize=10)
-    
-    # Add significance legend
-    plt.legend([plt.Rectangle((0,0),1,1, fc='purple', alpha=0.6),
-               plt.Rectangle((0,0),1,1, fc='grey', alpha=0.6)],
-              ['p < 0.05', 'p > 0.05'])
-    
-    # Adjust layout and save
-    plt.tight_layout()
-    plt.savefig(output_path, dpi=300, bbox_inches='tight')
-    plt.close()
-
+# %% [markdown]
+# **Note:** `plot_pathway_enrichment()` is now imported from scripts.fig2_utils.enrichment_utils
 
 # %%
 # Example usage:
@@ -287,24 +259,8 @@ mpl.rcParams['font.family'] = 'Arial'
 mpl.rcParams['pdf.fonttype'] = 42
 sns.set(style='whitegrid', context='paper')
 
-# Plotting style function (run this before plotting the final figure)
-def set_plotting_style():
-    plt.style.use('seaborn-paper')
-    plt.rc('axes', labelsize=12)
-    plt.rc('axes', titlesize=12)
-    plt.rc('xtick', labelsize=10)
-    plt.rc('ytick', labelsize=10)
-    plt.rc('legend', fontsize=10)
-    plt.rc('text.latex', preamble=r'\usepackage{sfmath}')
-    plt.rc('xtick.major', pad=2)
-    plt.rc('ytick.major', pad=2)
-    plt.rc('mathtext', fontset='stixsans', sf='sansserif')
-    plt.rc('figure', figsize=[10,9])
-    plt.rc('svg', fonttype='none')
-
-    # Override any previously set font settings to ensure Arial is used
-    plt.rc('font', family='Arial')
-
+# %% [markdown]
+# **Note:** `set_plotting_style()` is now imported from scripts.fig2_utils.plotting_utils
 
 # %%
 # Set font sizes
