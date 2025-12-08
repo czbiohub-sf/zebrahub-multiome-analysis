@@ -59,6 +59,79 @@ conda activate celloracle_env                                           # For Fi
    - In-silico knockout simulations
    - Perturbation analysis
 
+5. **Peak UMAP LiteMind Analysis (`scripts/litemind_peak_analysis/`)**:
+   - LLM-based biological interpretation of peak clusters
+   - Automated querying of biological databases (Ensembl, ZFIN, PubMed, Alliance)
+   - Structured markdown reports with literature citations
+   - Optional peer review and revision workflow
+
+## LiteMind Peak Cluster Analysis
+
+The `scripts/litemind_peak_analysis/` module provides AI-powered biological interpretation of chromatin accessibility peak clusters using large language models.
+
+### Setup
+
+1. **Install Dependencies:**
+   ```bash
+   pip install litemind==2025.7.26 openai==1.96.1 backoff requests-cache ratelimit arbol tabulate
+   ```
+
+2. **Set API Key:**
+   ```bash
+   # Option 1: OpenAI (default)
+   export OPENAI_API_KEY="sk-your-key-here"
+
+   # Option 2: Anthropic Claude
+   export ANTHROPIC_API_KEY="sk-ant-your-key-here"
+   ```
+
+3. **Configure Data Directory (optional):**
+   ```bash
+   # By default, uses external litemind subrepo data
+   # Override if needed:
+   export LITEMIND_DATA_DIR="/path/to/your/data"
+   ```
+
+### Usage
+
+```bash
+# Analyze specific coarse clusters
+python scripts/litemind_peak_analysis/main.py --coarse-clusters 0,1,2
+
+# Analyze all coarse clusters
+python scripts/litemind_peak_analysis/main.py --all-coarse
+
+# Analyze specific fine clusters
+python scripts/litemind_peak_analysis/main.py --fine-clusters 0_0,0_1
+
+# Skip review/revision (faster, lower quality)
+python scripts/litemind_peak_analysis/main.py --coarse-clusters 0 --no-review
+
+# Use Anthropic Claude instead of OpenAI
+python scripts/litemind_peak_analysis/main.py --coarse-clusters 0 --api anthropic
+```
+
+### Features
+
+- **Automated Analysis**: Interprets pseudobulk profiles, gene associations, and motif enrichments
+- **Database Integration**: Queries Ensembl, ZFIN, PubMed, Alliance, JASPAR, GO databases
+- **Web Search**: Contextual literature search for validation
+- **Quality Control**: Optional review and revision workflow for higher accuracy
+- **Structured Output**: Generates markdown reports with:
+  - Temporal dynamics and cell type specificity
+  - Gene associations and motif analysis
+  - Key transcription factors and regulatory programs
+  - Detailed biological interpretation with citations
+
+### Output
+
+Results are saved in `scripts/litemind_peak_analysis/results/`:
+- `coarse_cluster_analysis/` - Initial analyses
+- `cluster_analysis_review/` - Quality control reviews
+- `coarse_cluster_analysis_revision/` - Revised analyses
+
+See `scripts/litemind_peak_analysis/README.md` for detailed documentation.
+
 ## Development Workflow
 
 ### Working with Notebooks
