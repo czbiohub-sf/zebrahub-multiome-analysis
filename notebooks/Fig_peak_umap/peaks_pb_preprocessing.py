@@ -128,61 +128,7 @@ adata_peaks.write_h5ad("/hpc/projects/data.science/yangjoon.kim/zebrahub_multiom
 
 # %% [markdown]
 # ## 1. raw counts with pseudo-bulking with old strategy
-#
 
-# %%
-# def analyze_peaks_with_normalization(adata, celltype_key='annotation_ML_coarse', 
-#                                timepoint_key='dev_stage'):
-#     # Calculate statistics
-#     adata.obs['total_counts'] = np.array(adata.X.sum(axis=1))
-#     group_means = adata.obs.groupby([celltype_key, timepoint_key])['total_counts'].mean()
-#     cells_per_group = adata.obs.groupby([celltype_key, timepoint_key]).size()
-#     scale_factors = cells_per_group * group_means
-    
-#     # Compute pseudobulk
-#     ident_cols = [celltype_key, timepoint_key]
-#     adata_pseudo = sc.get.aggregate(adata, ident_cols, func='sum')
-#     # have the "sum" layer as the count matrix
-#     adata_pseudo.X = adata_pseudo.layers["sum"].copy()
-
-#     # Extract celltype and timepoint 
-#     celltype_timepoint = pd.DataFrame({
-#         'celltype': [
-#             '_'.join(x.split('_')[:-1]) for x in adata_pseudo.obs.index
-#         ],
-#         'timepoint': [
-#             x.split('_')[-1] for x in adata_pseudo.obs.index
-#         ]
-#     }, index=adata_pseudo.obs.index)
-    
-#     # Handle arrays appropriately
-#     X = adata_pseudo.X
-#     if isinstance(X, np.ndarray):
-#         normalized_counts = np.zeros_like(X)
-#     else:
-#         normalized_counts = np.zeros_like(X.toarray())
-    
-#     # Normalize counts
-#     for i, idx in enumerate(adata_pseudo.obs.index):
-#         celltype = celltype_timepoint.loc[idx, 'celltype']
-#         timepoint = celltype_timepoint.loc[idx, 'timepoint']
-#         sf = scale_factors[(celltype, timepoint)]
-#         if isinstance(X, np.ndarray):
-#             normalized_counts[i, :] = X[i] / sf
-#         else:
-#             normalized_counts[i, :] = X[i].toarray() / sf
-    
-    
-#     # Store results
-#     adata_pseudo.layers['normalized'] = normalized_counts
-#     adata_pseudo.obs['scale_factor'] = [scale_factors[(ct, tp)] 
-#                                       for ct, tp in celltype_timepoint.values]
-#     adata_pseudo.obs['n_cells'] = [cells_per_group[(ct, tp)] 
-#                                  for ct, tp in celltype_timepoint.values]
-#     adata_pseudo.obs['mean_depth'] = [group_means[(ct, tp)] 
-#                                    for ct, tp in celltype_timepoint.values]
-    
-#     return adata_pseudo
 
 # %%
 # Run normalization
