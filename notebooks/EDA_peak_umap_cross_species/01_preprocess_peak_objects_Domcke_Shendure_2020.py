@@ -1,5 +1,5 @@
 # %% [markdown]
-# # Preprocess peak objects
+# # Preprocess peak objects - Domcke 2020 Human Dataset
 # 
 # This notebook preprocesses the peak objects for the EDA_peak_umap_cross_species notebook.
 # sc_rapids jupyter kernel is used. (with GPU acceleration)
@@ -72,10 +72,10 @@ peak_objects.obs['cell_type_clean'] = peak_objects.obs['cell_type'].replace(cell
 # Remove unknowns
 unknown_mask = peak_objects.obs['cell_type_clean'].str.contains('Unknown', na=False)
 peak_objects = peak_objects[~unknown_mask].copy()
+
 # %% pseudobulk the peak objects to create peaks-by-pseudobulk (celltype-AND-stage) matrix
 # Define the analyze_peaks_with_normalization function locally with fixes for this dataset
 # (This version includes dtype conversion for numeric timepoint keys)
-# %%
 def analyze_peaks_with_normalization(
     adata, 
     celltype_key='annotation_ML_coarse', 
@@ -191,71 +191,246 @@ print(f"Common scale factor: {adata_pseudo.uns['common_scale_factor']}")
 # %% Inspect the results
 print(adata_pseudo.obs[['total_coverage', 'scale_factor', 'n_cells', 'mean_depth']].head(5))
 
-
-
-# %% Extract chromosome info from peak names (format: chr1-752336-752980)
-peak_names = peaks_by_pseudobulk.obs_names
-parts = [x.split('-') for x in peak_names]
-peaks_by_pseudobulk.obs['chr'] = [p[0] for p in parts]
-peaks_by_pseudobulk.obs['start'] = [int(p[1]) for p in parts]
-peaks_by_pseudobulk.obs['end'] = [int(p[2]) for p in parts]
-
-# %% save the adata_pseudo object
-# adata_pseudo.write_h5ad("/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/public_data/human_domcke_2020//Domcke-2020_pb_by_celltype_dayofpregnancy.h5ad")
-
-# %% Create log-normalized layer
-# log(1+p) transformation to convert the counts distribution from Poisson to Gaussian
-adata_pseudo.X = adata_pseudo.layers["normalized"].copy()
-sc.pp.log1p(adata_pseudo)
-adata_pseudo.layers["log_norm"] = adata_pseudo.X.copy()
-
-# %% Optional: Transpose to get peaks-by-pseudobulk for UMAP analysis
-# This is useful if you want to embed peaks instead of pseudobulk groups
-adata_pseudo.X = adata_pseudo.layers["normalized"]
-peaks_by_pseudobulk = adata_pseudo.copy().T
-print(f"Transposed shape (peaks-by-pseudobulk): {peaks_by_pseudobulk.shape}")
-# %% compute the UMAP coordinates for the peaks_by_pseudobulk
-sc.pp.scale(peaks_by_pseudobulk)
-rsc.pp.pca(peaks_by_pseudobulk, n_comps=100, use_highly_variable=False)
-rsc.pp.neighbors(peaks_by_pseudobulk, n_neighbors=15, n_pcs=40)
-rsc.tl.umap(peaks_by_pseudobulk, min_dist=0.2, random_state=42)
-
-sc.pl.umap(peaks_by_pseudobulk, size=5)
-
-# %%
-## save the adata objects
-adata_pseudo.write_h5ad("/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/public_data/human_domcke_2020/pb_by_celltype_stage_peaks.h5ad")
-peaks_by_pseudobulk.write_h5ad("/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/public_data/human_domcke_2020/peaks_by_pb_celltype_stage.h5ad")
-
-# %% load the adata objects
-adata_pseudo = sc.read_h5ad("/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/public_data/human_domcke_2020/pb_by_celltype_stage_peaks.h5ad")
-peaks_by_pseudobulk = sc.read_h5ad("/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/public_data/human_domcke_2020/peaks_by_pb_celltype_stage.h5ad")
-
-
-# %% Plot UMAP
+# %% Define the figure path
 figure_path = "/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/public_data/human_domcke_2020/figures/"
 os.makedirs(figure_path, exist_ok=True)
 sc.settings.figdir = figure_path
 
-sc.pl.umap(peaks_by_pseudobulk, color='chr', save='_chr.png', size=5)
-# %% 
-# import the utility functions
+# %% Transpose to create peaks-by-pseudobulk matrix
+# Note: After pseudobulking, we have pseudobulk_groups x peaks
+# We need to transpose to get peaks x pseudobulk_groups for peak-level analysis
+peaks_by_pseudobulk = adata_pseudo.T.copy()
+print(f"\nTransposed shape: {peaks_by_pseudobulk.shape}")
+print(f"Now: peaks (obs) x pseudobulk_groups (vars)")
+
+# %% Compute PCA once (will reuse for different UMAP parameters)
+# move the data to the GPU
+rsc.get.anndata_to_GPU(peaks_by_pseudobulk)
+# compute the PCA
+rsc.pp.pca(peaks_by_pseudobulk, n_comps=100, use_highly_variable=False)
+print(f"PCA computed: {peaks_by_pseudobulk.obsm['X_pca'].shape}")
+
+# %% [markdown]
+# ## Parameter sweep for UMAP optimization
+
+# %% Parameter sweep: test different n_neighbors and min_dist combinations
+import copy
+
+# Define parameter ranges
+n_neighbors_range = [15, 30, 50, 100]
+min_dist_range = [0.1, 0.2, 0.3, 0.5]
+
+# Create figure for parameter sweep results
+n_rows = len(min_dist_range)
+n_cols = len(n_neighbors_range)
+fig, axes = plt.subplots(n_rows, n_cols, figsize=(5*n_cols, 5*n_rows))
+
+print(f"Testing {n_rows * n_cols} parameter combinations...")
+print("="*60)
+
+# Store all UMAP embeddings
+umap_results = {}
+
+for i, min_dist in enumerate(min_dist_range):
+    for j, n_neighbors in enumerate(n_neighbors_range):
+        print(f"\nComputing UMAP: n_neighbors={n_neighbors}, min_dist={min_dist}")
+        
+        # Create a temporary copy to avoid modifying the original
+        adata_temp = peaks_by_pseudobulk.copy()
+        
+        # Compute neighbors and UMAP with current parameters
+        rsc.pp.neighbors(adata_temp, n_neighbors=n_neighbors, n_pcs=40, use_rep='X_pca')
+        rsc.tl.umap(adata_temp, min_dist=min_dist, random_state=42)
+        
+        # Store results
+        param_key = f"nn{n_neighbors}_md{min_dist}"
+        umap_results[param_key] = adata_temp.obsm['X_umap'].copy()
+        
+        # Plot on the grid
+        ax = axes[i, j] if n_rows > 1 else axes[j]
+        umap_coords = adata_temp.obsm['X_umap']
+        
+        # Plot with gray points
+        ax.scatter(umap_coords[:, 0], umap_coords[:, 1], 
+                   c='gray', s=0.5, alpha=0.5, rasterized=True)
+        
+        ax.set_title(f'n_neighbors={n_neighbors}\nmin_dist={min_dist}', 
+                     fontsize=12, fontweight='bold')
+        ax.set_xlabel('UMAP1')
+        ax.set_ylabel('UMAP2')
+        ax.set_aspect('equal')
+        
+        del adata_temp
+
+plt.tight_layout()
+plt.savefig(figure_path + 'human_umap_parameter_sweep.png', dpi=300, bbox_inches='tight')
+plt.savefig(figure_path + 'human_umap_parameter_sweep.pdf', bbox_inches='tight')
+plt.show()
+
+print("\n" + "="*60)
+print("Parameter sweep complete!")
+print(f"Saved visualization to: {figure_path}human_umap_parameter_sweep.png")
+
+# %% [markdown]
+# ## Visualize parameter sweep colored by chromosome (to see structure)
+
+# %% Create colored version of parameter sweep (colored by chromosome)
+fig, axes = plt.subplots(n_rows, n_cols, figsize=(5*n_cols, 5*n_rows))
+
+print("\nCreating colored visualization of parameter sweep...")
+
+for i, min_dist in enumerate(min_dist_range):
+    for j, n_neighbors in enumerate(n_neighbors_range):
+        param_key = f"nn{n_neighbors}_md{min_dist}"
+        umap_coords = umap_results[param_key]
+        
+        # Plot on the grid
+        ax = axes[i, j] if n_rows > 1 else axes[j]
+        
+        # Color by chromosome
+        chr_colors = peaks_by_pseudobulk.obs['Chromosome'].astype('category').cat.codes
+        scatter = ax.scatter(umap_coords[:, 0], umap_coords[:, 1], 
+                            c=chr_colors, s=0.5, alpha=0.6, 
+                            cmap='tab20', rasterized=True)
+        
+        ax.set_title(f'n_neighbors={n_neighbors}\nmin_dist={min_dist}', 
+                     fontsize=12, fontweight='bold')
+        ax.set_xlabel('UMAP1')
+        ax.set_ylabel('UMAP2')
+        ax.set_aspect('equal')
+
+plt.tight_layout()
+plt.savefig(figure_path + 'human_umap_parameter_sweep_colored.png', dpi=300, bbox_inches='tight')
+plt.savefig(figure_path + 'human_umap_parameter_sweep_colored.pdf', bbox_inches='tight')
+plt.show()
+
+print(f"Saved colored visualization to: {figure_path}human_umap_parameter_sweep_colored.png")
+
+# %% Quantitative analysis: compute connectivity metrics for each parameter set
+# from scipy.sparse import csr_matrix
+# from scipy.sparse.csgraph import connected_components
+
+# connectivity_metrics = {}
+
+# print("\nComputing connectivity metrics for each parameter combination...")
+# print("="*60)
+
+# for param_key in umap_results.keys():
+#     # Parse parameters from key
+#     parts = param_key.split('_')
+#     n_neighbors = int(parts[0].replace('nn', ''))
+#     min_dist = float(parts[1].replace('md', ''))
+    
+#     # Create temporary adata to get the connectivity graph
+#     adata_temp = peaks_by_pseudobulk.copy()
+#     rsc.pp.neighbors(adata_temp, n_neighbors=n_neighbors, n_pcs=40, use_rep='X_pca')
+    
+#     # Get connectivity graph
+#     connectivities = adata_temp.obsp['connectivities']
+    
+#     # Compute number of connected components
+#     n_components, labels = connected_components(connectivities, directed=False)
+    
+#     # Compute average connectivity (mean number of edges per node)
+#     avg_connectivity = connectivities.sum() / connectivities.shape[0]
+    
+#     # Store metrics
+#     connectivity_metrics[param_key] = {
+#         'n_neighbors': n_neighbors,
+#         'min_dist': min_dist,
+#         'n_components': n_components,
+#         'avg_connectivity': avg_connectivity
+#     }
+    
+#     print(f"{param_key}: {n_components} components, avg_connectivity={avg_connectivity:.2f}")
+    
+#     del adata_temp
+
+# # Create summary table
+# import pandas as pd
+# metrics_df = pd.DataFrame(connectivity_metrics).T
+# metrics_df = metrics_df.sort_values(['n_components', 'avg_connectivity'])
+
+# print("\n" + "="*60)
+# print("CONNECTIVITY METRICS SUMMARY")
+# print("="*60)
+# print("(Sorted by fewest components, then highest connectivity)")
+# print(metrics_df)
+# print("\nBest parameters (fewest disconnected components):")
+# best_params = metrics_df.iloc[0]
+# print(f"  n_neighbors = {int(best_params['n_neighbors'])}")
+# print(f"  min_dist = {best_params['min_dist']}")
+# print(f"  n_components = {int(best_params['n_components'])}")
+# print(f"  avg_connectivity = {best_params['avg_connectivity']:.2f}")
+
+# %% Choose optimal parameters and compute final UMAP
+# Based on connectivity metrics and visual inspection
+optimal_n_neighbors = 30  # Use best from metrics
+optimal_min_dist = 0.5              # Use best from metrics
+
+# Or manually override based on visual inspection:
+# optimal_n_neighbors = 50  
+# optimal_min_dist = 0.2
+
+print(f"\nComputing final UMAP with optimal parameters:")
+print(f"  n_neighbors = {optimal_n_neighbors}")
+print(f"  min_dist = {optimal_min_dist}")
+
+rsc.pp.neighbors(peaks_by_pseudobulk, n_neighbors=optimal_n_neighbors, n_pcs=40, use_rep='X_pca')
+rsc.tl.umap(peaks_by_pseudobulk, min_dist=optimal_min_dist, random_state=42)
+
+# plot the final UMAP
+sc.pl.umap(peaks_by_pseudobulk, 
+           title=f'Peak UMAP (n_neighbors={optimal_n_neighbors}, min_dist={optimal_min_dist})',
+           save='_human_peaks_umap_basic.png')
+
+# %% Save the adata_pseudo and peaks_by_pseudobulk objects
+output_dir = "/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/public_data/human_domcke_2020/"
+os.makedirs(output_dir, exist_ok=True)
+#adata_pseudo.write_h5ad(output_dir + "Domcke-2020_pb_by_celltype_dayofpregnancy.h5ad")
+#print(f"Saved pseudobulk object to: {output_dir}Domcke-2020_pb_by_celltype_dayofpregnancy.h5ad")
+
+
+
+# %% Annotate the peaks_by_pseudobulk object
+# %% 1) Extract chromosome info from peak names (format: chr1-752336-752980)
+peak_names = peaks_by_pseudobulk.obs_names
+parts = [x.split('-') for x in peak_names]
+peaks_by_pseudobulk.obs['Chromosome'] = [p[0] for p in parts]
+peaks_by_pseudobulk.obs['Start'] = [int(p[1]) for p in parts]
+peaks_by_pseudobulk.obs['End'] = [int(p[2]) for p in parts]
+# %% 2) Calculate total accessibility (sum across all pseudobulk groups)
+# For peaks_by_pseudobulk: rows=peaks, columns=pseudobulk groups
+# Sum across axis=1 to get total accessibility per peak
+print("Calculating total accessibility per peak...")
+
+# Get the data matrix
+X = peaks_by_pseudobulk.layers["normalized"]
+if hasattr(X, 'toarray'):
+    # If sparse matrix, convert to dense (or use sparse operations)
+    total_accessibility = np.array(X.sum(axis=1)).flatten()
+else:
+    # Already dense
+    total_accessibility = X.sum(axis=1)
+
+# Add to obs
+peaks_by_pseudobulk.obs['total_accessibility'] = total_accessibility
+
+# Calculate log-transformed accessibility (log1p to handle zeros)
+peaks_by_pseudobulk.obs['log_total_accessibility'] = np.log1p(total_accessibility)
+
+print(f"Total accessibility range: {total_accessibility.min():.2f} - {total_accessibility.max():.2f}")
+print(f"Log total accessibility range: {peaks_by_pseudobulk.obs['log_total_accessibility'].min():.2f} - {peaks_by_pseudobulk.obs['log_total_accessibility'].max():.2f}")
+# %% Import the utility functions
 import pyranges as pr
 import sys
-sys.path.append("../Fig_peak_umap/scripts/")
+sys.path.append("/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/zebrahub-multiome-analysis/notebooks/Fig_peak_umap/scripts/")
 from peak_annotation_utils import annotate_peak_types
 help(annotate_peak_types)
 
 # %% Prepare peaks DataFrame for annotation
-# Extract peak coordinates from the obs_names or existing columns
-peaks_df = peaks_by_pseudobulk.obs[['chr', 'start', 'end']].copy()
-
-# Rename columns to match the expected format
-peaks_df = peaks_df.rename(columns={
-    'chr': 'Chromosome',
-    'start': 'Start',
-    'end': 'End'
-})
+# Extract peak coordinates from the obs columns
+peaks_df = peaks_by_pseudobulk.obs[['Chromosome', 'Start', 'End']].copy()
 
 # Ensure proper data types
 peaks_df['Chromosome'] = peaks_df['Chromosome'].astype(str)
@@ -267,15 +442,23 @@ print(peaks_df.head())
 print(f"Shape: {peaks_df.shape}")
 print(f"Data types:\n{peaks_df.dtypes}")
 
-# %% Annotate peaks using mouse GTF file
-# Path to mouse GTF file
-mouse_gtf_file = '/hpc/reference/sequencing_alignment/alignment_references/GRCH38.gencode.v47.primary_assembly_Cellranger_20250321/genes/genes.gtf.gz'  # Update this path
+# %% save the annotated peaks_by_pseudobulk object
+peaks_by_pseudobulk.write_h5ad(output_dir + "peaks_by_pb_annotated.h5ad")
+print(f"Saved annotated peaks_by_pseudobulk object to: {output_dir}peaks_by_pb_annotated.h5ad")
 
-# Annotate peaks (using Argelaguet 2022 definition: 500bp upstream, 100bp downstream)
+# %% checkpoint 2.
+output_dir = "/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/public_data/human_domcke_2020/"
+peaks_by_pseudobulk = sc.read_h5ad(output_dir + "peaks_by_pb_annotated.h5ad")
+peaks_by_pseudobulk
+# %% Annotate peaks using human GTF file
+# Path to human GTF file
+human_gtf_file = '/hpc/reference/sequencing_alignment/alignment_references/GRCH38.gencode.v47.primary_assembly_Cellranger_20250321/genes/genes.gtf.gz'
+
+# Annotate peaks (using Argelaguet 2022 definition: 500bp upstream, 200bp downstream)
 annotated_peaks = annotate_peak_types(
     peaks_df, 
-    mouse_gtf_file, 
-    upstream_promoter=2000, 
+    human_gtf_file, 
+    upstream_promoter=500, 
     downstream_promoter=200
 )
 
@@ -285,27 +468,21 @@ print(f"\nPeak type distribution:")
 print(annotated_peaks['peak_type'].value_counts())
 
 # %% Add annotations back to the AnnData object
-peaks_by_pseudobulk.obs['Chromosome'] = annotated_peaks['Chromosome'].values
-peaks_by_pseudobulk.obs['Start'] = annotated_peaks['Start'].values
-peaks_by_pseudobulk.obs['End'] = annotated_peaks['End'].values
 peaks_by_pseudobulk.obs['peak_type'] = annotated_peaks['peak_type'].values
 
 # Verify
 print(peaks_by_pseudobulk.obs[['Chromosome', 'Start', 'End', 'peak_type']].head())
 
-# %% 
-sc.pl.umap(peaks_by_pseudobulk, color="peak_type", save='_peak_type.png')
+# %% Visualize peak types on UMAP
+sc.pl.umap(peaks_by_pseudobulk, color="peak_type", 
+           title='Human peaks colored by genomic annotation',
+           save='_human_peak_type.png')
 
-# %% Reformat peak names to match expected format (chr-start-end instead of chr:start-end)
-print("Reformatting peak names...")
-# Create new index with chr-start-end format
-new_index = [f"{row['chr']}-{row['start']}-{row['end']}" 
-             for _, row in peaks_by_pseudobulk.obs.iterrows()]
-peaks_by_pseudobulk.obs_names = new_index
-
-print(f"Peak name format updated. Example: {peaks_by_pseudobulk.obs_names[0]}")
-
-# %% Import the associate_peaks_to_genes function (with reload to get latest changes)
+# %% checkpoint 1.
+output_dir = "/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/public_data/human_domcke_2020/"
+peaks_by_pseudobulk = sc.read_h5ad(output_dir + "peaks_by_pb_annotated.h5ad")
+peaks_by_pseudobulk
+# %% Import the associate_peaks_to_genes function
 import importlib
 import peak_annotation_utils
 importlib.reload(peak_annotation_utils)
@@ -318,7 +495,7 @@ print("="*50)
 
 peaks_with_genes = associate_peaks_to_genes(
     peaks_by_pseudobulk,
-    mouse_gtf_file,
+    human_gtf_file,
     max_distance=50000,  # Cap at 50kb
     chunk_size=1000
 )
@@ -347,14 +524,11 @@ if len(valid_distances) > 0:
     print(f"  Median: {valid_distances.median():.0f} bp")
 
 # %% Visualize distance to TSS on UMAP
-# Only show peaks with valid TSS distances
-peaks_by_pseudobulk.obs['distance_to_tss_capped'] = peaks_by_pseudobulk.obs['distance_to_tss'].copy()
-
 sc.pl.umap(peaks_by_pseudobulk, color='distance_to_tss', 
            title='Distance to nearest TSS (bp)',
-           cmap='magma',  # Reverse so closer = darker
+           cmap='magma',
            vmin=0, vmax=10000,
-           save='_distance_to_tss.png')
+           save='_human_distance_to_tss.png')
 
 # %% Create binned distance categories
 bins = [0, 1000, 5000, 10000, 20000, 50000]
@@ -370,7 +544,7 @@ peaks_by_pseudobulk.obs['distance_to_tss_binned'] = pd.cut(
 # Plot binned distances
 sc.pl.umap(peaks_by_pseudobulk, color='distance_to_tss_binned',
            title='Binned distance to nearest TSS',
-           save=figure_path + 'mouse_distance_to_tss_binned.png')
+           save='_human_distance_to_tss_binned.png')
 
 # %% Distribution of TSS distances
 fig, axes = plt.subplots(1, 2, figsize=(14, 5))
@@ -395,8 +569,8 @@ axes[1].tick_params(axis='x', rotation=45)
 axes[1].grid(False)
 
 plt.tight_layout()
-plt.savefig(figure_path + 'mouse_tss_distance_distributions.png', dpi=300, bbox_inches='tight')
-plt.savefig(figure_path + 'mouse_tss_distance_distributions.pdf', bbox_inches='tight')
+plt.savefig(figure_path + 'human_tss_distance_distributions.png', dpi=300, bbox_inches='tight')
+plt.savefig(figure_path + 'human_tss_distance_distributions.pdf', bbox_inches='tight')
 plt.show()
 
 # %% TSS distance statistics by peak type
@@ -405,48 +579,18 @@ tss_by_type = peaks_by_pseudobulk.obs.groupby('peak_type')['distance_to_tss'].de
 print(tss_by_type)
 
 # %% [markdown]
-# ## Calculate total accessibility per peak and visualize on UMAP
+# ## Additional accessibility visualizations on UMAP
 
-# %% Calculate total accessibility (sum across all pseudobulk groups)
-# For peaks_by_pseudobulk: rows=peaks, columns=pseudobulk groups
-# Sum across axis=1 to get total accessibility per peak
-print("Calculating total accessibility per peak...")
-
-# Get the data matrix
-X = peaks_by_pseudobulk.layers["normalized"]
-if hasattr(X, 'toarray'):
-    # If sparse matrix, convert to dense (or use sparse operations)
-    total_accessibility = np.array(X.sum(axis=1)).flatten()
-else:
-    # Already dense
-    total_accessibility = X.sum(axis=1)
-
-# Add to obs
-peaks_by_pseudobulk.obs['total_accessibility'] = total_accessibility
-
-# Calculate log-transformed accessibility (log1p to handle zeros)
-peaks_by_pseudobulk.obs['log_total_accessibility'] = np.log1p(total_accessibility)
-
-print(f"Total accessibility range: {total_accessibility.min():.2f} - {total_accessibility.max():.2f}")
-print(f"Log total accessibility range: {peaks_by_pseudobulk.obs['log_total_accessibility'].min():.2f} - {peaks_by_pseudobulk.obs['log_total_accessibility'].max():.2f}")
-
-# %% Visualize log(total accessibility) on UMAP
-# Set the figure path for scanpy
-# figure_path = "/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/public_data/mouse_argelaguet_2022/figures/"
-# os.makedirs(figure_path, exist_ok=True)
-# sc.settings.figdir = figure_path
-
-# Note: scanpy's save parameter only accepts a suffix, not a full path
-# It will save to sc.settings.figdir + save
+# %% Visualize log(total accessibility) on UMAP with different colormaps
 sc.pl.umap(peaks_by_pseudobulk, color='log_total_accessibility', 
            title='Log(Total Accessibility) per peak',
            cmap='viridis',
-           save='_mouse_log_total_accessibility.png')
+           save='_human_log_total_accessibility.png')
 
 # %% Also visualize with different color maps
 sc.pl.umap(peaks_by_pseudobulk, color='log_total_accessibility', 
            title='Log(Total Accessibility) - magma colormap',
-           cmap='magma', save='_mouse_log_total_accessibility_magma.png')
+           cmap='magma', save='_human_log_total_accessibility_magma.png')
 
 # %% Distribution of log total accessibility
 fig, axes = plt.subplots(1, 2, figsize=(12, 5))
@@ -467,7 +611,7 @@ axes[1].tick_params(axis='x', rotation=45)
 axes[1].grid(False)
 
 plt.tight_layout()
-plt.savefig(figure_path + 'mouse_log_total_accessibility_distributions.png', dpi=300, bbox_inches='tight')
+plt.savefig(figure_path + 'human_log_total_accessibility_distributions.png', dpi=300, bbox_inches='tight')
 plt.show()
 
 # %% Statistics of accessibility by peak type
@@ -506,28 +650,12 @@ ax.legend(fontsize=12, loc='upper right')
 ax.grid(False)
 
 plt.tight_layout()
-plt.savefig(figure_path + 'mouse_log_total_accessibility_distributions_density.png', dpi=300, bbox_inches='tight')
-plt.savefig(figure_path + 'mouse_log_total_accessibility_distributions_density.pdf', bbox_inches='tight')
+plt.savefig(figure_path + 'human_log_total_accessibility_distributions_density.png', dpi=300, bbox_inches='tight')
+plt.savefig(figure_path + 'human_log_total_accessibility_distributions_density.pdf', bbox_inches='tight')
 plt.show()
 
-# %% Print detailed summary statistics for each peak type
-# print("\n=== Log(Total Accessibility) Statistics by Peak Type ===")
-# for peak_type in sorted(peak_types):
-#     peak_data = peaks_by_pseudobulk.obs[peaks_by_pseudobulk.obs['peak_type'] == peak_type]
-#     print(f"\n{peak_type.upper()}:")
-#     print(f"  N peaks: {len(peak_data):,}")
-#     print(f"  Mean: {peak_data['log_total_accessibility'].mean():.3f}")
-#     print(f"  Median: {peak_data['log_total_accessibility'].median():.3f}")
-#     print(f"  Std: {peak_data['log_total_accessibility'].std():.3f}")
-#     print(f"  Min: {peak_data['log_total_accessibility'].min():.3f}")
-#     print(f"  Max: {peak_data['log_total_accessibility'].max():.3f}")
-
-# %% Visualize peak types on UMAP
-sc.pl.umap(peaks_by_pseudobulk, color="peak_type", 
-           title='Mouse peaks colored by genomic annotation')
-
 # %% [markdown]
-# ## Highlight only promoter peaks on UMAP
+# ## Highlight peak types on UMAP
 
 # %% Create binary column for promoter vs non-promoter
 peaks_by_pseudobulk.obs['is_promoter'] = peaks_by_pseudobulk.obs['peak_type'] == 'promoter'
@@ -536,16 +664,19 @@ peaks_by_pseudobulk.obs['is_promoter'] = peaks_by_pseudobulk.obs['peak_type'] ==
 sc.pl.umap(peaks_by_pseudobulk, color='is_promoter', 
            title='Promoter peaks highlighted',
            palette=['lightgray', 'red'],
-           save='_promoters_highlighted.png')
+           save='_human_promoters_highlighted.png')
 
 # %% Create separate plots for each peak type
+# Get UMAP coordinates
+umap_coords = peaks_by_pseudobulk.obsm['X_umap']
+
 fig, axes = plt.subplots(2, 2, figsize=(16, 16))
 axes = axes.flatten()
 
-peak_types = ['promoter', 'exonic', 'intronic', 'intergenic']
-colors = ['#e41a1c', '#377eb8', '#4daf4a', '#984ea3']  # Red, Blue, Green, Purple
+peak_types_list = ['promoter', 'exonic', 'intronic', 'intergenic']
+colors_list = ['#e41a1c', '#377eb8', '#4daf4a', '#984ea3']  # Red, Blue, Green, Purple
 
-for idx, (peak_type, color) in enumerate(zip(peak_types, colors)):
+for idx, (peak_type, color) in enumerate(zip(peak_types_list, colors_list)):
     ax = axes[idx]
     
     # Create mask for current peak type
@@ -574,15 +705,9 @@ for idx, (peak_type, color) in enumerate(zip(peak_types, colors)):
     ax.set_aspect('equal')
 
 plt.tight_layout()
-plt.savefig(figure_path + 'mouse_peak_types_individual_highlighted.png', dpi=300, bbox_inches='tight')
-plt.savefig(figure_path + 'mouse_peak_types_individual_highlighted.pdf', bbox_inches='tight')
+plt.savefig(figure_path + 'human_peak_types_individual_highlighted.png', dpi=300, bbox_inches='tight')
+plt.savefig(figure_path + 'human_peak_types_individual_highlighted.pdf', bbox_inches='tight')
 plt.show()
-
-# %% Print summary statistics
-print("\n=== Promoter Peak Summary ===")
-print(f"Total peaks: {len(peaks_by_pseudobulk.obs):,}")
-print(f"Promoter peaks: {promoter_mask.sum():,} ({(promoter_mask.sum()/len(peaks_by_pseudobulk.obs))*100:.2f}%)")
-print(f"Non-promoter peaks: {(~promoter_mask).sum():,} ({((~promoter_mask).sum()/len(peaks_by_pseudobulk.obs))*100:.2f}%)")
 
 # %% Display detailed peak type statistics
 print("\n=== Peak Type Statistics ===")
@@ -597,7 +722,7 @@ fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
 
 # Bar plot of counts
 sns.barplot(x=peak_counts.index, y=peak_counts.values, ax=ax1)
-ax1.set_title('Number of Peaks by Type (Mouse Argelaguet 2022)')
+ax1.set_title('Number of Peaks by Type (Human Domcke 2020)')
 ax1.set_ylabel('Number of peaks')
 ax1.set_xlabel('Peak Type')
 ax1.tick_params(axis='x', rotation=45)
@@ -612,40 +737,9 @@ ax2.tick_params(axis='x', rotation=45)
 ax2.grid(False)
 
 plt.tight_layout()
+plt.savefig(figure_path + 'human_peak_type_distribution.png', dpi=300, bbox_inches='tight')
+plt.savefig(figure_path + 'human_peak_type_distribution.pdf', bbox_inches='tight')
 plt.show()
-
-# %% Verify coordinate consistency
-print("\nVerifying coordinate consistency:")
-print("\nData types:")
-print(f"  chr: {peaks_by_pseudobulk.obs['chr'].dtype}")
-print(f"  Chromosome: {peaks_by_pseudobulk.obs['Chromosome'].dtype}")
-print(f"  start: {peaks_by_pseudobulk.obs['start'].dtype}")
-print(f"  Start: {peaks_by_pseudobulk.obs['Start'].dtype}")
-print(f"  end: {peaks_by_pseudobulk.obs['end'].dtype}")
-print(f"  End: {peaks_by_pseudobulk.obs['End'].dtype}")
-
-print("\nFirst few values:")
-print(peaks_by_pseudobulk.obs[['chr', 'Chromosome', 'start', 'Start', 'end', 'End']].head())
-
-# Convert to same types for comparison
-chr_match = (peaks_by_pseudobulk.obs['chr'].astype(str) == peaks_by_pseudobulk.obs['Chromosome'].astype(str))
-start_match = (peaks_by_pseudobulk.obs['start'].astype(int) == peaks_by_pseudobulk.obs['Start'].astype(int))
-end_match = (peaks_by_pseudobulk.obs['end'].astype(int) == peaks_by_pseudobulk.obs['End'].astype(int))
-
-coord_match = (chr_match & start_match & end_match).all()
-
-print(f"\nChromosome match: {chr_match.all()}")
-print(f"Start match: {start_match.all()}")
-print(f"End match: {end_match.all()}")
-print(f"All coordinates match: {coord_match}")
-
-# Show any mismatches
-if not coord_match:
-    mismatches = peaks_by_pseudobulk.obs[~(chr_match & start_match & end_match)]
-    print(f"\nNumber of mismatches: {len(mismatches)}")
-    if len(mismatches) > 0:
-        print("\nFirst few mismatches:")
-        print(mismatches[['chr', 'Chromosome', 'start', 'Start', 'end', 'End']].head())
 
 # %% Summary of the annotated object
 print("\n=== Summary of annotated peaks_by_pseudobulk ===")
@@ -655,22 +749,21 @@ print(f"Total pseudobulk groups (vars): {peaks_by_pseudobulk.n_vars}")
 print(f"\nAnnotations in .obs:")
 print(peaks_by_pseudobulk.obs.columns.tolist())
 
-# %% Optional: Save the annotated pseudobulked object
-peaks_by_pseudobulk.write_h5ad("/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/public_data/mouse_argelaguet_2022/peaks_by_pb_celltype_stage_annotated.h5ad")
-# adata_pseudo.write_h5ad("/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/public_data/mouse_argelaguet_2022/pseudobulk_by_celltype_stage.h5ad")
+# %% Save intermediate annotated object
+intermediate_output_path = output_dir + "peaks_by_pb_celltype_stage_annotated.h5ad"
+peaks_by_pseudobulk.write_h5ad(intermediate_output_path)
+print(f"\nSaved intermediate annotated object to: {intermediate_output_path}")
 
-# %% Part 2. Annotate peak UMAP with most accessible celltypes and timepoints
-# Use functions from 09_annotate_peak_umap_celltype_timepoints.py to identify
-# which celltypes and timepoints show highest accessibility for each cluster
-
-# load the adata object (peaks_by_pseudobulk)
-peaks_by_pseudobulk = sc.read_h5ad("/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/public_data/mouse_argelaguet_2022/peaks_by_pb_celltype_stage_annotated.h5ad")
+# %% [markdown]
+# # Part 2: Annotate peak UMAP with most accessible celltypes and timepoints
+# 
+# Use functions to identify which celltypes and timepoints show highest accessibility for each cluster
 
 # %% Import necessary functions from the annotation script
 import re
 import sys
 import importlib
-sys.path.append("../Fig_peak_umap/scripts/")
+sys.path.append("/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/zebrahub-multiome-analysis/notebooks/Fig_peak_umap/scripts/")
 
 # Import and reload to get latest version
 import peak_accessibility_utils
@@ -684,7 +777,9 @@ from peak_accessibility_utils import (
 )
 
 # %% Perform leiden clustering on the peak UMAP
+print("\n" + "="*60)
 print("Performing leiden clustering on the peak object...")
+print("="*60)
 
 # Use the existing neighbors graph to compute leiden clustering
 sc.tl.leiden(peaks_by_pseudobulk, resolution=0.4, key_added='leiden_coarse')
@@ -692,15 +787,18 @@ sc.tl.leiden(peaks_by_pseudobulk, resolution=1.0, key_added='leiden_fine')
 
 # Visualize the clusters
 sc.pl.umap(peaks_by_pseudobulk, color=['leiden_coarse', 'leiden_fine'], 
-           legend_loc='on data', legend_fontsize=8)
+           legend_loc='on data', legend_fontsize=8,
+           save='_human_leiden_clusters.png')
 
 print(f"Coarse clustering: {len(peaks_by_pseudobulk.obs['leiden_coarse'].unique())} clusters")
 print(f"Fine clustering: {len(peaks_by_pseudobulk.obs['leiden_fine'].unique())} clusters")
 
 # %% Parse celltype and timepoint information from pseudobulk group names
-print("\nParsing celltype and timepoint information from pseudobulk groups...")
+print("\n" + "="*60)
+print("Parsing celltype and timepoint information from pseudobulk groups...")
+print("="*60)
 
-# The var_names should be in format: celltype_timepoint (e.g., "Astro_E7.5")
+# The var_names should be in format: celltype_timepoint (e.g., "Astrocytes_52.0")
 celltype_list = []
 timepoint_list = []
 
@@ -814,33 +912,75 @@ peaks_by_pseudobulk.obs['cluster_annotation'] = (
     ': ' + peaks_by_pseudobulk.obs['top_celltype']
 )
 
+# Convert top_timepoint to numeric for continuous colormap visualization
+peaks_by_pseudobulk.obs['top_timepoint_numeric'] = pd.to_numeric(
+    peaks_by_pseudobulk.obs['top_timepoint'], 
+    errors='coerce'
+)
+
 print("\nAnnotation complete!")
-print(f"Added columns: top_celltype, top_timepoint, cluster_annotation")
+print(f"Added columns: top_celltype, top_timepoint, top_timepoint_numeric, cluster_annotation")
+print(f"\nTimepoint range: {peaks_by_pseudobulk.obs['top_timepoint_numeric'].min():.1f} - {peaks_by_pseudobulk.obs['top_timepoint_numeric'].max():.1f} days")
 
 # %% Visualize annotated UMAP
+
+# Plot 1: Top celltype
+sc.pl.umap(peaks_by_pseudobulk, color='top_celltype',
+           title='Most Accessible Celltype', save='_most_access_ct.png')
+
+# Plot 2: Top timepoint (continuous colormap)
+sc.pl.umap(peaks_by_pseudobulk, color='top_timepoint_numeric',
+           title='Most Accessible Timepoint (days of pregnancy)',
+           cmap='viridis',
+           save='_most_access_tp.png')
+
+
+# %% Visualize annotated UMAP (3-panel figure)
 print("\n" + "="*60)
 print("Creating annotated UMAP visualizations...")
 print("="*60)
 
-# Plot leiden clusters with top celltype annotation
+# Create 3-panel figure
 fig, axes = plt.subplots(1, 3, figsize=(24, 7))
 
-# Plot 1: Leiden clusters
+# Get UMAP coordinates
+umap_coords = peaks_by_pseudobulk.obsm['X_umap']
+
+# Plot 1: Leiden clusters (categorical)
 sc.pl.umap(peaks_by_pseudobulk, color='leiden_coarse', 
            ax=axes[0], show=False, title='Leiden Clusters (coarse)')
 
-# Plot 2: Top celltype
+# Plot 2: Top celltype (categorical)
 sc.pl.umap(peaks_by_pseudobulk, color='top_celltype',
            ax=axes[1], show=False, title='Most Accessible Celltype')
 
-# Plot 3: Top timepoint  
-sc.pl.umap(peaks_by_pseudobulk, color='top_timepoint',
-           ax=axes[2], show=False, title='Most Accessible Timepoint')
+# Plot 3: Top timepoint (continuous with viridis)
+timepoint_numeric = peaks_by_pseudobulk.obs['top_timepoint_numeric'].values
+valid_mask = ~pd.isna(timepoint_numeric)
+
+scatter = axes[2].scatter(
+    umap_coords[valid_mask, 0], 
+    umap_coords[valid_mask, 1],
+    c=timepoint_numeric[valid_mask],
+    cmap='viridis',
+    s=1,
+    alpha=0.8,
+    rasterized=True
+)
+
+# Add colorbar
+cbar = plt.colorbar(scatter, ax=axes[2])
+cbar.set_label('Day of Pregnancy', rotation=270, labelpad=20)
+
+axes[2].set_title('Most Accessible Timepoint\n(early = blue, late = yellow)', fontsize=12)
+axes[2].set_xlabel('UMAP1')
+axes[2].set_ylabel('UMAP2')
+axes[2].set_aspect('equal')
 
 plt.tight_layout()
-plt.savefig(figure_path + 'mouse_peak_umap_annotated_celltype_timepoint.png', 
+plt.savefig(figure_path + 'human_peak_umap_annotated_most_accessible_ct_tp.png', 
             dpi=300, bbox_inches='tight')
-plt.savefig(figure_path + 'mouse_peak_umap_annotated_celltype_timepoint.pdf', 
+plt.savefig(figure_path + 'human_peak_umap_annotated_most_accessible_ct_tp.pdf', 
             bbox_inches='tight')
 plt.show()
 
@@ -893,9 +1033,9 @@ sc.pl.umap(peaks_by_pseudobulk, color='top_celltype',
            title='Most Accessible Celltype')
 
 plt.tight_layout()
-plt.savefig(figure_path + 'mouse_peak_umap_specificity_patterns.png',
+plt.savefig(figure_path + 'human_peak_umap_specificity_patterns.png',
             dpi=300, bbox_inches='tight')
-plt.savefig(figure_path + 'mouse_peak_umap_specificity_patterns.pdf',
+plt.savefig(figure_path + 'human_peak_umap_specificity_patterns.pdf',
             bbox_inches='tight')
 plt.show()
 
@@ -934,11 +1074,16 @@ def plot_cluster_accessibility_profile(cluster_id, celltype_profiles, timepoint_
     timepoints = list(timepoint_profiles[cluster_id].keys())
     timepoint_values = list(timepoint_profiles[cluster_id].values())
     
-    # Sort timepoints naturally
-    sorted_indices = sorted(range(len(timepoints)), 
-                          key=lambda i: float(timepoints[i].replace('E', '').replace('somites', '')))
-    timepoints_sorted = [timepoints[i] for i in sorted_indices]
-    values_sorted = [timepoint_values[i] for i in sorted_indices]
+    # Sort timepoints by numeric value
+    try:
+        sorted_indices = sorted(range(len(timepoints)), 
+                              key=lambda i: float(timepoints[i]))
+        timepoints_sorted = [timepoints[i] for i in sorted_indices]
+        values_sorted = [timepoint_values[i] for i in sorted_indices]
+    except:
+        # If conversion fails, keep original order
+        timepoints_sorted = timepoints
+        values_sorted = timepoint_values
     
     axes[1].bar(range(len(timepoints_sorted)), values_sorted, color='coral', alpha=0.7)
     axes[1].set_xticks(range(len(timepoints_sorted)))
@@ -966,17 +1111,17 @@ for cluster_id in sorted(list(cluster_celltype_profiles_coarse.keys()))[:3]:
         cluster_id,
         cluster_celltype_profiles_coarse,
         cluster_timepoint_profiles_coarse,
-        save_path=f"{figure_path}mouse_cluster_{cluster_id}_accessibility_profile.png"
+        save_path=f"{figure_path}human_cluster_{cluster_id}_accessibility_profile.png"
     )
 
-# %% Save the annotated object
-print("\n" + "="*60)
-print("Saving annotated peak object...")
-print("="*60)
+# %% Save the final annotated object with cluster annotations
+print("\n" + "="*60")
+print("Saving final annotated peak object...")
+print("="*60")
 
-output_path = "/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/public_data/mouse_argelaguet_2022/peaks_by_pb_celltype_stage_annotated_with_clusters.h5ad"
-peaks_by_pseudobulk.write_h5ad(output_path)
-print(f"Saved to: {output_path}")
+final_output_path = output_dir + "peaks_by_pb_celltype_stage_annotated_with_clusters.h5ad"
+peaks_by_pseudobulk.write_h5ad(final_output_path)
+print(f"Saved to: {final_output_path}")
 
 print("\n" + "="*60)
 print("Annotation pipeline complete!")
