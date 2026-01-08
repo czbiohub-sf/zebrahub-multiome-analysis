@@ -5,15 +5,17 @@
 # sc_rapids jupyter kernel is used. (with GPU acceleration)
 # 
 # %% Load the libraries
+import os
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.cm as cm
+from matplotlib.colors import Normalize
 import seaborn as sns
 import scanpy as sc
 
 import cupy as cp
 import rapids_singlecell as rsc
-
 # %% Dataset 1. Argelaguet 2022 mouse peak objects
 # 1) file paths for Argelaguet 2022 mouse peak objects
 peak_objects_path = "/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/public_data/mouse_argelaguet_2022/PeakMatrix_anndata.h5ad"
@@ -37,7 +39,9 @@ print(peak_objects.obs.head())
 
 # %% pseudobulk the peak objects to create peaks-by-pseudobulk (celltype-AND-stage) matrix
 # %% pseudobulk the peak objects to create peaks-by-pseudobulk (celltype-AND-stage) matrix
-from Fig_peak_umap.scripts.analyze_peaks_with_normalization import analyze_peaks_with_normalization
+import sys
+sys.path.append("../")
+from Fig_peak_umap.utils.utils_pseudobulk import analyze_peaks_with_normalization
 
 # Run the pseudobulking
 adata_pseudo = analyze_peaks_with_normalization(
@@ -55,7 +59,7 @@ print(adata_pseudo.obs[['total_coverage', 'scale_factor', 'n_cells', 'mean_depth
 
 # %% Optional: Transpose to get peaks-by-pseudobulk for UMAP analysis
 # This is useful if you want to embed peaks instead of pseudobulk groups
-adata_pseudo.X = adata_pseudo.layers["log_norm"]
+adata_pseudo.X = adata_pseudo.layers["normalized"]
 peaks_by_pseudobulk = adata_pseudo.copy().T
 print(f"Transposed shape (peaks-by-pseudobulk): {peaks_by_pseudobulk.shape}")
 
@@ -70,29 +74,29 @@ peaks_by_pseudobulk = sc.read_h5ad("/hpc/projects/data.science/yangjoon.kim/zebr
 
 # %% computing UMAP
 # moves `.X` to the GPU
-rsc.get.anndata_to_GPU(peaks_by_pseudobulk)
+#rsc.get.anndata_to_GPU(peaks_by_pseudobulk)
 
 # Compute UMAP
 # rsc.pp.scale(peaks_pb_norm) # scale is for each "features" to have similar importance...
 rsc.pp.pca(peaks_by_pseudobulk, n_comps=100, use_highly_variable=False)
-rsc.pp.neighbors(peaks_by_pseudobulk, n_neighbors=15, n_pcs=40)
-rsc.tl.umap(peaks_by_pseudobulk, min_dist=0.2, random_state=42)
+rsc.pp.neighbors(peaks_by_pseudobulk, n_neighbors=50, n_pcs=40)
+rsc.tl.umap(peaks_by_pseudobulk, min_dist=0.4, random_state=42)
 
 # plot the UMAP
 sc.pl.umap(peaks_by_pseudobulk, color="chr")
 
 # %% 
 # define the figure path
-figure_path = "/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/public_data/mouse_argelaguet_2022/figures/"
+figure_path = "/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/public_data/mouse_argelaguet_2022/figures_v2/"
 os.makedirs(figure_path, exist_ok=True)
 sc.settings.figdir = figure_path
-sc.pl.umap(peaks_by_pseudobulk, color="chr", save='_chr.png')
+sc.pl.umap(peaks_by_pseudobulk, color="chr", save='_chromosome.png')
 # %% 
 # import the utility functions
 import pyranges as pr
 import sys
-sys.path.append("../Fig_peak_umap/scripts/")
-from peak_annotation_utils import annotate_peak_types
+sys.path.append("../")
+from Fig_peak_umap.scripts.peak_annotation_utils import annotate_peak_types
 help(annotate_peak_types)
 
 # %% Prepare peaks DataFrame for annotation
@@ -156,9 +160,9 @@ print(f"Peak name format updated. Example: {peaks_by_pseudobulk.obs_names[0]}")
 
 # %% Import the associate_peaks_to_genes function (with reload to get latest changes)
 import importlib
-import peak_annotation_utils
+from Fig_peak_umap.scripts import peak_annotation_utils
 importlib.reload(peak_annotation_utils)
-from peak_annotation_utils import associate_peaks_to_genes
+from Fig_peak_umap.scripts.peak_annotation_utils import associate_peaks_to_genes
 
 # %% Associate peaks to nearest genes and calculate TSS distances
 print("\n" + "="*50)
@@ -294,8 +298,29 @@ sc.pl.umap(peaks_by_pseudobulk, color='log_total_accessibility',
 
 # %% Also visualize with different color maps
 sc.pl.umap(peaks_by_pseudobulk, color='log_total_accessibility', 
-           title='Log(Total Accessibility) - magma colormap',
-           cmap='magma', save='_mouse_log_total_accessibility_magma.png')
+           title='Log(Total Accessibility) - cividis colormap',
+           cmap='cividis', save='_mouse_log_total_accessibility_cividis.png')
+
+# %% Export just the colorbar as a standalone PDF
+import matplotlib.cm as cm
+from matplotlib.colorbar import ColorbarBase
+from matplotlib.colors import Normalize
+
+# Get the data range for the colorbar
+vmin = peaks_by_pseudobulk.obs['log_total_accessibility'].min()
+vmax = peaks_by_pseudobulk.obs['log_total_accessibility'].max()
+
+# Create a figure with just the colorbar
+fig, ax = plt.subplots(figsize=(1.5, 6))
+norm = Normalize(vmin=vmin, vmax=vmax)
+cbar = ColorbarBase(ax, cmap=cm.cividis, norm=norm, orientation='vertical')
+cbar.set_label('Log(Total Accessibility)', fontsize=12)
+
+# Save as PDF
+plt.savefig(figure_path + 'mouse_log_total_accessibility_cividis_colorbar.pdf', 
+            bbox_inches='tight', dpi=300)
+plt.show()
+print(f"Colorbar saved to: {figure_path}mouse_log_total_accessibility_cividis_colorbar.pdf")
 
 # %% Distribution of log total accessibility
 fig, axes = plt.subplots(1, 2, figsize=(12, 5))
@@ -505,7 +530,7 @@ print(f"\nAnnotations in .obs:")
 print(peaks_by_pseudobulk.obs.columns.tolist())
 
 # %% Optional: Save the annotated pseudobulked object
-peaks_by_pseudobulk.write_h5ad("/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/public_data/mouse_argelaguet_2022/peaks_by_pb_celltype_stage_annotated.h5ad")
+peaks_by_pseudobulk.write_h5ad("/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/public_data/mouse_argelaguet_2022/peaks_by_pb_celltype_stage_annotated_v2.h5ad")
 # adata_pseudo.write_h5ad("/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/public_data/mouse_argelaguet_2022/pseudobulk_by_celltype_stage.h5ad")
 
 # %% Part 2. Annotate peak UMAP with most accessible celltypes and timepoints
@@ -513,18 +538,18 @@ peaks_by_pseudobulk.write_h5ad("/hpc/projects/data.science/yangjoon.kim/zebrahub
 # which celltypes and timepoints show highest accessibility for each cluster
 
 # load the adata object (peaks_by_pseudobulk)
-peaks_by_pseudobulk = sc.read_h5ad("/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/public_data/mouse_argelaguet_2022/peaks_by_pb_celltype_stage_annotated.h5ad")
-
+peaks_by_pseudobulk = sc.read_h5ad("/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/public_data/mouse_argelaguet_2022/peaks_by_pb_celltype_stage_annotated_v2.h5ad")
+peaks_by_pseudobulk
 # %% Import necessary functions from the annotation script
 import re
 import sys
 import importlib
-sys.path.append("../Fig_peak_umap/scripts/")
+sys.path.append("../")
 
 # Import and reload to get latest version
-import peak_accessibility_utils
+from Fig_peak_umap.scripts import peak_accessibility_utils
 importlib.reload(peak_accessibility_utils)
-from peak_accessibility_utils import (
+from Fig_peak_umap.scripts.peak_accessibility_utils import (
     create_cluster_celltype_profiles,
     create_cluster_timepoint_profiles,
     get_top_annotations,
@@ -537,14 +562,17 @@ print("Performing leiden clustering on the peak object...")
 
 # Use the existing neighbors graph to compute leiden clustering
 sc.tl.leiden(peaks_by_pseudobulk, resolution=0.4, key_added='leiden_coarse')
-sc.tl.leiden(peaks_by_pseudobulk, resolution=1.0, key_added='leiden_fine')
+#sc.tl.leiden(peaks_by_pseudobulk, resolution=1.0, key_added='leiden_fine')
 
 # Visualize the clusters
-sc.pl.umap(peaks_by_pseudobulk, color=['leiden_coarse', 'leiden_fine'], 
+sc.pl.umap(peaks_by_pseudobulk, color=['leiden_coarse'], 
            legend_loc='on data', legend_fontsize=8)
 
 print(f"Coarse clustering: {len(peaks_by_pseudobulk.obs['leiden_coarse'].unique())} clusters")
-print(f"Fine clustering: {len(peaks_by_pseudobulk.obs['leiden_fine'].unique())} clusters")
+#print(f"Fine clustering: {len(peaks_by_pseudobulk.obs['leiden_fine'].unique())} clusters")
+
+
+
 
 # %% Parse celltype and timepoint information from pseudobulk group names
 print("\nParsing celltype and timepoint information from pseudobulk groups...")
@@ -583,11 +611,11 @@ cluster_celltype_profiles_coarse = create_cluster_celltype_profiles(
     verbose=True
 )
 
-cluster_celltype_profiles_fine = create_cluster_celltype_profiles(
-    peaks_by_pseudobulk,
-    cluster_col='leiden_fine',
-    verbose=True
-)
+# cluster_celltype_profiles_fine = create_cluster_celltype_profiles(
+#     peaks_by_pseudobulk,
+#     cluster_col='leiden_fine',
+#     verbose=True
+# )
 
 print("\n" + "="*60)
 print("Computing timepoint accessibility profiles...")
@@ -599,11 +627,11 @@ cluster_timepoint_profiles_coarse = create_cluster_timepoint_profiles(
     verbose=True
 )
 
-cluster_timepoint_profiles_fine = create_cluster_timepoint_profiles(
-    peaks_by_pseudobulk,
-    cluster_col='leiden_fine',
-    verbose=True
-)
+# cluster_timepoint_profiles_fine = create_cluster_timepoint_profiles(
+#     peaks_by_pseudobulk,
+#     cluster_col='leiden_fine',
+#     verbose=True
+# )
 
 # %% Classify clusters by accessibility specificity
 print("\n" + "="*60)
@@ -666,7 +694,801 @@ peaks_by_pseudobulk.obs['cluster_annotation'] = (
 print("\nAnnotation complete!")
 print(f"Added columns: top_celltype, top_timepoint, cluster_annotation")
 
-# %% Visualize annotated UMAP
+# %% Compute peak contrast for celltype and timepoint accessibility
+print("\n" + "="*60)
+print("Computing peak contrast metrics...")
+print("="*60)
+
+def compute_peak_contrast(accessibility_vector):
+    """
+    Compute peak contrast: (max - mean_of_others) / std_of_others
+    
+    This measures how strongly a peak stands out from the background.
+    High values = specific signal, Low values = ubiquitous/weak signal
+    """
+    if len(accessibility_vector) < 2:
+        return np.nan
+    
+    max_val = np.max(accessibility_vector)
+    max_idx = np.argmax(accessibility_vector)
+    
+    # Get all values except the maximum
+    other_values = np.delete(accessibility_vector, max_idx)
+    
+    if len(other_values) == 0:
+        return np.nan
+    
+    mean_others = np.mean(other_values)
+    std_others = np.std(other_values)
+    
+    # Avoid division by zero
+    if std_others == 0:
+        # If all other values are the same, return a large value if max differs
+        if max_val > mean_others:
+            return 100.0  # Arbitrarily large
+        else:
+            return 0.0
+    
+    contrast = (max_val - mean_others) / std_others
+    return contrast
+
+# Compute celltype contrast and most accessible celltype for each peak
+print("\nComputing celltype peak contrast and most accessible celltype...")
+celltype_contrast_list = []
+top_celltype_list = []
+top_celltype_accessibility_list = []
+
+for peak_idx in range(peaks_by_pseudobulk.n_obs):
+    # Get accessibility across all pseudobulk groups for this peak
+    peak_accessibility = peaks_by_pseudobulk.layers['normalized'][peak_idx, :].toarray().flatten() if hasattr(peaks_by_pseudobulk.layers['normalized'], 'toarray') else peaks_by_pseudobulk.layers['normalized'][peak_idx, :]
+    
+    # Group by celltype and compute mean accessibility per celltype
+    celltype_accessibility = {}
+    for i, pb_group in enumerate(peaks_by_pseudobulk.var_names):
+        celltype = peaks_by_pseudobulk.var.loc[pb_group, 'celltype']
+        if celltype not in celltype_accessibility:
+            celltype_accessibility[celltype] = []
+        celltype_accessibility[celltype].append(peak_accessibility[i])
+    
+    # Average across timepoints for each celltype
+    celltype_means = {ct: np.mean(vals) for ct, vals in celltype_accessibility.items()}
+    celltype_means_array = np.array(list(celltype_means.values()))
+    celltype_names = list(celltype_means.keys())
+    
+    # Find most accessible celltype
+    max_idx = np.argmax(celltype_means_array)
+    top_celltype = celltype_names[max_idx]
+    top_accessibility = celltype_means_array[max_idx]
+    
+    # Compute contrast
+    contrast = compute_peak_contrast(celltype_means_array)
+    
+    celltype_contrast_list.append(contrast)
+    top_celltype_list.append(top_celltype)
+    top_celltype_accessibility_list.append(top_accessibility)
+
+peaks_by_pseudobulk.obs['celltype_peak_contrast'] = celltype_contrast_list
+peaks_by_pseudobulk.obs['peak_top_celltype'] = top_celltype_list
+peaks_by_pseudobulk.obs['peak_top_celltype_accessibility'] = top_celltype_accessibility_list
+
+# Compute timepoint contrast and most accessible timepoint for each peak
+print("Computing timepoint peak contrast and most accessible timepoint...")
+timepoint_contrast_list = []
+top_timepoint_list = []
+top_timepoint_accessibility_list = []
+
+for peak_idx in range(peaks_by_pseudobulk.n_obs):
+    # Get accessibility across all pseudobulk groups for this peak
+    peak_accessibility = peaks_by_pseudobulk.layers['normalized'][peak_idx, :].toarray().flatten() if hasattr(peaks_by_pseudobulk.layers['normalized'], 'toarray') else peaks_by_pseudobulk.layers['normalized'][peak_idx, :]
+    
+    # Group by timepoint and compute mean accessibility per timepoint
+    timepoint_accessibility = {}
+    for i, pb_group in enumerate(peaks_by_pseudobulk.var_names):
+        timepoint = peaks_by_pseudobulk.var.loc[pb_group, 'timepoint']
+        if timepoint not in timepoint_accessibility:
+            timepoint_accessibility[timepoint] = []
+        timepoint_accessibility[timepoint].append(peak_accessibility[i])
+    
+    # Average across celltypes for each timepoint
+    timepoint_means = {tp: np.mean(vals) for tp, vals in timepoint_accessibility.items()}
+    timepoint_means_array = np.array(list(timepoint_means.values()))
+    timepoint_names = list(timepoint_means.keys())
+    
+    # Find most accessible timepoint
+    max_idx = np.argmax(timepoint_means_array)
+    top_timepoint = timepoint_names[max_idx]
+    top_accessibility = timepoint_means_array[max_idx]
+    
+    # Compute contrast
+    contrast = compute_peak_contrast(timepoint_means_array)
+    
+    timepoint_contrast_list.append(contrast)
+    top_timepoint_list.append(top_timepoint)
+    top_timepoint_accessibility_list.append(top_accessibility)
+
+peaks_by_pseudobulk.obs['timepoint_peak_contrast'] = timepoint_contrast_list
+peaks_by_pseudobulk.obs['peak_top_timepoint'] = top_timepoint_list
+peaks_by_pseudobulk.obs['peak_top_timepoint_accessibility'] = top_timepoint_accessibility_list
+
+print("\nPeak-level analysis complete!")
+print(f"Celltype contrast range: {np.nanmin(celltype_contrast_list):.2f} - {np.nanmax(celltype_contrast_list):.2f}")
+print(f"Timepoint contrast range: {np.nanmin(timepoint_contrast_list):.2f} - {np.nanmax(timepoint_contrast_list):.2f}")
+print(f"Mean celltype contrast: {np.nanmean(celltype_contrast_list):.2f}")
+print(f"Mean timepoint contrast: {np.nanmean(timepoint_contrast_list):.2f}")
+
+print(f"\nTop celltypes per peak:")
+print(pd.Series(top_celltype_list).value_counts().head(10))
+print(f"\nTop timepoints per peak:")
+print(pd.Series(top_timepoint_list).value_counts().head(10))
+
+# %% Convert timepoints to numeric values for continuous colormap visualization
+def timepoint_to_numeric(timepoint_str):
+    """Convert timepoint strings like 'E7.5' to numeric values like 7.5"""
+    if timepoint_str == 'unknown' or pd.isna(timepoint_str):
+        return np.nan
+    # Remove 'E' prefix and convert to float
+    try:
+        return float(str(timepoint_str).replace('E', ''))
+    except:
+        return np.nan
+
+# Convert categorical to string first, then apply the numeric conversion
+# Convert both cluster-based and peak-based timepoint annotations
+peaks_by_pseudobulk.obs['top_timepoint_numeric'] = peaks_by_pseudobulk.obs['top_timepoint'].astype(str).apply(timepoint_to_numeric)
+peaks_by_pseudobulk.obs['peak_top_timepoint_numeric'] = peaks_by_pseudobulk.obs['peak_top_timepoint'].astype(str).apply(timepoint_to_numeric)
+
+print("\nTimepoint conversion complete!")
+valid_timepoints = peaks_by_pseudobulk.obs['top_timepoint_numeric'].dropna()
+print(f"Cluster-based numeric timepoint range: {valid_timepoints.min():.1f} - {valid_timepoints.max():.1f}")
+print(f"Unique timepoints: {sorted(valid_timepoints.unique())}")
+
+valid_peak_timepoints = peaks_by_pseudobulk.obs['peak_top_timepoint_numeric'].dropna()
+print(f"\nPeak-based numeric timepoint range: {valid_peak_timepoints.min():.1f} - {valid_peak_timepoints.max():.1f}")
+print(f"Unique timepoints: {sorted(valid_peak_timepoints.unique())}")
+
+# %% Save the annotated object
+peaks_by_pseudobulk.write_h5ad("/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/public_data/mouse_argelaguet_2022/peaks_by_pb_celltype_stage_annotated_v2.h5ad")
+
+# %% create individual plots for the UMAP
+# Plot 1: Leiden clusters
+# sc.pl.umap(peaks_by_pseudobulk, color='leiden_coarse',
+#         title='Leiden Clusters (coarse)', save='_leiden_clusters_coarse.png')
+
+def normalize_for_alpha_robust(values, min_alpha=0.1, max_alpha=0.9):
+    """Normalize values to alpha range using robust percentile clipping."""
+    min_val = np.percentile(values, 5)
+    max_val = np.percentile(values, 95)
+    clipped = np.clip(values, min_val, max_val)
+    normalized = (clipped - min_val) / (max_val - min_val)
+    return normalized * (max_alpha - min_alpha) + min_alpha
+
+# Compute alpha values from contrast
+peaks_by_pseudobulk.obs['alpha_celltype'] = normalize_for_alpha_robust(
+    peaks_by_pseudobulk.obs['celltype_peak_contrast']
+)
+peaks_by_pseudobulk.obs['alpha_timepoint'] = normalize_for_alpha_robust(
+    peaks_by_pseudobulk.obs['timepoint_peak_contrast']
+)
+
+# Plot: Top celltype with alpha = specificity
+sc.pl.umap(
+    peaks_by_pseudobulk, 
+    color='top_celltype',
+    alpha=peaks_by_pseudobulk.obs['alpha_celltype'].values,
+    title='Top Celltype (α = specificity)',
+    frameon=False,
+    save='_top_celltype_alpha_contrast.png'
+)
+
+# Plot: Top timepoint with alpha = specificity  
+sc.pl.umap(
+    peaks_by_pseudobulk,
+    color='top_timepoint', 
+    alpha=peaks_by_pseudobulk.obs['alpha_timepoint'].values,
+    title='Top Timepoint (α = specificity)',
+    frameon=False,
+    save='_top_timepoint_alpha_contrast.png'
+)
+
+# %% mapping cell types to broader tissues (or lineages)
+mouse_celltype_to_lineage = {
+    # ECTODERM / CNS
+    "Ectoderm": [
+        "Epiblast",
+        "Rostral_neurectoderm",
+        "Caudal_neurectoderm", 
+        "Forebrain_Midbrain_Hindbrain",
+        "Spinal_cord",
+        "Neural_crest",
+        "Surface_ectoderm",
+    ],
+    
+    # EXTRAEMBRYONIC
+    "Extraembryonic": [
+        "ExE_ectoderm",
+        "ExE_endoderm", 
+        "ExE_mesoderm",
+        "Visceral_endoderm",
+        "Parietal_endoderm",
+    ],
+    
+    # ENDODERM
+    "Endoderm": [
+        "Def._endoderm",
+        "Gut",
+    ],
+    
+    # PARAXIAL MESODERM
+    "Paraxial Mesoderm": [
+        "Paraxial_mesoderm",
+        "Somitic_mesoderm",
+        "NMP",  # Neuromesodermal progenitors
+        "Caudal_Mesoderm",
+        "Caudal_epiblast",
+    ],
+    
+    # LATERAL PLATE / CARDIAC MESODERM
+    "Lateral Mesoderm": [
+        "Mesenchyme",
+        "Mixed_mesoderm",
+        "Intermediate_mesoderm",
+        "Cardiomyocytes",
+        "Pharyngeal_mesoderm",
+        "Allantois",
+    ],
+    
+    # HEMATOPOIETIC / BLOOD
+    "Hematopoietic": [
+        "Blood_progenitors_1",
+        "Blood_progenitors_2",
+        "Erythroid1",
+        "Erythroid2",
+        "Erythroid3",
+        "Haematoendothelial_progenitors",
+        "Endothelium",
+    ],
+    
+    # PRIMITIVE STREAK / EARLY MESODERM
+    "Primitive Streak": [
+        "Primitive_Streak",
+        "Anterior_Primitive_Streak",
+        "Nascent_mesoderm",
+        "Notochord",
+    ],
+    
+    # GERMLINE
+    "Germline": [
+        "PGC",
+    ],
+}
+
+# %% map the celltype to the lineage
+import numpy as np
+import re
+import scanpy as sc
+
+# Step 1: Strip the stage suffix (E7.5, E8.0, etc.) to get base celltype
+def strip_stage_suffix(celltype_stage):
+    """Remove _E7.5, _E8.0, _E8.75 etc. from celltype names."""
+    # Match pattern: _E followed by numbers and optional decimal
+    return re.sub(r'_E\d+\.?\d*$', '', str(celltype_stage))
+
+# Apply to create clean celltype column
+peaks_by_pseudobulk.obs['celltype_clean'] = peaks_by_pseudobulk.obs['top_celltype'].apply(strip_stage_suffix)
+
+# Verify the cleaning worked
+print("Original celltypes (sample):")
+print(peaks_by_pseudobulk.obs['top_celltype'].value_counts().head(10))
+print("\nCleaned celltypes:")
+print(peaks_by_pseudobulk.obs['celltype_clean'].value_counts())
+
+# Step 2: Map to lineages using the dictionary
+mouse_celltype_to_lineage = {
+    "Ectoderm": [
+        "Epiblast",
+        "Rostral_neurectoderm",
+        "Caudal_neurectoderm", 
+        "Forebrain_Midbrain_Hindbrain",
+        "Spinal_cord",
+        "Neural_crest",
+        "Surface_ectoderm",
+    ],
+    "Extraembryonic": [
+        "ExE_ectoderm",
+        "ExE_endoderm", 
+        "ExE_mesoderm",
+        "Visceral_endoderm",
+        "Parietal_endoderm",
+    ],
+    "Endoderm": [
+        "Def._endoderm",
+        "Gut",
+    ],
+    "Paraxial Mesoderm": [
+        "Paraxial_mesoderm",
+        "Somitic_mesoderm",
+        "NMP",
+        "Caudal_Mesoderm",
+        "Caudal_epiblast",
+    ],
+    "Lateral Mesoderm": [
+        "Mesenchyme",
+        "Mixed_mesoderm",
+        "Intermediate_mesoderm",
+        "Cardiomyocytes",
+        "Pharyngeal_mesoderm",
+        "Allantois",
+    ],
+    "Hematopoietic": [
+        "Blood_progenitors_1",
+        "Blood_progenitors_2",
+        "Erythroid1",
+        "Erythroid2",
+        "Erythroid3",
+        "Haematoendothelial_progenitors",
+        "Endothelium",
+    ],
+    "Primitive Streak": [
+        "Primitive_Streak",
+        "Anterior_Primitive_Streak",
+        "Nascent_mesoderm",
+        "Notochord",
+    ],
+    "Germline": [
+        "PGC",
+    ],
+}
+
+# Create reverse mapping
+celltype_to_lineage_map = {}
+for lineage, celltypes in mouse_celltype_to_lineage.items():
+    for celltype in celltypes:
+        celltype_to_lineage_map[celltype] = lineage
+
+# Step 3: Map cleaned celltypes to lineages
+peaks_by_pseudobulk.obs['lineage'] = peaks_by_pseudobulk.obs['celltype_clean'].map(celltype_to_lineage_map)
+
+# Check for unmapped celltypes
+unmapped = peaks_by_pseudobulk.obs[peaks_by_pseudobulk.obs['lineage'].isna()]['celltype_clean'].unique()
+if len(unmapped) > 0:
+    print(f"\nWarning: {len(unmapped)} unmapped celltypes: {list(unmapped)}")
+    peaks_by_pseudobulk.obs['lineage'] = peaks_by_pseudobulk.obs['lineage'].fillna('Unknown')
+
+print(f"\nLineage distribution:")
+print(peaks_by_pseudobulk.obs['lineage'].value_counts())
+
+# Step 4: Plot
+mouse_lineage_colors = {
+    'Ectoderm': '#DAA520',
+    'Endoderm': '#6A5ACD',
+    'Paraxial Mesoderm': '#4169E1',
+    'Lateral Mesoderm': '#228B22',
+    'Hematopoietic': '#DC143C',
+    'Primitive Streak': '#FF8C00',
+    'Extraembryonic': '#808080',
+    'Germline': '#DA70D6',
+    'Unknown': '#D3D3D3',
+}
+
+sc.pl.umap(
+    peaks_by_pseudobulk,
+    color='lineage',
+    palette=mouse_lineage_colors,
+    title='Mouse Peak UMAP - Lineage',
+    frameon=False,
+    save='_mouse_lineage.png'
+)
+  
+# %% Plot PEAK-LEVEL most accessible celltype and timepoint
+print("\nPlotting peak-level most accessible annotations...")
+
+# Plot 4: Peak-level top celltype
+sc.pl.umap(peaks_by_pseudobulk, color='peak_top_celltype',
+           title='Most Accessible Celltype (Per Peak)',
+           save='_peak_top_celltype.png')
+
+# Plot 5: Peak-level top timepoint (numeric with viridis colormap)
+sc.pl.umap(peaks_by_pseudobulk, color='peak_top_timepoint_numeric',
+           title='Most Accessible Timepoint (Per Peak)',
+           cmap='viridis',
+           save='_peak_top_timepoint_numeric.png')
+
+
+# %% 
+# Step 1: Check the structure of your data
+print(f"peaks_by_pseudobulk shape: {peaks_by_pseudobulk.shape}")
+print(f"var (pseudobulk groups) sample: {peaks_by_pseudobulk.var_names[:10].tolist()}")
+
+# Step 2: Parse pseudobulk column names to get celltype and stage
+import re
+
+def parse_celltype_stage(name):
+    """Extract celltype and stage from 'Celltype_E8.0' format."""
+    match = re.match(r'^(.+)_(E\d+\.?\d*)$', name)
+    if match:
+        return match.group(1), match.group(2)
+    return name, None
+
+# Create mappings
+celltype_mapping = {}
+stage_mapping = {}
+
+for col in peaks_by_pseudobulk.var_names:
+    celltype, stage = parse_celltype_stage(col)
+    celltype_mapping[col] = celltype
+    stage_mapping[col] = stage
+
+unique_celltypes = sorted(set(celltype_mapping.values()))
+unique_stages = sorted(set(s for s in stage_mapping.values() if s is not None))
+
+print(f"\nFound {len(unique_celltypes)} unique celltypes")
+print(f"Found {len(unique_stages)} unique stages: {unique_stages}")
+
+# Step 3: Compute mean accessibility per celltype (averaging across stages)
+# Get the dense matrix (if sparse)
+X = peaks_by_pseudobulk.X
+if hasattr(X, 'toarray'):
+    X = X.toarray()
+
+for celltype in unique_celltypes:
+    # Get columns for this celltype (all stages)
+    celltype_cols = [col for col, ct in celltype_mapping.items() if ct == celltype]
+    col_indices = [peaks_by_pseudobulk.var_names.get_loc(col) for col in celltype_cols]
+    
+    if col_indices:
+        # Mean accessibility across stages
+        mean_accessibility = np.mean(X[:, col_indices], axis=1)
+        peaks_by_pseudobulk.obs[f'accessibility_{celltype}'] = mean_accessibility
+
+print(f"\nCreated {len(unique_celltypes)} accessibility columns")
+
+# Step 4: Compute mean accessibility per lineage (averaging across celltypes)
+lineage_accessibility = {}
+
+for lineage, celltypes_in_lineage in mouse_celltype_to_lineage.items():
+    lineage_cols = [f'accessibility_{ct}' for ct in celltypes_in_lineage 
+                    if f'accessibility_{ct}' in peaks_by_pseudobulk.obs.columns]
+    
+    if lineage_cols:
+        lineage_vals = peaks_by_pseudobulk.obs[lineage_cols].values
+        peaks_by_pseudobulk.obs[f'accessibility_lineage_{lineage}'] = np.mean(lineage_vals, axis=1)
+        lineage_accessibility[lineage] = True
+        print(f"Created accessibility_lineage_{lineage} from {len(lineage_cols)} celltypes")
+
+# Step 5: Compute top lineage and lineage contrast
+lineage_acc_cols = [f'accessibility_lineage_{lin}' for lin in lineage_accessibility.keys()]
+lineage_vals = peaks_by_pseudobulk.obs[lineage_acc_cols].values
+lineage_names = list(lineage_accessibility.keys())
+
+# Find max lineage for each peak
+max_lineage_idx = np.argmax(lineage_vals, axis=1)
+peaks_by_pseudobulk.obs['top_lineage'] = [lineage_names[i] for i in max_lineage_idx]
+
+# Compute contrast
+max_vals = np.max(lineage_vals, axis=1)
+other_vals_mean = np.array([
+    np.mean(np.delete(row, max_idx)) 
+    for row, max_idx in zip(lineage_vals, max_lineage_idx)
+])
+other_vals_std = np.array([
+    np.std(np.delete(row, max_idx)) 
+    for row, max_idx in zip(lineage_vals, max_lineage_idx)
+])
+
+peaks_by_pseudobulk.obs['lineage_contrast'] = np.where(
+    other_vals_std > 1e-10,
+    (max_vals - other_vals_mean) / other_vals_std,
+    0
+)
+
+print(f"\nLineage contrast stats: mean={peaks_by_pseudobulk.obs['lineage_contrast'].mean():.2f}, "
+      f"std={peaks_by_pseudobulk.obs['lineage_contrast'].std():.2f}")
+
+# Step 6: Compute alpha and plot
+peaks_by_pseudobulk.obs['alpha_lineage'] = normalize_for_alpha_robust(
+    peaks_by_pseudobulk.obs['lineage_contrast']
+)
+
+sc.pl.umap(
+    peaks_by_pseudobulk,
+    color='top_lineage',
+    palette=mouse_lineage_colors,
+    alpha=peaks_by_pseudobulk.obs['alpha_lineage'].values,
+    title='Mouse Peak UMAP - Lineage (α = specificity)',
+    frameon=False,
+    save='_mouse_lineage_alpha_contrast.png'
+)
+
+print(f"\nTop lineage distribution:")
+print(peaks_by_pseudobulk.obs['top_lineage'].value_counts())
+
+# %% repeat this for the timepoints
+
+# %% Export viridis colorbar for timepoint as standalone PDF
+# Get the data range for the timepoint colorbar
+vmin_tp = peaks_by_pseudobulk.obs['top_timepoint_numeric'].min()
+vmax_tp = peaks_by_pseudobulk.obs['top_timepoint_numeric'].max()
+
+# Create a figure with just the colorbar
+fig, ax = plt.subplots(figsize=(1.5, 6))
+norm_tp = Normalize(vmin=vmin_tp, vmax=vmax_tp)
+cbar_tp = ColorbarBase(ax, cmap=cm.viridis, norm=norm_tp, orientation='vertical')
+cbar_tp.set_label('Embryonic Day', fontsize=12)
+
+# Save as PDF
+plt.savefig(figure_path + 'mouse_timepoint_viridis_colorbar.pdf', 
+            bbox_inches='tight', dpi=300)
+plt.show()
+print(f"Colorbar saved to: {figure_path}mouse_timepoint_viridis_colorbar.pdf")
+
+# %% Normalize peak contrast values to 0-1 range for dot size scaling
+print("\n" + "="*60)
+print("Normalizing peak contrast values for size scaling...")
+print("="*60)
+
+# Min-max normalization to 0-1 range
+def normalize_to_01(values):
+    """Normalize values to 0-1 range using min-max scaling"""
+    values_clean = np.array(values)
+    values_clean = values_clean[~np.isnan(values_clean)]
+    
+    if len(values_clean) == 0:
+        return np.zeros_like(values)
+    
+    min_val = np.min(values_clean)
+    max_val = np.max(values_clean)
+    
+    if max_val == min_val:
+        return np.ones_like(values) * 0.5  # If all same, return 0.5
+    
+    normalized = (np.array(values) - min_val) / (max_val - min_val)
+    # Replace any NaN with 0
+    normalized[np.isnan(normalized)] = 0
+    
+    return normalized
+
+# Normalize both contrast metrics
+celltype_contrast_normalized = normalize_to_01(peaks_by_pseudobulk.obs['celltype_peak_contrast'])
+timepoint_contrast_normalized = normalize_to_01(peaks_by_pseudobulk.obs['timepoint_peak_contrast'])
+
+peaks_by_pseudobulk.obs['celltype_peak_contrast_normalized'] = celltype_contrast_normalized
+peaks_by_pseudobulk.obs['timepoint_peak_contrast_normalized'] = timepoint_contrast_normalized
+
+print(f"Celltype contrast normalized range: {np.min(celltype_contrast_normalized):.3f} - {np.max(celltype_contrast_normalized):.3f}")
+print(f"Timepoint contrast normalized range: {np.min(timepoint_contrast_normalized):.3f} - {np.max(timepoint_contrast_normalized):.3f}")
+
+# %% Create UMAP plots with dot size scaled by peak contrast
+print("\n" + "="*60)
+print("Creating UMAP plots with contrast-scaled dot sizes...")
+print("="*60)
+
+# Get UMAP coordinates
+umap_coords = peaks_by_pseudobulk.obsm['X_umap']
+
+# Scale the normalized contrast to reasonable dot sizes
+# Base size + contrast-based size
+min_size = 0.5
+max_size = 20.0
+celltype_sizes = min_size + celltype_contrast_normalized * (max_size - min_size)
+timepoint_sizes = min_size + timepoint_contrast_normalized * (max_size - min_size)
+
+# Create figure with 2 subplots
+fig, axes = plt.subplots(1, 2, figsize=(20, 9))
+
+# Plot 1: Celltype - colored by top celltype, sized by contrast
+ax = axes[0]
+# Get unique celltypes and assign colors
+celltypes = peaks_by_pseudobulk.obs['peak_top_celltype'].unique()
+celltype_colors = plt.cm.tab20(np.linspace(0, 1, len(celltypes)))
+celltype_to_color = {ct: celltype_colors[i] for i, ct in enumerate(celltypes)}
+
+# Map colors to each peak
+colors_ct = [celltype_to_color[ct] for ct in peaks_by_pseudobulk.obs['peak_top_celltype']]
+
+scatter1 = ax.scatter(umap_coords[:, 0], umap_coords[:, 1],
+                     c=colors_ct, s=celltype_sizes, alpha=0.6, edgecolors='none')
+ax.set_xlabel('UMAP1', fontsize=14)
+ax.set_ylabel('UMAP2', fontsize=14)
+ax.set_title('Celltype: Size = Contrast\n(Larger dots = more cell-type specific)', 
+             fontsize=14, fontweight='bold')
+ax.set_aspect('equal')
+
+# Plot 2: Timepoint - colored by timepoint, sized by contrast
+ax = axes[1]
+# Use viridis colormap for timepoint
+timepoint_numeric = peaks_by_pseudobulk.obs['peak_top_timepoint_numeric'].values
+norm_tp_scatter = Normalize(vmin=np.nanmin(timepoint_numeric), vmax=np.nanmax(timepoint_numeric))
+colors_tp = cm.viridis(norm_tp_scatter(timepoint_numeric))
+
+scatter2 = ax.scatter(umap_coords[:, 0], umap_coords[:, 1],
+                     c=colors_tp, s=timepoint_sizes, alpha=0.6, edgecolors='none')
+ax.set_xlabel('UMAP1', fontsize=14)
+ax.set_ylabel('UMAP2', fontsize=14)
+ax.set_title('Timepoint: Size = Contrast\n(Larger dots = more stage-specific)', 
+             fontsize=14, fontweight='bold')
+ax.set_aspect('equal')
+
+# Add colorbar for timepoint
+cbar = plt.colorbar(cm.ScalarMappable(norm=norm_tp_scatter, cmap='viridis'), 
+                    ax=ax, fraction=0.046, pad=0.04)
+cbar.set_label('Embryonic Day', fontsize=12)
+
+plt.tight_layout()
+plt.savefig(figure_path + 'mouse_umap_contrast_sized_dots.png', dpi=150, bbox_inches='tight')
+plt.savefig(figure_path + 'mouse_umap_contrast_sized_dots.pdf', bbox_inches='tight')
+plt.show()
+
+print(f"Saved contrast-sized UMAP to: {figure_path}mouse_umap_contrast_sized_dots.png/pdf")
+
+# %% Create separate plots for high contrast peaks only
+print("\nCreating plots highlighting high-contrast peaks...")
+
+# Define high contrast threshold (e.g., top 25%)
+ct_threshold = np.percentile(celltype_contrast_normalized, 75)
+tp_threshold = np.percentile(timepoint_contrast_normalized, 75)
+
+high_ct_mask = celltype_contrast_normalized >= ct_threshold
+high_tp_mask = timepoint_contrast_normalized >= tp_threshold
+
+print(f"High celltype contrast peaks (top 25%): {high_ct_mask.sum():,} / {len(high_ct_mask):,}")
+print(f"High timepoint contrast peaks (top 25%): {high_tp_mask.sum():,} / {len(high_tp_mask):,}")
+
+fig, axes = plt.subplots(1, 2, figsize=(20, 9))
+
+# Plot 1: Highlight high celltype contrast peaks
+ax = axes[0]
+# Background: all peaks in gray
+ax.scatter(umap_coords[:, 0], umap_coords[:, 1], 
+          c='lightgray', s=1, alpha=0.3, edgecolors='none')
+# Foreground: high contrast peaks colored by celltype
+colors_ct_high = [celltype_to_color[ct] for ct in peaks_by_pseudobulk.obs['peak_top_celltype'][high_ct_mask]]
+ax.scatter(umap_coords[high_ct_mask, 0], umap_coords[high_ct_mask, 1],
+          c=colors_ct_high, s=celltype_sizes[high_ct_mask], alpha=0.7, edgecolors='none')
+ax.set_xlabel('UMAP1', fontsize=14)
+ax.set_ylabel('UMAP2', fontsize=14)
+ax.set_title(f'High Celltype Contrast Peaks (Top 25%)\nn={high_ct_mask.sum():,}', 
+            fontsize=14, fontweight='bold')
+ax.set_aspect('equal')
+
+# Plot 2: Highlight high timepoint contrast peaks
+ax = axes[1]
+# Background: all peaks in gray
+ax.scatter(umap_coords[:, 0], umap_coords[:, 1], 
+          c='lightgray', s=1, alpha=0.3, edgecolors='none')
+# Foreground: high contrast peaks colored by timepoint
+colors_tp_high = cm.viridis(norm_tp_scatter(timepoint_numeric[high_tp_mask]))
+ax.scatter(umap_coords[high_tp_mask, 0], umap_coords[high_tp_mask, 1],
+          c=colors_tp_high, s=timepoint_sizes[high_tp_mask], alpha=0.7, edgecolors='none')
+ax.set_xlabel('UMAP1', fontsize=14)
+ax.set_ylabel('UMAP2', fontsize=14)
+ax.set_title(f'High Timepoint Contrast Peaks (Top 25%)\nn={high_tp_mask.sum():,}', 
+            fontsize=14, fontweight='bold')
+ax.set_aspect('equal')
+
+# Add colorbar for timepoint
+cbar = plt.colorbar(cm.ScalarMappable(norm=norm_tp_scatter, cmap='viridis'), 
+                    ax=ax, fraction=0.046, pad=0.04)
+cbar.set_label('Embryonic Day', fontsize=12)
+
+plt.tight_layout()
+plt.savefig(figure_path + 'mouse_umap_high_contrast_peaks.png', dpi=150, bbox_inches='tight')
+plt.savefig(figure_path + 'mouse_umap_high_contrast_peaks.pdf', bbox_inches='tight')
+plt.show()
+
+print(f"Saved high-contrast peaks UMAP to: {figure_path}mouse_umap_high_contrast_peaks.png/pdf")
+
+# %% Visualize peak contrast on UMAP
+print("\n" + "="*60)
+print("Visualizing peak contrast metrics on UMAP...")
+print("="*60)
+
+# Create a 2x2 grid for contrast visualizations
+fig, axes = plt.subplots(2, 2, figsize=(16, 14))
+
+# Plot 1: Celltype peak contrast
+sc.pl.umap(peaks_by_pseudobulk, color='celltype_peak_contrast',
+           ax=axes[0, 0], show=False,
+           title='Celltype Peak Contrast\n(Higher = more cell-type specific)',
+           cmap='magma', vmin=0)
+
+# Plot 2: Timepoint peak contrast
+sc.pl.umap(peaks_by_pseudobulk, color='timepoint_peak_contrast',
+           ax=axes[0, 1], show=False,
+           title='Timepoint Peak Contrast\n(Higher = more stage-specific)',
+           cmap='magma', vmin=0)
+
+# Plot 3: Peak-level top celltype (for reference)
+sc.pl.umap(peaks_by_pseudobulk, color='peak_top_celltype',
+           ax=axes[1, 0], show=False,
+           title='Most Accessible Celltype (Per Peak)')
+
+# Plot 4: Peak-level top timepoint numeric (for reference)
+sc.pl.umap(peaks_by_pseudobulk, color='peak_top_timepoint_numeric',
+           ax=axes[1, 1], show=False,
+           title='Most Accessible Timepoint (Per Peak)',
+           cmap='viridis')
+
+plt.tight_layout()
+plt.savefig(figure_path + 'mouse_peak_contrast_umaps.png', dpi=150, bbox_inches='tight')
+plt.savefig(figure_path + 'mouse_peak_contrast_umaps.pdf', bbox_inches='tight')
+plt.show()
+
+# %% Individual peak contrast plots
+# Celltype contrast
+sc.pl.umap(peaks_by_pseudobulk, color='celltype_peak_contrast',
+           title='Celltype Peak Contrast',
+           cmap='magma', vmin=0,
+           save='_celltype_peak_contrast.png')
+
+# Timepoint contrast
+sc.pl.umap(peaks_by_pseudobulk, color='timepoint_peak_contrast',
+           title='Timepoint Peak Contrast',
+           cmap='magma', vmin=0,
+           save='_timepoint_peak_contrast.png')
+
+# %% Distribution of peak contrast values
+fig, axes = plt.subplots(1, 2, figsize=(14, 5))
+
+# Celltype contrast histogram
+axes[0].hist(peaks_by_pseudobulk.obs['celltype_peak_contrast'].dropna(), 
+             bins=50, edgecolor='black', alpha=0.7, color='steelblue')
+axes[0].set_xlabel('Celltype Peak Contrast', fontsize=12)
+axes[0].set_ylabel('Number of peaks', fontsize=12)
+axes[0].set_title('Distribution of Celltype Peak Contrast', fontsize=14, fontweight='bold')
+axes[0].axvline(peaks_by_pseudobulk.obs['celltype_peak_contrast'].median(), 
+                color='red', linestyle='--', linewidth=2, 
+                label=f'Median: {peaks_by_pseudobulk.obs["celltype_peak_contrast"].median():.2f}')
+axes[0].legend()
+axes[0].grid(False)
+
+# Timepoint contrast histogram
+axes[1].hist(peaks_by_pseudobulk.obs['timepoint_peak_contrast'].dropna(), 
+             bins=50, edgecolor='black', alpha=0.7, color='coral')
+axes[1].set_xlabel('Timepoint Peak Contrast', fontsize=12)
+axes[1].set_ylabel('Number of peaks', fontsize=12)
+axes[1].set_title('Distribution of Timepoint Peak Contrast', fontsize=14, fontweight='bold')
+axes[1].axvline(peaks_by_pseudobulk.obs['timepoint_peak_contrast'].median(), 
+                color='red', linestyle='--', linewidth=2,
+                label=f'Median: {peaks_by_pseudobulk.obs["timepoint_peak_contrast"].median():.2f}')
+axes[1].legend()
+axes[1].grid(False)
+
+plt.tight_layout()
+plt.savefig(figure_path + 'mouse_peak_contrast_distributions.png', dpi=300, bbox_inches='tight')
+plt.savefig(figure_path + 'mouse_peak_contrast_distributions.pdf', bbox_inches='tight')
+plt.show()
+
+# %% Peak contrast by peak type
+fig, axes = plt.subplots(1, 2, figsize=(14, 6))
+
+# Celltype contrast by peak type
+sns.violinplot(data=peaks_by_pseudobulk.obs, x='peak_type', y='celltype_peak_contrast', ax=axes[0])
+axes[0].set_xlabel('Peak Type', fontsize=12)
+axes[0].set_ylabel('Celltype Peak Contrast', fontsize=12)
+axes[0].set_title('Celltype Specificity by Peak Type', fontsize=14, fontweight='bold')
+axes[0].tick_params(axis='x', rotation=45)
+axes[0].grid(False)
+
+# Timepoint contrast by peak type
+sns.violinplot(data=peaks_by_pseudobulk.obs, x='peak_type', y='timepoint_peak_contrast', ax=axes[1])
+axes[1].set_xlabel('Peak Type', fontsize=12)
+axes[1].set_ylabel('Timepoint Peak Contrast', fontsize=12)
+axes[1].set_title('Temporal Specificity by Peak Type', fontsize=14, fontweight='bold')
+axes[1].tick_params(axis='x', rotation=45)
+axes[1].grid(False)
+
+plt.tight_layout()
+plt.savefig(figure_path + 'mouse_peak_contrast_by_type.png', dpi=300, bbox_inches='tight')
+plt.savefig(figure_path + 'mouse_peak_contrast_by_type.pdf', bbox_inches='tight')
+plt.show()
+
+print("\n=== Peak Contrast Summary Statistics ===")
+print("\nCelltype Peak Contrast by Peak Type:")
+print(peaks_by_pseudobulk.obs.groupby('peak_type')['celltype_peak_contrast'].describe())
+print("\nTimepoint Peak Contrast by Peak Type:")
+print(peaks_by_pseudobulk.obs.groupby('peak_type')['timepoint_peak_contrast'].describe())
+
+# %% Visualize annotated UMAP (a master plot)
 print("\n" + "="*60)
 print("Creating annotated UMAP visualizations...")
 print("="*60)
@@ -688,7 +1510,7 @@ sc.pl.umap(peaks_by_pseudobulk, color='top_timepoint',
 
 plt.tight_layout()
 plt.savefig(figure_path + 'mouse_peak_umap_annotated_celltype_timepoint.png', 
-            dpi=300, bbox_inches='tight')
+            dpi=150, bbox_inches='tight')
 plt.savefig(figure_path + 'mouse_peak_umap_annotated_celltype_timepoint.pdf', 
             bbox_inches='tight')
 plt.show()
@@ -717,7 +1539,7 @@ print("="*60)
 
 # Create color palette for specificity patterns
 specificity_colors = {
-    'ubiquitous': '#e41a1c',     # Red
+    'ubiquitous': '#e41a1c',     # Green
     'specific': '#377eb8',       # Blue
     'moderate': '#4daf4a'        # Green
 }
@@ -760,72 +1582,112 @@ for pattern in ['ubiquitous', 'specific', 'moderate']:
         print(f"  Top celltypes:")
         print(pattern_peaks['top_celltype'].value_counts().head(5))
 
-# %% Plot accessibility profiles for selected clusters
-def plot_cluster_accessibility_profile(cluster_id, celltype_profiles, timepoint_profiles,
-                                       figsize=(14, 5), save_path=None):
-    """
-    Plot celltype and timepoint accessibility profiles for a specific cluster.
-    """
-    fig, axes = plt.subplots(1, 2, figsize=figsize)
-    
-    # Celltype profile
-    celltypes = list(celltype_profiles[cluster_id].keys())
-    celltype_values = list(celltype_profiles[cluster_id].values())
-    
-    axes[0].bar(range(len(celltypes)), celltype_values, color='steelblue', alpha=0.7)
-    axes[0].set_xticks(range(len(celltypes)))
-    axes[0].set_xticklabels(celltypes, rotation=45, ha='right')
-    axes[0].set_ylabel('Mean Accessibility')
-    axes[0].set_title(f'Cluster {cluster_id}: Celltype Accessibility')
-    axes[0].grid(False)
-    
-    # Timepoint profile
-    timepoints = list(timepoint_profiles[cluster_id].keys())
-    timepoint_values = list(timepoint_profiles[cluster_id].values())
-    
-    # Sort timepoints naturally
-    sorted_indices = sorted(range(len(timepoints)), 
-                          key=lambda i: float(timepoints[i].replace('E', '').replace('somites', '')))
-    timepoints_sorted = [timepoints[i] for i in sorted_indices]
-    values_sorted = [timepoint_values[i] for i in sorted_indices]
-    
-    axes[1].bar(range(len(timepoints_sorted)), values_sorted, color='coral', alpha=0.7)
-    axes[1].set_xticks(range(len(timepoints_sorted)))
-    axes[1].set_xticklabels(timepoints_sorted, rotation=45, ha='right')
-    axes[1].set_ylabel('Mean Accessibility')
-    axes[1].set_title(f'Cluster {cluster_id}: Timepoint Accessibility')
-    axes[1].grid(False)
-    
-    plt.tight_layout()
-    
-    if save_path:
-        plt.savefig(save_path, dpi=300, bbox_inches='tight')
-    
-    plt.show()
+# %% Part 3. Plot the most accessible celltypes and timepoints for each peak (using contrast as the opacity)
+# use "celltype.mapped" for celltype, and "stage" for timepoints
 
-# %% Plot profiles for a few example clusters
-print("\n" + "="*60)
-print("Plotting example cluster profiles...")
-print("="*60)
+# plot the most accessible celltypes and timepoints for each peak (using contrast as the opacity)
+# fig, axes = plt.subplots(1, 2, figsize=(14, 7))
+# ax = axes[0]
+# ax.scatter(peaks_by_pseudobulk.obs['celltype_peak_contrast'], peaks_by_pseudobulk.obs['peak_top_celltype_accessibility'], alpha=0.5)
+# ax.set_xlabel('Celltype Peak Contrast', fontsize=12)
+# ax.set_ylabel('Peak Top Celltype Accessibility', fontsize=12)
+# ax.set_title('Celltype Peak Contrast vs. Peak Top Celltype Accessibility', fontsize=14, fontweight='bold')
+# ax.grid(False)
 
-# Plot first 3 clusters as examples
-for cluster_id in sorted(list(cluster_celltype_profiles_coarse.keys()))[:3]:
-    print(f"\nPlotting cluster {cluster_id}...")
-    plot_cluster_accessibility_profile(
-        cluster_id,
-        cluster_celltype_profiles_coarse,
-        cluster_timepoint_profiles_coarse,
-        save_path=f"{figure_path}mouse_cluster_{cluster_id}_accessibility_profile.png"
-    )
+# %% plot the most accessible celltypes and timepoints for each peak (using contrast as the opacity)
+# 1) compute the contrast for each peak (celltype and timepoint, respectively)
+celltype_contrast_list = []
+timepoint_contrast_list = []
+for peak_idx in range(peaks_by_pseudobulk.n_obs):
+    # Get accessibility across all pseudobulk groups for this peak
+    peak_accessibility = peaks_by_pseudobulk.layers['normalized'][peak_idx, :].toarray().flatten() if hasattr(peaks_by_pseudobulk.layers['normalized'], 'toarray') else peaks_by_pseudobulk.layers['normalized'][peak_idx, :]
+    
+    # Group by celltype and compute mean accessibility per celltype
+    celltype_accessibility = {}
+    for i, pb_group in enumerate(peaks_by_pseudobulk.var_names):
+        celltype = peaks_by_pseudobulk.var.loc[pb_group, 'celltype']
+        if celltype not in celltype_accessibility:
+            celltype_accessibility[celltype] = []
+        celltype_accessibility[celltype].append(peak_accessibility[i])
+    
+    # Average across timepoints for each celltype
+    celltype_means = {ct: np.mean(vals) for ct, vals in celltype_accessibility.items()}
+    celltype_means_array = np.array(list(celltype_means.values()))
+    celltype_names = list(celltype_means.keys())
+    
+    # Find most accessible celltype
+    max_idx = np.argmax(celltype_means_array)
+    top_celltype = celltype_names[max_idx]
+    top_accessibility = celltype_means_array[max_idx]
+    
+    # Compute contrast
+    contrast = compute_peak_contrast(celltype_means_array)
+    
+    celltype_contrast_list.append(contrast)
+    top_celltype_list.append(top_celltype)
+    top_celltype_accessibility_list.append(top_accessibility)
+
+peaks_by_pseudobulk.obs['celltype_peak_contrast'] = celltype_contrast_list
+peaks_by_pseudobulk.obs['top_celltype'] = top_celltype_list
+# 
+# Repeat this for the timepoint contrast (stage)
+timepoint_contrast_list = []
+top_timepoint_list = []
+top_timepoint_accessibility_list = []
+for peak_idx in range(peaks_by_pseudobulk.n_obs):
+    # Get accessibility across all pseudobulk groups for this peak
+    peak_accessibility = peaks_by_pseudobulk.layers['normalized'][peak_idx, :].toarray().flatten() if hasattr(peaks_by_pseudobulk.layers['normalized'], 'toarray') else peaks_by_pseudobulk.layers['normalized'][peak_idx, :]
+    
+    # Group by timepoint and compute mean accessibility per timepoint
+    timepoint_accessibility = {}
+    for i, pb_group in enumerate(peaks_by_pseudobulk.var_names):
+        timepoint = peaks_by_pseudobulk.var.loc[pb_group, 'timepoint']
+        if timepoint not in timepoint_accessibility:
+            timepoint_accessibility[timepoint] = []
+        timepoint_accessibility[timepoint].append(peak_accessibility[i])
+    
+    # Average across celltypes for each timepoint
+    timepoint_means = {tp: np.mean(vals) for tp, vals in timepoint_accessibility.items()}
+    timepoint_means_array = np.array(list(timepoint_means.values()))
+    timepoint_names = list(timepoint_means.keys())
+    
+    # Find most accessible timepoint
+    max_idx = np.argmax(timepoint_means_array)
+    top_timepoint = timepoint_names[max_idx]
+    top_accessibility = timepoint_means_array[max_idx]
+    
+    # Compute contrast
+    contrast = compute_peak_contrast(timepoint_means_array)
+    timepoint_contrast_list.append(contrast)
+    top_timepoint_list.append(top_timepoint)
+    top_timepoint_accessibility_list.append(top_accessibility)
+
+peaks_by_pseudobulk.obs['timepoint_peak_contrast'] = timepoint_contrast_list
+peaks_by_pseudobulk.obs['peak_top_timepoint'] = top_timepoint_list
+#peaks_by_pseudobulk.obs['peak_top_timepoint_accessibility'] = top_timepoint_accessibility_list
+
 
 # %% Save the annotated object
 print("\n" + "="*60)
 print("Saving annotated peak object...")
 print("="*60)
 
+print("\nFinal annotations included in .obs:")
+print("  - Peak genomic annotations: peak_type, chr, start, end")
+print("  - Gene associations: gene_body_overlaps, nearest_gene, distance_to_tss")
+print("  - Accessibility metrics: total_accessibility, log_total_accessibility")
+print("  - Cluster assignments: leiden_coarse")
+print("  - Cluster-based annotations: top_celltype, top_timepoint, top_timepoint_numeric")
+print("  - Peak-level most accessible: peak_top_celltype, peak_top_timepoint, peak_top_timepoint_numeric")
+print("  - Peak-level accessibility values: peak_top_celltype_accessibility, peak_top_timepoint_accessibility")
+print("  - Peak contrast metrics (raw): celltype_peak_contrast, timepoint_peak_contrast")
+print("  - Peak contrast metrics (normalized 0-1): celltype_peak_contrast_normalized, timepoint_peak_contrast_normalized")
+print("  - Specificity patterns: accessibility_pattern, accessibility_entropy")
+print("  - Combined annotation: cluster_annotation")
+
 output_path = "/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/public_data/mouse_argelaguet_2022/peaks_by_pb_celltype_stage_annotated_with_clusters.h5ad"
 peaks_by_pseudobulk.write_h5ad(output_path)
-print(f"Saved to: {output_path}")
+print(f"\nSaved to: {output_path}")
 
 print("\n" + "="*60)
 print("Annotation pipeline complete!")
