@@ -448,7 +448,7 @@ print(f"Saved annotated peaks_by_pseudobulk object to: {output_dir}peaks_by_pb_a
 
 # %% checkpoint 2.
 output_dir = "/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/public_data/human_domcke_2020/"
-peaks_by_pseudobulk = sc.read_h5ad(output_dir + "peaks_by_pb_annotated.h5ad")
+peaks_by_pseudobulk = sc.read_h5ad(output_dir + "peaks_by_pb_celltype_stage_annotated.h5ad")
 peaks_by_pseudobulk
 # %% Annotate peaks using human GTF file
 # Path to human GTF file
@@ -480,7 +480,7 @@ sc.pl.umap(peaks_by_pseudobulk, color="peak_type",
 
 # %% checkpoint 1.
 output_dir = "/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/public_data/human_domcke_2020/"
-peaks_by_pseudobulk = sc.read_h5ad(output_dir + "peaks_by_pb_annotated.h5ad")
+peaks_by_pseudobulk = sc.read_h5ad(output_dir + "peaks_by_pb_celltype_stage_annotated.h5ad")
 peaks_by_pseudobulk
 # %% Import the associate_peaks_to_genes function
 import importlib
@@ -922,7 +922,325 @@ print("\nAnnotation complete!")
 print(f"Added columns: top_celltype, top_timepoint, top_timepoint_numeric, cluster_annotation")
 print(f"\nTimepoint range: {peaks_by_pseudobulk.obs['top_timepoint_numeric'].min():.1f} - {peaks_by_pseudobulk.obs['top_timepoint_numeric'].max():.1f} days")
 
-# %% Visualize annotated UMAP
+# %% [markdown]
+# ## Compute peak-level contrast metrics
+# 
+# For each individual peak, compute:
+# - `peak_top_celltype`: the celltype with highest accessibility
+# - `peak_top_timepoint`: the timepoint with highest accessibility  
+# - `celltype_peak_contrast`: how specific the peak is to its top celltype
+# - `timepoint_peak_contrast`: how specific the peak is to its top timepoint
+
+# %% Define peak contrast function
+def compute_peak_contrast(accessibility_vector):
+    """
+    Compute peak contrast: (max - mean_of_others) / std_of_others
+    
+    This measures how strongly a peak stands out from the background.
+    High values = specific signal, Low values = ubiquitous/weak signal
+    """
+    if len(accessibility_vector) < 2:
+        return np.nan
+    
+    max_val = np.max(accessibility_vector)
+    max_idx = np.argmax(accessibility_vector)
+    
+    # Get all values except the maximum
+    other_values = np.delete(accessibility_vector, max_idx)
+    
+    if len(other_values) == 0:
+        return np.nan
+    
+    mean_others = np.mean(other_values)
+    std_others = np.std(other_values)
+    
+    # Avoid division by zero
+    if std_others == 0:
+        # If all other values are the same, return a large value if max differs
+        if max_val > mean_others:
+            return 100.0  # Arbitrarily large
+        else:
+            return 0.0
+    
+    contrast = (max_val - mean_others) / std_others
+    return contrast
+
+# %% Compute celltype contrast and most accessible celltype for each peak
+print("\n" + "="*60)
+print("Computing peak-level contrast metrics...")
+print("="*60)
+
+print("\nComputing celltype peak contrast and most accessible celltype...")
+celltype_contrast_list = []
+peak_top_celltype_list = []
+peak_top_celltype_accessibility_list = []
+
+for peak_idx in range(peaks_by_pseudobulk.n_obs):
+    # Get accessibility across all pseudobulk groups for this peak
+    peak_accessibility = peaks_by_pseudobulk.layers['normalized'][peak_idx, :].toarray().flatten() if hasattr(peaks_by_pseudobulk.layers['normalized'], 'toarray') else peaks_by_pseudobulk.layers['normalized'][peak_idx, :]
+    
+    # Group by celltype and compute mean accessibility per celltype
+    celltype_accessibility = {}
+    for i, pb_group in enumerate(peaks_by_pseudobulk.var_names):
+        celltype = peaks_by_pseudobulk.var.loc[pb_group, 'celltype']
+        if celltype not in celltype_accessibility:
+            celltype_accessibility[celltype] = []
+        celltype_accessibility[celltype].append(peak_accessibility[i])
+    
+    # Average across timepoints for each celltype
+    celltype_means = {ct: np.mean(vals) for ct, vals in celltype_accessibility.items()}
+    celltype_means_array = np.array(list(celltype_means.values()))
+    celltype_names = list(celltype_means.keys())
+    
+    # Find most accessible celltype
+    max_idx = np.argmax(celltype_means_array)
+    top_celltype = celltype_names[max_idx]
+    top_accessibility = celltype_means_array[max_idx]
+    
+    # Compute contrast
+    contrast = compute_peak_contrast(celltype_means_array)
+    
+    celltype_contrast_list.append(contrast)
+    peak_top_celltype_list.append(top_celltype)
+    peak_top_celltype_accessibility_list.append(top_accessibility)
+
+peaks_by_pseudobulk.obs['celltype_peak_contrast'] = celltype_contrast_list
+peaks_by_pseudobulk.obs['peak_top_celltype'] = peak_top_celltype_list
+peaks_by_pseudobulk.obs['peak_top_celltype_accessibility'] = peak_top_celltype_accessibility_list
+
+# %% Compute timepoint contrast and most accessible timepoint for each peak
+print("Computing timepoint peak contrast and most accessible timepoint...")
+timepoint_contrast_list = []
+peak_top_timepoint_list = []
+peak_top_timepoint_accessibility_list = []
+
+for peak_idx in range(peaks_by_pseudobulk.n_obs):
+    # Get accessibility across all pseudobulk groups for this peak
+    peak_accessibility = peaks_by_pseudobulk.layers['normalized'][peak_idx, :].toarray().flatten() if hasattr(peaks_by_pseudobulk.layers['normalized'], 'toarray') else peaks_by_pseudobulk.layers['normalized'][peak_idx, :]
+    
+    # Group by timepoint and compute mean accessibility per timepoint
+    timepoint_accessibility = {}
+    for i, pb_group in enumerate(peaks_by_pseudobulk.var_names):
+        timepoint = peaks_by_pseudobulk.var.loc[pb_group, 'timepoint']
+        if timepoint not in timepoint_accessibility:
+            timepoint_accessibility[timepoint] = []
+        timepoint_accessibility[timepoint].append(peak_accessibility[i])
+    
+    # Average across celltypes for each timepoint
+    timepoint_means = {tp: np.mean(vals) for tp, vals in timepoint_accessibility.items()}
+    timepoint_means_array = np.array(list(timepoint_means.values()))
+    timepoint_names = list(timepoint_means.keys())
+    
+    # Find most accessible timepoint
+    max_idx = np.argmax(timepoint_means_array)
+    top_timepoint = timepoint_names[max_idx]
+    top_accessibility = timepoint_means_array[max_idx]
+    
+    # Compute contrast
+    contrast = compute_peak_contrast(timepoint_means_array)
+    
+    timepoint_contrast_list.append(contrast)
+    peak_top_timepoint_list.append(top_timepoint)
+    peak_top_timepoint_accessibility_list.append(top_accessibility)
+
+peaks_by_pseudobulk.obs['timepoint_peak_contrast'] = timepoint_contrast_list
+peaks_by_pseudobulk.obs['peak_top_timepoint'] = peak_top_timepoint_list
+peaks_by_pseudobulk.obs['peak_top_timepoint_accessibility'] = peak_top_timepoint_accessibility_list
+
+# %% Convert peak_top_timepoint to numeric for visualization
+peaks_by_pseudobulk.obs['peak_top_timepoint_numeric'] = pd.to_numeric(
+    peaks_by_pseudobulk.obs['peak_top_timepoint'], 
+    errors='coerce'
+)
+
+print("\nPeak-level analysis complete!")
+print(f"Celltype contrast range: {np.nanmin(celltype_contrast_list):.2f} - {np.nanmax(celltype_contrast_list):.2f}")
+print(f"Timepoint contrast range: {np.nanmin(timepoint_contrast_list):.2f} - {np.nanmax(timepoint_contrast_list):.2f}")
+print(f"Mean celltype contrast: {np.nanmean(celltype_contrast_list):.2f}")
+print(f"Mean timepoint contrast: {np.nanmean(timepoint_contrast_list):.2f}")
+
+print(f"\nTop celltypes per peak:")
+print(pd.Series(peak_top_celltype_list).value_counts().head(10))
+print(f"\nTop timepoints per peak:")
+print(pd.Series(peak_top_timepoint_list).value_counts().head(10))
+
+# %% Normalize peak contrast values to 0-1 range for visualization
+def normalize_to_01(values):
+    """Normalize values to 0-1 range using min-max scaling"""
+    values_clean = np.array(values)
+    values_clean = values_clean[~np.isnan(values_clean)]
+    
+    if len(values_clean) == 0:
+        return np.zeros_like(values)
+    
+    min_val = np.min(values_clean)
+    max_val = np.max(values_clean)
+    
+    if max_val == min_val:
+        return np.ones_like(values) * 0.5
+    
+    normalized = (np.array(values) - min_val) / (max_val - min_val)
+    normalized[np.isnan(normalized)] = 0
+    
+    return normalized
+
+def normalize_for_alpha_robust(values, min_alpha=0.1, max_alpha=0.9):
+    """Normalize values to alpha range using robust percentile clipping."""
+    min_val = np.percentile(values, 5)
+    max_val = np.percentile(values, 95)
+    clipped = np.clip(values, min_val, max_val)
+    normalized = (clipped - min_val) / (max_val - min_val)
+    return normalized * (max_alpha - min_alpha) + min_alpha
+
+# Normalize contrast metrics
+celltype_contrast_normalized = normalize_to_01(peaks_by_pseudobulk.obs['celltype_peak_contrast'])
+timepoint_contrast_normalized = normalize_to_01(peaks_by_pseudobulk.obs['timepoint_peak_contrast'])
+
+peaks_by_pseudobulk.obs['celltype_peak_contrast_normalized'] = celltype_contrast_normalized
+peaks_by_pseudobulk.obs['timepoint_peak_contrast_normalized'] = timepoint_contrast_normalized
+
+# Compute alpha values for visualization
+peaks_by_pseudobulk.obs['alpha_celltype'] = normalize_for_alpha_robust(
+    peaks_by_pseudobulk.obs['celltype_peak_contrast']
+)
+peaks_by_pseudobulk.obs['alpha_timepoint'] = normalize_for_alpha_robust(
+    peaks_by_pseudobulk.obs['timepoint_peak_contrast']
+)
+
+print(f"\nCelltype contrast normalized range: {np.min(celltype_contrast_normalized):.3f} - {np.max(celltype_contrast_normalized):.3f}")
+print(f"Timepoint contrast normalized range: {np.min(timepoint_contrast_normalized):.3f} - {np.max(timepoint_contrast_normalized):.3f}")
+
+# %% Visualize peak-level annotations
+print("\n" + "="*60)
+print("Visualizing peak-level annotations...")
+print("="*60)
+
+# Plot: Peak-level top celltype
+sc.pl.umap(peaks_by_pseudobulk, color='peak_top_celltype',
+           title='Most Accessible Celltype (Per Peak)',
+           save='_human_peak_top_celltype.png')
+
+# Plot: Peak-level top timepoint (numeric with viridis colormap)
+sc.pl.umap(peaks_by_pseudobulk, color='peak_top_timepoint_numeric',
+           title='Most Accessible Timepoint (Per Peak)',
+           cmap='viridis',
+           save='_human_peak_top_timepoint_numeric.png')
+
+# Plot: Top celltype with alpha = specificity
+sc.pl.umap(
+    peaks_by_pseudobulk, 
+    color='peak_top_celltype',
+    alpha=peaks_by_pseudobulk.obs['alpha_celltype'].values,
+    title='Top Celltype (α = specificity)',
+    frameon=False,
+    save='_human_top_celltype_alpha_contrast.png'
+)
+
+# Plot: Top timepoint with alpha = specificity  
+sc.pl.umap(
+    peaks_by_pseudobulk,
+    color='peak_top_timepoint_numeric', 
+    cmap='viridis',
+    alpha=peaks_by_pseudobulk.obs['alpha_timepoint'].values,
+    title='Top Timepoint (α = specificity)',
+    frameon=False,
+    save='_human_top_timepoint_alpha_contrast.png'
+)
+
+# %% Visualize peak contrast on UMAP
+fig, axes = plt.subplots(2, 2, figsize=(16, 14))
+
+# Plot 1: Celltype peak contrast
+sc.pl.umap(peaks_by_pseudobulk, color='celltype_peak_contrast',
+           ax=axes[0, 0], show=False,
+           title='Celltype Peak Contrast\n(Higher = more cell-type specific)',
+           cmap='magma', vmin=0)
+
+# Plot 2: Timepoint peak contrast
+sc.pl.umap(peaks_by_pseudobulk, color='timepoint_peak_contrast',
+           ax=axes[0, 1], show=False,
+           title='Timepoint Peak Contrast\n(Higher = more stage-specific)',
+           cmap='magma', vmin=0)
+
+# Plot 3: Peak-level top celltype
+sc.pl.umap(peaks_by_pseudobulk, color='peak_top_celltype',
+           ax=axes[1, 0], show=False,
+           title='Most Accessible Celltype (Per Peak)')
+
+# Plot 4: Peak-level top timepoint numeric
+sc.pl.umap(peaks_by_pseudobulk, color='peak_top_timepoint_numeric',
+           ax=axes[1, 1], show=False,
+           title='Most Accessible Timepoint (Per Peak)',
+           cmap='viridis')
+
+plt.tight_layout()
+plt.savefig(figure_path + 'human_peak_contrast_umaps.png', dpi=150, bbox_inches='tight')
+plt.savefig(figure_path + 'human_peak_contrast_umaps.pdf', bbox_inches='tight')
+plt.show()
+
+# %% Distribution of peak contrast values
+fig, axes = plt.subplots(1, 2, figsize=(14, 5))
+
+# Celltype contrast histogram
+axes[0].hist(peaks_by_pseudobulk.obs['celltype_peak_contrast'].dropna(), 
+             bins=50, edgecolor='black', alpha=0.7, color='steelblue')
+axes[0].set_xlabel('Celltype Peak Contrast', fontsize=12)
+axes[0].set_ylabel('Number of peaks', fontsize=12)
+axes[0].set_title('Distribution of Celltype Peak Contrast', fontsize=14, fontweight='bold')
+axes[0].axvline(peaks_by_pseudobulk.obs['celltype_peak_contrast'].median(), 
+                color='red', linestyle='--', linewidth=2, 
+                label=f'Median: {peaks_by_pseudobulk.obs["celltype_peak_contrast"].median():.2f}')
+axes[0].legend()
+axes[0].grid(False)
+
+# Timepoint contrast histogram
+axes[1].hist(peaks_by_pseudobulk.obs['timepoint_peak_contrast'].dropna(), 
+             bins=50, edgecolor='black', alpha=0.7, color='coral')
+axes[1].set_xlabel('Timepoint Peak Contrast', fontsize=12)
+axes[1].set_ylabel('Number of peaks', fontsize=12)
+axes[1].set_title('Distribution of Timepoint Peak Contrast', fontsize=14, fontweight='bold')
+axes[1].axvline(peaks_by_pseudobulk.obs['timepoint_peak_contrast'].median(), 
+                color='red', linestyle='--', linewidth=2,
+                label=f'Median: {peaks_by_pseudobulk.obs["timepoint_peak_contrast"].median():.2f}')
+axes[1].legend()
+axes[1].grid(False)
+
+plt.tight_layout()
+plt.savefig(figure_path + 'human_peak_contrast_distributions.png', dpi=300, bbox_inches='tight')
+plt.savefig(figure_path + 'human_peak_contrast_distributions.pdf', bbox_inches='tight')
+plt.show()
+
+# %% Peak contrast by peak type
+fig, axes = plt.subplots(1, 2, figsize=(14, 6))
+
+# Celltype contrast by peak type
+sns.violinplot(data=peaks_by_pseudobulk.obs, x='peak_type', y='celltype_peak_contrast', ax=axes[0])
+axes[0].set_xlabel('Peak Type', fontsize=12)
+axes[0].set_ylabel('Celltype Peak Contrast', fontsize=12)
+axes[0].set_title('Celltype Specificity by Peak Type', fontsize=14, fontweight='bold')
+axes[0].tick_params(axis='x', rotation=45)
+axes[0].grid(False)
+
+# Timepoint contrast by peak type
+sns.violinplot(data=peaks_by_pseudobulk.obs, x='peak_type', y='timepoint_peak_contrast', ax=axes[1])
+axes[1].set_xlabel('Peak Type', fontsize=12)
+axes[1].set_ylabel('Timepoint Peak Contrast', fontsize=12)
+axes[1].set_title('Temporal Specificity by Peak Type', fontsize=14, fontweight='bold')
+axes[1].tick_params(axis='x', rotation=45)
+axes[1].grid(False)
+
+plt.tight_layout()
+plt.savefig(figure_path + 'human_peak_contrast_by_type.png', dpi=300, bbox_inches='tight')
+plt.savefig(figure_path + 'human_peak_contrast_by_type.pdf', bbox_inches='tight')
+plt.show()
+
+print("\n=== Peak Contrast Summary Statistics ===")
+print("\nCelltype Peak Contrast by Peak Type:")
+print(peaks_by_pseudobulk.obs.groupby('peak_type')['celltype_peak_contrast'].describe())
+print("\nTimepoint Peak Contrast by Peak Type:")
+print(peaks_by_pseudobulk.obs.groupby('peak_type')['timepoint_peak_contrast'].describe())
+
+# %% Visualize annotated UMAP (cluster-based)
 
 # Plot 1: Top celltype
 sc.pl.umap(peaks_by_pseudobulk, color='top_celltype',
@@ -1114,14 +1432,328 @@ for cluster_id in sorted(list(cluster_celltype_profiles_coarse.keys()))[:3]:
         save_path=f"{figure_path}human_cluster_{cluster_id}_accessibility_profile.png"
     )
 
+# %% [markdown]
+# ## Part 3: Map cell types to broader lineages
+# 
+# Similar to the mouse Argelaguet 2022 analysis, we aggregate cell types into broader 
+# developmental lineage categories for visualization and cross-species comparison.
+
+# %% Define human celltype to lineage mapping dictionary
+human_celltype_to_lineage = {
+    # CENTRAL NERVOUS SYSTEM (CNS)
+    "CNS": [
+        "Astrocytes",
+        "Astrocytes/Oligodendrocytes",
+        "Excitatory neurons",
+        "Inhibitory neurons",
+        "Limbic system neurons",
+        "Granule neurons",
+        "Purkinje neurons",
+    ],
+    
+    # PERIPHERAL NERVOUS SYSTEM / NEURAL CREST
+    "PNS/Neural Crest": [
+        "ENS neurons",
+        "ENS glia",
+        "Schwann cells",
+        "Sympathoblasts",
+        "Chromaffin cells",
+        "Ganglion cells",
+        "Satellite cells",
+    ],
+    
+    # SENSORY / EYE
+    "Sensory/Eye": [
+        "Photoreceptor cells",
+        "Retinal pigment cells",
+        "Retinal progenitors and Muller glia",
+        "Horizontal/Amacrine cells",
+    ],
+    
+    # ENDODERM-DERIVED EPITHELIUM
+    "Endoderm": [
+        "Hepatoblasts",
+        "Acinar cells",
+        "Ductal cells",
+        "Islet endocrine cells",
+        "Intestinal epithelial cells",
+        "Goblet cells",
+        "Parietal and chief cells",
+        "Bronchiolar and alveolar epithelial cells",
+        "Ciliated epithelial cells",
+        "Thymic epithelial cells",
+    ],
+    
+    # CARDIAC
+    "Cardiac": [
+        "Cardiomyocytes",
+        "Endocardial cells",
+        "Epicardial fat cells",
+    ],
+    
+    # MUSCLE / MESENCHYME
+    "Mesenchyme": [
+        "Smooth muscle cells",
+        "Skeletal muscle cells",
+        "Stromal cells",
+        "Mesothelial cells",
+        "Stellate cells",
+    ],
+    
+    # HEMATOPOIETIC / IMMUNE
+    "Hematopoietic": [
+        "Erythroblasts",
+        "Hematopoietic stem cells",
+        "Lymphoid cells",
+        "Myeloid cells",
+        "Lymphoid/Myeloid cells",
+        "Megakaryocytes",
+        "Antigen presenting cells",
+        "Thymocytes",
+    ],
+    
+    # ENDOTHELIAL
+    "Endothelial": [
+        "Vascular endothelial cells",
+        "Lymphatic endothelial cells",
+    ],
+    
+    # RENAL
+    "Renal": [
+        "Metanephric cells",
+        "Mesangial cells",
+        "Ureteric bud cells",
+    ],
+    
+    # PLACENTAL / EXTRAEMBRYONIC
+    "Placental": [
+        "Extravillous trophoblasts",
+        "Syncytiotrophoblasts and villous cytotrophoblasts",
+        "Trophoblast giant cells",
+    ],
+    
+    # ENDOCRINE
+    "Endocrine": [
+        "Adrenocortical cells",
+        "Neuroendocrine cells",
+    ],
+    
+    # OTHER / UNCLASSIFIED
+    "Other": [
+        "Epithelial cells",
+        "ELF3_AGBL2 positive cells",
+        "IGFBP1_DKK1 positive cells",
+        "PAEP_MECOM positive cells",
+        "SKOR2_NPSR1 positive cells",
+    ],
+}
+
+# %% Create reverse mapping (celltype -> lineage)
+print("\n" + "="*60)
+print("Mapping cell types to lineages...")
+print("="*60)
+
+celltype_to_lineage_map = {}
+for lineage, celltypes in human_celltype_to_lineage.items():
+    for celltype in celltypes:
+        celltype_to_lineage_map[celltype] = lineage
+
+print(f"Created mapping for {len(celltype_to_lineage_map)} cell types to {len(human_celltype_to_lineage)} lineages")
+
+# %% Map the top_celltype to peak_lineage (per peak metric)
+peaks_by_pseudobulk.obs["peak_lineage"] = peaks_by_pseudobulk.obs["peak_top_celltype"].map(celltype_to_lineage_map)
+
+# Check for unmapped celltypes
+unmapped = peaks_by_pseudobulk.obs[peaks_by_pseudobulk.obs['peak_lineage'].isna()]['top_celltype'].unique()
+if len(unmapped) > 0:
+    print(f"\nWarning: {len(unmapped)} unmapped celltypes: {list(unmapped)}")
+    peaks_by_pseudobulk.obs['peak_lineage'] = peaks_by_pseudobulk.obs['peak_lineage'].fillna('Other')
+
+print(f"\nLineage distribution:")
+print(peaks_by_pseudobulk.obs['peak_lineage'].value_counts())
+
+# %% Define lineage color palette for visualization
+human_lineage_colors = {
+    'CNS': '#1f77b4',              # Blue
+    'PNS/Neural Crest': '#17becf', # Cyan
+    'Sensory/Eye': '#9467bd',      # Purple
+    'Endoderm': '#2ca02c',         # Green
+    'Cardiac': '#d62728',          # Red
+    'Mesenchyme': '#8c564b',       # Brown
+    'Hematopoietic': '#e377c2',    # Pink
+    'Endothelial': '#ff7f0e',      # Orange
+    'Renal': '#bcbd22',            # Yellow-green
+    'Placental': '#7f7f7f',        # Gray
+    'Endocrine': '#ffbb78',        # Light orange
+    'Other': '#c7c7c7',            # Light gray
+}
+
+# %% Visualize lineage on UMAP
+sc.pl.umap(
+    peaks_by_pseudobulk,
+    color='peak_lineage',
+    palette=human_lineage_colors,
+    title='Human Peak UMAP - Lineage',
+    frameon=False,
+    save='_human_peak_lineage.png'
+)
+
+# %% Compute lineage-level accessibility profiles
+print("\n" + "="*60)
+print("Computing lineage-level accessibility...")
+print("="*60)
+
+# Get the dense matrix (if sparse)
+X = peaks_by_pseudobulk.X
+if hasattr(X, 'toarray'):
+    X = X.toarray()
+
+# Get unique celltypes from var
+unique_celltypes = peaks_by_pseudobulk.var['celltype'].unique()
+print(f"Found {len(unique_celltypes)} unique celltypes in pseudobulk groups")
+
+# Compute mean accessibility per celltype (averaging across timepoints)
+for celltype in unique_celltypes:
+    # Get columns for this celltype (all timepoints)
+    celltype_mask = peaks_by_pseudobulk.var['celltype'] == celltype
+    col_indices = np.where(celltype_mask)[0]
+    
+    if len(col_indices) > 0:
+        # Mean accessibility across timepoints
+        mean_accessibility = np.mean(X[:, col_indices], axis=1)
+        peaks_by_pseudobulk.obs[f'accessibility_{celltype}'] = mean_accessibility
+
+print(f"Created {len(unique_celltypes)} accessibility columns")
+
+# %% Compute mean accessibility per lineage (averaging across celltypes in each lineage)
+lineage_accessibility = {}
+
+for lineage, celltypes_in_lineage in human_celltype_to_lineage.items():
+    lineage_cols = [f'accessibility_{ct}' for ct in celltypes_in_lineage 
+                    if f'accessibility_{ct}' in peaks_by_pseudobulk.obs.columns]
+    
+    if lineage_cols:
+        lineage_vals = peaks_by_pseudobulk.obs[lineage_cols].values
+        peaks_by_pseudobulk.obs[f'accessibility_lineage_{lineage}'] = np.mean(lineage_vals, axis=1)
+        lineage_accessibility[lineage] = True
+        print(f"Created accessibility_lineage_{lineage} from {len(lineage_cols)} celltypes")
+
+# %% Compute top lineage and lineage contrast for each peak
+print("\n" + "="*60)
+print("Computing lineage contrast metrics...")
+print("="*60)
+
+lineage_acc_cols = [f'accessibility_lineage_{lin}' for lin in lineage_accessibility.keys()]
+lineage_vals = peaks_by_pseudobulk.obs[lineage_acc_cols].values
+lineage_names = list(lineage_accessibility.keys())
+
+# Find max lineage for each peak
+max_lineage_idx = np.argmax(lineage_vals, axis=1)
+peaks_by_pseudobulk.obs['top_lineage'] = [lineage_names[i] for i in max_lineage_idx]
+
+# Compute contrast: (max - mean_others) / std_others
+max_vals = np.max(lineage_vals, axis=1)
+other_vals_mean = np.array([
+    np.mean(np.delete(row, max_idx)) 
+    for row, max_idx in zip(lineage_vals, max_lineage_idx)
+])
+other_vals_std = np.array([
+    np.std(np.delete(row, max_idx)) 
+    for row, max_idx in zip(lineage_vals, max_lineage_idx)
+])
+
+peaks_by_pseudobulk.obs['lineage_contrast'] = np.where(
+    other_vals_std > 1e-10,
+    (max_vals - other_vals_mean) / other_vals_std,
+    0
+)
+
+print(f"Lineage contrast stats: mean={peaks_by_pseudobulk.obs['lineage_contrast'].mean():.2f}, "
+      f"std={peaks_by_pseudobulk.obs['lineage_contrast'].std():.2f}")
+
+print(f"\nTop lineage distribution:")
+print(peaks_by_pseudobulk.obs['top_lineage'].value_counts())
+
+# %% Normalize lineage contrast for alpha scaling (using function defined earlier)
+peaks_by_pseudobulk.obs['alpha_lineage'] = normalize_for_alpha_robust(
+    peaks_by_pseudobulk.obs['lineage_contrast']
+)
+
+# %% Visualize lineage with alpha = specificity
+sc.pl.umap(
+    peaks_by_pseudobulk,
+    color='top_lineage',
+    palette=human_lineage_colors,
+    alpha=peaks_by_pseudobulk.obs['alpha_lineage'].values,
+    title='Human Peak UMAP - Lineage (α = specificity)',
+    frameon=False,
+    save='_human_lineage_alpha_contrast.png'
+)
+
+# %% Create multi-panel lineage visualization
+fig, axes = plt.subplots(1, 3, figsize=(24, 7))
+
+# Plot 1: Peak lineage (from cluster-based annotation)
+sc.pl.umap(peaks_by_pseudobulk, color='peak_lineage',
+           ax=axes[0], show=False, 
+           title='Peak Lineage (cluster-based)',
+           palette=human_lineage_colors)
+
+# Plot 2: Top lineage (from peak-level accessibility)
+sc.pl.umap(peaks_by_pseudobulk, color='top_lineage',
+           ax=axes[1], show=False,
+           title='Top Lineage (peak-level)',
+           palette=human_lineage_colors)
+
+# Plot 3: Lineage contrast
+sc.pl.umap(peaks_by_pseudobulk, color='lineage_contrast',
+           ax=axes[2], show=False,
+           title='Lineage Contrast\n(higher = more lineage-specific)',
+           cmap='magma', vmin=0)
+
+plt.tight_layout()
+plt.savefig(figure_path + 'human_peak_umap_lineage_summary.png', dpi=300, bbox_inches='tight')
+plt.savefig(figure_path + 'human_peak_umap_lineage_summary.pdf', bbox_inches='tight')
+plt.show()
+
+print(f"Saved lineage summary to: {figure_path}human_peak_umap_lineage_summary.png")
+
+# %% Lineage distribution statistics
+print("\n" + "="*60)
+print("Lineage Summary Statistics")
+print("="*60)
+
+print("\n=== Peak Lineage Distribution ===")
+peak_lineage_counts = peaks_by_pseudobulk.obs['peak_lineage'].value_counts()
+peak_lineage_props = peaks_by_pseudobulk.obs['peak_lineage'].value_counts(normalize=True) * 100
+
+for lineage in peak_lineage_counts.index:
+    print(f"{lineage}: {peak_lineage_counts[lineage]:,} ({peak_lineage_props[lineage]:.2f}%)")
+
+print("\n=== Top Lineage Distribution ===")
+top_lineage_counts = peaks_by_pseudobulk.obs['top_lineage'].value_counts()
+top_lineage_props = peaks_by_pseudobulk.obs['top_lineage'].value_counts(normalize=True) * 100
+
+for lineage in top_lineage_counts.index:
+    print(f"{lineage}: {top_lineage_counts[lineage]:,} ({top_lineage_props[lineage]:.2f}%)")
+
 # %% Save the final annotated object with cluster annotations
-print("\n" + "="*60")
+print("\n" + "="*60)
 print("Saving final annotated peak object...")
-print("="*60")
+print("="*60)
 
 final_output_path = output_dir + "peaks_by_pb_celltype_stage_annotated_with_clusters.h5ad"
 peaks_by_pseudobulk.write_h5ad(final_output_path)
 print(f"Saved to: {final_output_path}")
+
+print("\nFinal annotations included in .obs:")
+print("  - Peak genomic annotations: peak_type, Chromosome, Start, End")
+print("  - Gene associations: gene_body_overlaps, nearest_gene, distance_to_tss")
+print("  - Accessibility metrics: total_accessibility, log_total_accessibility")
+print("  - Cluster assignments: leiden_coarse, leiden_fine")
+print("  - Cluster-based annotations: top_celltype, top_timepoint, top_timepoint_numeric")
+print("  - Lineage annotations: peak_lineage, top_lineage, lineage_contrast, alpha_lineage")
+print("  - Specificity patterns: accessibility_pattern, accessibility_entropy")
 
 print("\n" + "="*60)
 print("Annotation pipeline complete!")

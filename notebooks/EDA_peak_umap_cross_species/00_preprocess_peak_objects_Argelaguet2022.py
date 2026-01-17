@@ -1045,8 +1045,10 @@ for lineage, celltypes in mouse_celltype_to_lineage.items():
     for celltype in celltypes:
         celltype_to_lineage_map[celltype] = lineage
 
-# Step 3: Map cleaned celltypes to lineages
+# Step 3: Map cleaned celltypes to lineages (per coarse cluster)
 peaks_by_pseudobulk.obs['lineage'] = peaks_by_pseudobulk.obs['celltype_clean'].map(celltype_to_lineage_map)
+# map the top_celltype to top_lineage (per peak metric, the most accessible celltype is "top_celltype")
+peaks_by_pseudobulk.obs["peak_lineage"] = peaks_by_pseudobulk.obs["peak_top_celltype"].map(celltype_to_lineage_map)
 
 # Check for unmapped celltypes
 unmapped = peaks_by_pseudobulk.obs[peaks_by_pseudobulk.obs['lineage'].isna()]['celltype_clean'].unique()
@@ -1070,15 +1072,25 @@ mouse_lineage_colors = {
     'Unknown': '#D3D3D3',
 }
 
+# sc.pl.umap(
+#     peaks_by_pseudobulk,
+#     color='lineage',
+#     palette=mouse_lineage_colors,
+#     title='Mouse Peak UMAP - Lineage',
+#     frameon=False,
+#     save='_mouse_lineage.png'
+# )
 sc.pl.umap(
     peaks_by_pseudobulk,
-    color='lineage',
+    color='peak_lineage',
     palette=mouse_lineage_colors,
     title='Mouse Peak UMAP - Lineage',
     frameon=False,
-    save='_mouse_lineage.png'
 )
-  
+
+
+# %% save the h5ad object with the latest annotation
+peaks_by_pseudobulk.write_h5ad("/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/public_data/mouse_argelaguet_2022/peaks_by_pb_celltype_stage_annotated_v2.h5ad")
 # %% Plot PEAK-LEVEL most accessible celltype and timepoint
 print("\nPlotting peak-level most accessible annotations...")
 
