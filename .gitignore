@@ -43,3 +43,15 @@ notebooks/Fig_peak_umap/llm_annotation/litemind_prompt_leiden_coarse/
 # Chromatin velocity exploration (deprecated)
 figures/chrom_velocity/
 notebooks/Fig_peak_umap/chrom_velo/
+
+# Documentation drafts
+docs/
+
+# Cross-species EDA figures
+notebooks/EDA_peak_umap_cross_species/figures/
+
+# Planning documents
+plan_refactor_v2.md
+
+# LiteMind cache
+scripts/litemind_peak_analysis/.cache/
