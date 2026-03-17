@@ -5,429 +5,333 @@
 
 ## Overview
 
-Build a cross-species peak UMAP that embeds regulatory elements from zebrafish, mouse, and human into a shared space based on transcription factor binding motif composition. Peaks with similar regulatory grammar will co-embed regardless of sequence conservation.
+Build a cross-species peak UMAP embedding zebrafish (~640K), mouse (~192K), and human (~1M) regulatory elements into a shared space based on TF binding motif composition (JASPAR2024 CORE vertebrates). Peaks with similar regulatory grammar co-embed regardless of sequence conservation.
 
 ---
 
 ## Inputs
 
+| Species | h5ad path | Peaks | Genome |
+|---------|-----------|-------|--------|
+| Zebrafish | `/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/annotated_data/objects_v2/peaks_by_ct_tp_pseudobulked_all_peaks_pca_concord.h5ad` | 640,834 | danRer11 |
+| Mouse | `/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/public_data/mouse_argelaguet_2022/peaks_by_pb_celltype_stage_annotated_v2.h5ad` | 192,251 | mm10 |
+| Human | `/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/public_data/human_domcke_2020/peaks_by_pb_celltype_stage_annotated.h5ad` | 1,041,455 | **hg19** ⚠️ |
+
+**Total peaks: ~1.87M across three species.**
+
+> ⚠️ **Genome version note:** The human h5ad has `obs['genome'] == 'hg19'`. The GTF provided (`GRCH38.gencode.v47`) is hg38. Need to confirm whether to use an hg19 genome FASTA for sequence extraction, or liftover the peaks to hg38 first. Use hg19 FASTA for motif scanning to match the stored coordinates.
+
+GTF files (for gene annotation reference only — not used in motif scanning):
+- Mouse: `/hpc/reference/sequencing_alignment/alignment_references/mouse_gencode_M31_GRCm39_cellranger/genes/genes.gtf.gz`
+- Human: `/hpc/reference/sequencing_alignment/alignment_references/GRCH38.gencode.v47.primary_assembly_Cellranger_20250321/genes/genes.gtf.gz`
+
+### h5ad Data Structure
+
+**Zebrafish** (`peaks × 190 pseudobulk groups`):
+- `.obs` index format: `1-32-526` (chromosome-start-end, **no "chr" prefix**)
+- `.obs` key columns: `celltype`, `timepoint` (dominant annotation per peak)
+- Coordinate parsing: split on `-` → `chr={parts[0]}`, `start={parts[1]}`, `end={parts[2]}`; prepend `chr` prefix when writing BED
+- Peak widths: variable (~500–700bp typical, some wider)
+- `.layers`: `log_norm`, `normalized`, `sum`
+
+**Mouse** (`peaks × 145 pseudobulk groups`):
+- `.obs` index format: `chr1-3035602-3036202`
+- `.obs` key columns: `chr`, `start`, `end` (Categorical dtype → cast to int), `top_celltype`, `top_timepoint`
+- Peak widths: ~600bp (uniform)
+- `.layers`: `normalized`, `sum`
+
+**Human** (`peaks × 249 pseudobulk groups`):
+- `.obs` index format: `chr1-752336-752980`
+- `.obs` key columns: `chr`, `start`, `end` (Categorical dtype → cast to int), `top_celltype`, `top_timepoint`, `genome`
+- Peak widths: variable (266–1813bp)
+- `.layers`: `normalized`, `sum`
+
+### Motif Database
+- JASPAR 2024 CORE vertebrates non-redundant (already downloaded — **fill in path**)
+- HOMER binary: `/hpc/mydata/yang-joon.kim/homer/bin/annotatePeaks.pl`
+- **Preferred scanner:** GimmeMotifs (`gimmemotifs`) — reads JASPAR PFM natively, parallelized, Python-native
+
+### Output Directory
 ```
-# h5ad objects: peaks-by-pseudobulk matrices
-# Each h5ad has:
-#   - .X: peaks (rows) × pseudobulk_samples (columns) accessibility matrix
-#   - .obs: peak metadata (chr, start, end, peak_id, etc.)
-#   - .var: pseudobulk sample metadata (celltype, timepoint, etc.)
-
-ZEBRAFISH_H5AD = "<path_to_zebrafish_peaks_by_pseudobulk.h5ad>"
-MOUSE_H5AD     = "<path_to_mouse_peaks_by_pseudobulk.h5ad>"
-HUMAN_H5AD     = "<path_to_human_peaks_by_pseudobulk.h5ad>"
-
-# Reference genomes (for peak sequence extraction)
-ZEBRAFISH_GENOME = "danRer11"   # or path to fasta
-MOUSE_GENOME     = "mm10"       # or path to fasta
-HUMAN_GENOME     = "hg38"       # or path to fasta
-
-# Motif database
-JASPAR_MOTIF_DB = "JASPAR2024_CORE_vertebrates_non-redundant"
-# Will be downloaded and converted to HOMER format
+/hpc/scratch/group.data.science/yang-joon.kim/multiome-cross-species-peak-umap/
+├── peak_sequences/
+├── motif_database/
+├── motif_scores/
+├── cross_species_motif_adata.h5ad
+├── cross_species_embedded.h5ad
+├── cluster_conservation_classification.csv
+└── figures/
 ```
+
+---
+
+## Script Structure
+
+All scripts live in `notebooks/EDA_peak_umap_cross_species/scripts/`:
+
+| Script | Purpose |
+|--------|---------|
+| `00_config.py` | All paths and parameters (import everywhere) |
+| `01_prepare_peaks.py` | Extract coordinates → BED → FASTA per species |
+| `02_prepare_motifs.py` | Load/convert JASPAR motifs, build metadata CSV |
+| `03_scan_motifs.py` | Parallelized motif scanning → `{species}_motif_scores.npz` |
+| `04_build_matrix.py` | Concatenate + normalize → `cross_species_motif_adata.h5ad` |
+| `05_embed_umap.py` | PCA → Harmony → UMAP → Leiden |
+| `06_visualize.py` | Diagnostic plots |
+| `07_validate.py` | Cluster coherence + conservation classification |
+| `run_all.py` | Master execution script |
+| `slurm_scripts/` | SLURM submission scripts for compute-heavy steps |
 
 ---
 
 ## Phase 1: Preparation
 
-### Step 1.1: Download and prepare JASPAR core vertebrate motif database
+### Step 1.1: Per-species coordinate extraction → BED → FASTA
 
-```bash
-# Download JASPAR 2024 CORE vertebrate non-redundant PWMs
-# https://jaspar.elixir.no/download/data/2024/CORE/JASPAR2024_CORE_vertebrates_non-redundant_pfms_jaspar.txt
+Each species requires species-specific parsing of `.obs` to produce a 6-column BED file,
+then `bedtools getfasta` to extract sequences.
 
-# Convert JASPAR PFM → HOMER motif format:
-python convert_jaspar_to_homer.py \
-    --input JASPAR2024_CORE_vertebrates_non-redundant_pfms.txt \
-    --output jaspar_core_vertebrate.motif
-```
-
-**Key decision:** Use JASPAR 2024 CORE vertebrates non-redundant collection (~900 motifs).
-
-- ~900 motifs may be too many due to TF family redundancy.
-- **Recommended:** Cluster motifs by similarity (HOMER `compareMotifs.pl` or MEME `TOMTOM`) and retain representative motifs per cluster. Target: 300–500 non-redundant motifs.
-- Alternative: use all JASPAR motifs and let PCA handle redundancy (correlated motifs load on the same PCs).
-
-### Step 1.2: Extract peak sequences from each species
+**Species-specific parsing logic:**
 
 ```python
-import anndata as ad
-
-def extract_peak_sequences(h5ad_path, output_bed):
-    """
-    Extract peak coordinates from h5ad .obs and write BED file.
-    Expected .obs columns: 'chr', 'start', 'end'
-    (or 'peak_id' parseable as chr:start-end)
-    """
-    adata = ad.read_h5ad(h5ad_path)
-    peaks_bed = adata.obs[['chr', 'start', 'end']].copy()
-    peaks_bed['name'] = adata.obs_names
-    peaks_bed['score'] = 0
-    peaks_bed['strand'] = '.'
-    peaks_bed.to_csv(output_bed, sep='\t', header=False, index=False)
-    return output_bed
+def parse_peak_coordinates(adata, species):
+    """Returns DataFrame with columns: chr, start, end"""
+    if species == 'zebrafish':
+        # Index format: '1-32-526' — no chr prefix
+        parts = adata.obs_names.str.split('-', expand=True)
+        df = pd.DataFrame({
+            'chr':   'chr' + parts[0],   # prepend 'chr'
+            'start': parts[1].astype(int),
+            'end':   parts[2].astype(int),
+        }, index=adata.obs_names)
+    else:
+        # Mouse/Human: separate chr, start, end columns (Categorical → int)
+        df = pd.DataFrame({
+            'chr':   adata.obs['chr'].astype(str),
+            'start': adata.obs['start'].astype(int),
+            'end':   adata.obs['end'].astype(int),
+        }, index=adata.obs_names)
+    return df
 ```
 
-```bash
-# For each species, extract sequences with bedtools:
-bedtools getfasta -fi ${ZEBRAFISH_GENOME}.fa -bed zebrafish_peaks.bed \
-    -fo zebrafish_peaks.fa -name
-bedtools getfasta -fi ${MOUSE_GENOME}.fa -bed mouse_peaks.bed \
-    -fo mouse_peaks.fa -name
-bedtools getfasta -fi ${HUMAN_GENOME}.fa -bed human_peaks.bed \
-    -fo human_peaks.fa -name
-```
-
-**Note on peak width:** Resize all peaks to a fixed width (e.g., 500 bp centered on summit) before sequence extraction for fair motif scoring comparison. Variable-width peaks require downstream length normalization.
-
-### Step 1.3: Verify peak counts and basic stats
+**Resize all peaks to 500 bp centered:**
 
 ```python
-# Log number of peaks per species
-# Check peak width distributions
-# Verify genome builds match the h5ad coordinates
+center = (df['start'] + df['end']) // 2
+df['start'] = (center - 250).clip(lower=0)
+df['end']   = center + 250
+```
+
+**Sequence extraction:**
+
+```bash
+bedtools getfasta -fi ${GENOME}.fa -bed {species}_peaks.bed -fo {species}_peaks.fa -name
+```
+
+**Genome FASTAs needed:**
+- `danRer11.fa` — zebrafish (danRer11 / GRCz11)
+- `mm10.fa` — mouse (GRCm38)
+- `hg19.fa` — human (**hg19**, matching h5ad coordinates)
+
+**Metadata to save per species:**
+
+From `.obs`: species label, original peak ID, `celltype_max` / `top_celltype`, `timepoint` / `top_timepoint`, `lineage` (if present), `leiden_coarse`.
+
+Column name mapping:
+
+| Field | Zebrafish col | Mouse col | Human col |
+|-------|---------------|-----------|-----------|
+| Dominant cell type | `celltype` | `top_celltype` | `top_celltype` |
+| Dominant timepoint | `timepoint` | `top_timepoint` | `top_timepoint` |
+| Lineage | `peak_lineage` (check) | `peak_lineage` | `peak_lineage` |
+| Leiden coarse | *(none yet)* | `leiden_coarse` | `leiden_coarse` |
+
+### Step 1.2: Verify peak counts and widths
+
+```python
+# Sanity checks per species
+assert len(peaks_df) == adata.n_obs
+assert (peaks_df['end'] - peaks_df['start']).eq(500).all(), "Peak widths not 500bp"
+assert not peaks_df['chr'].str.contains('nan').any(), "NaN chromosomes"
 ```
 
 ---
 
-## Phase 2: Motif Scanning with HOMER
+## Phase 2: Motif Database Preparation
 
-### Step 2.1: Run HOMER `annotatePeaks.pl` for motif scanning
+### Step 2.1: Load JASPAR motifs
 
-```bash
-# Scan each species' peaks against the shared JASPAR motif database.
-# -mscore outputs the best log-odds score per motif per peak.
-
-# Zebrafish
-annotatePeaks.pl zebrafish_peaks.bed ${ZEBRAFISH_GENOME} \
-    -m jaspar_core_vertebrate.motif \
-    -mscore -nogene -noann \
-    > zebrafish_motif_scores.txt
-
-# Mouse
-annotatePeaks.pl mouse_peaks.bed ${MOUSE_GENOME} \
-    -m jaspar_core_vertebrate.motif \
-    -mscore -nogene -noann \
-    > mouse_motif_scores.txt
-
-# Human
-annotatePeaks.pl human_peaks.bed ${HUMAN_GENOME} \
-    -m jaspar_core_vertebrate.motif \
-    -mscore -nogene -noann \
-    > human_motif_scores.txt
-```
-
-**Alternative if `-mscore` format is unsuitable:**
-
-```bash
-# Use findMotifsGenome.pl in "find" mode:
-findMotifsGenome.pl zebrafish_peaks.bed ${ZEBRAFISH_GENOME} output_dir/ \
-    -find jaspar_core_vertebrate.motif \
-    > zebrafish_motif_hits.txt
-```
-
-### Step 2.2: Parse HOMER output into peaks × motifs matrix
+GimmeMotifs reads JASPAR PFM format directly:
 
 ```python
-import pandas as pd
+from gimmemotifs.motif import read_motifs
+
+JASPAR_PFM = "<path_to_downloaded_JASPAR2024_CORE_vertebrates_non-redundant.pfm>"
+motifs = read_motifs(JASPAR_PFM, fmt='jaspar')
+print(f"Loaded {len(motifs)} motifs")  # expect ~800-900
+```
+
+### Step 2.2: Build motif metadata CSV
+
+```python
+meta = pd.DataFrame([{
+    'motif_id': m.id,
+    'tf_name':  m.id.split('.')[-1] if '.' in m.id else m.id,
+    'consensus': m.consensus,
+} for m in motifs])
+meta.to_csv(f"{OUTPUT_DIR}/motif_database/motif_metadata.csv", index=False)
+```
+
+---
+
+## Phase 3: Motif Scanning (Main Compute Step)
+
+**Scale:** ~1.87M peaks × ~800 motifs. This is the bottleneck.
+- GimmeMotifs with 32 CPUs: ~30–60 min per species
+- Human (~1M peaks) will be the slowest; run in parallel with zebrafish/mouse
+
+### Step 3.1: GimmeMotifs Scanner (recommended)
+
+```python
+from gimmemotifs.motif import read_motifs
+from gimmemotifs.scanner import Scanner
+from scipy import sparse
 import numpy as np
 
-def parse_homer_motif_scores(homer_output_path, peak_ids):
-    """
-    Parse HOMER annotatePeaks.pl -mscore output into a
-    peaks × motifs DataFrame.
+def scan_species(fasta_path, motif_path, n_cpus, output_npz):
+    motifs = read_motifs(motif_path)
+    motif_names = [m.id for m in motifs]
 
-    Returns:
-        pd.DataFrame: rows = peaks, columns = motif names, values = log-odds scores
-    """
-    df = pd.read_csv(homer_output_path, sep='\t', index_col=0)
+    s = Scanner(ncpus=n_cpus)
+    s.set_motifs(motif_path)
+    s.set_threshold(threshold=0.0)  # keep all scores
 
-    # HOMER prepends annotation columns before motif score columns.
-    # Adjust this filter based on actual column names in the output.
-    motif_cols = [c for c in df.columns if 'Score' in c or c.startswith('MA')]
-    motif_matrix = df[motif_cols].fillna(0)
-    motif_matrix.index = peak_ids
+    scores_list, seq_names = [], []
+    for name, scores in s.best_score(fasta_path):
+        scores_list.append(scores)
+        seq_names.append(name)
 
-    return motif_matrix
-
-zf_motifs = parse_homer_motif_scores("zebrafish_motif_scores.txt", zf_peak_ids)
-mm_motifs = parse_homer_motif_scores("mouse_motif_scores.txt", mm_peak_ids)
-hs_motifs = parse_homer_motif_scores("human_motif_scores.txt", hs_peak_ids)
+    score_matrix = np.array(scores_list)   # (n_peaks, n_motifs)
+    sparse.save_npz(output_npz, sparse.csr_matrix(score_matrix))
+    np.savez(output_npz.replace('.npz', '_meta.npz'),
+             peak_names=np.array(seq_names),
+             motif_names=np.array(motif_names))
+    print(f"Shape: {score_matrix.shape}")
 ```
 
-**Critical check:** Verify that motif column names are identical across all three species outputs — this shared vocabulary is what makes cross-species embedding possible.
+### Step 3.2: HOMER fallback (split-parallel-merge)
+
+If GimmeMotifs is unavailable, split peaks into chunks of ~10K, run
+`annotatePeaks.pl` in parallel with `multiprocessing.Pool`, then merge.
+HOMER binary: `/hpc/mydata/yang-joon.kim/homer/bin/annotatePeaks.pl`
+
+### SLURM resources for scanning
+
+| Species | Peaks | Recommended resources |
+|---------|-------|-----------------------|
+| Zebrafish | 640K | 32 CPUs, 64G, 4h |
+| Mouse | 192K | 32 CPUs, 32G, 2h |
+| Human | 1.04M | 32 CPUs, 128G, 6h |
+
+Run all three as independent SLURM jobs in parallel.
 
 ---
 
-## Phase 3: Build Cross-Species Motif Matrix
+## Phase 4: Build Cross-Species Motif Matrix
 
-### Step 3.1: Concatenate peaks × motifs matrices
+### Step 4.1: Concatenate and normalize
 
 ```python
-import anndata as ad
-
-def build_cross_species_motif_adata(motif_matrices, h5ad_paths):
-    """
-    motif_matrices: {'zebrafish': df, 'mouse': df, 'human': df}
-    h5ad_paths:     {'zebrafish': path, 'mouse': path, 'human': path}
-    """
-    all_obs, all_peaks = [], []
-
-    for species, motif_df in motif_matrices.items():
-        adata_orig = ad.read_h5ad(h5ad_paths[species])
-
-        obs = adata_orig.obs.copy()
-        obs['species'] = species
-        obs['peak_id_global'] = [f"{species}_{pid}" for pid in obs.index]
-
-        # Cell type with highest accessibility per peak
-        X = adata_orig.X.toarray() if hasattr(adata_orig.X, 'toarray') else adata_orig.X
-        obs['celltype_max_accessibility'] = adata_orig.var.index[np.argmax(X, axis=1)]
-
-        all_obs.append(obs)
-        all_peaks.append(motif_df)
-
-    combined_motif = pd.concat(all_peaks, axis=0)
-    combined_obs   = pd.concat(all_obs, axis=0)
-    combined_obs.index = combined_obs['peak_id_global']
-    combined_motif.index = combined_obs.index
-
-    adata_motif = ad.AnnData(
-        X=combined_motif.values,
-        obs=combined_obs,
-        var=pd.DataFrame(index=combined_motif.columns)
-    )
-
-    print(f"Combined motif matrix: {adata_motif.shape}")
-    for sp in ['zebrafish', 'mouse', 'human']:
-        n = (adata_motif.obs['species'] == sp).sum()
-        print(f"  {sp}: {n} peaks")
-
-    return adata_motif
+# Within-species z-score per motif (removes GC/genome-composition bias)
+def zscore_within_species(X):
+    X = X.toarray() if sparse.issparse(X) else X.copy()
+    mean = np.mean(X, axis=0, keepdims=True)
+    std  = np.std(X, axis=0, keepdims=True)
+    std[std == 0] = 1.0
+    return (X - mean) / std
 ```
 
-### Step 3.2: Normalize the motif score matrix
+Critical check: motif names must be identical (same order) across all three
+`_meta.npz` files before concatenating.
+
+### Step 4.2: Create AnnData and save
 
 ```python
-def normalize_motif_matrix(adata_motif):
-    """
-    Within-species z-score normalization per motif.
-    Removes GC-content and genome-composition differences between species.
-    """
-    adata_motif.layers['raw_motif_scores'] = adata_motif.X.copy()
-
-    for species in ['zebrafish', 'mouse', 'human']:
-        mask = adata_motif.obs['species'] == species
-        X = adata_motif.X[mask, :]
-        mean = np.mean(X, axis=0)
-        std  = np.std(X, axis=0)
-        std[std == 0] = 1
-        adata_motif.X[mask, :] = (X - mean) / std
-
-    return adata_motif
-```
-
-**Design decision:** Within-species z-scoring (above) is recommended as the default — analogous to batch correction where species is the batch variable. Alternatives:
-- **Quantile normalization:** forces identical per-motif distributions across species (more aggressive)
-- **Log-transform then z-score:** useful if raw scores are highly skewed
-
----
-
-## Phase 4: Dimensionality Reduction and UMAP
-
-### Step 4.1: PCA on the combined motif matrix
-
-```python
-import scanpy as sc
-
-sc.tl.pca(adata_motif, n_comps=50, svd_solver='arpack')
-# Inspect: sc.pl.pca_variance_ratio(adata_motif)
-# Check PC loadings: top motifs per PC should reflect known regulatory programs
-```
-
-### Step 4.2: Optional — Harmony correction for species batch effect
-
-```python
-import harmonypy as hm
-
-harmony_out = hm.run_harmony(
-    adata_motif.obsm['X_pca'][:, :50],
-    adata_motif.obs,
-    'species',
-    max_iter_harmony=20
+adata = ad.AnnData(
+    X=np.vstack([X_zf, X_mm, X_hs]),           # (1.87M, n_motifs)
+    obs=pd.concat([obs_zf, obs_mm, obs_hs]),    # species, peak metadata
+    var=pd.DataFrame(index=motif_names),         # motif IDs
 )
-adata_motif.obsm['X_pca_harmony'] = harmony_out.Z_corr.T
+adata.write(f"{OUTPUT_DIR}/cross_species_motif_adata.h5ad")
 ```
 
-**Trade-off:**
-- Without Harmony: species may separate even for conserved programs (GC content, motif DB biases)
-- With Harmony: risk of over-correcting and merging truly divergent programs
+---
 
-**Recommendation:** Run both and compare; save separate h5ad files for each.
-
-### Step 4.3: Compute neighbors, UMAP, and Leiden clustering
+## Phase 5: Embedding
 
 ```python
-def compute_umap(adata_motif, use_harmony=False, n_neighbors=15, min_dist=0.1):
-    use_rep = 'X_pca_harmony' if use_harmony else 'X_pca'
-    sc.pp.neighbors(adata_motif, n_neighbors=n_neighbors, use_rep=use_rep)
-    sc.tl.umap(adata_motif, min_dist=min_dist)
+# PCA
+sc.tl.pca(adata, n_comps=50, svd_solver='arpack')
+
+# Harmony (optional — run both with and without, save separately)
+import harmonypy as hm
+ho = hm.run_harmony(adata.obsm['X_pca'], adata.obs, 'species', max_iter_harmony=20)
+adata.obsm['X_pca_harmony'] = ho.Z_corr.T
+
+# Neighbors + UMAP + Leiden at multiple resolutions
+for suffix, use_rep in [('_raw', 'X_pca'), ('_harmony', 'X_pca_harmony')]:
+    sc.pp.neighbors(adata, n_neighbors=15, use_rep=use_rep, key_added=f'neighbors{suffix}')
+    sc.tl.umap(adata, neighbors_key=f'neighbors{suffix}', min_dist=0.1)
+    adata.obsm[f'X_umap{suffix}'] = adata.obsm['X_umap'].copy()
     for res in [0.5, 1.0, 2.0]:
-        sc.tl.leiden(adata_motif, resolution=res, key_added=f'leiden_res{res}')
-    return adata_motif
+        sc.tl.leiden(adata, resolution=res, neighbors_key=f'neighbors{suffix}',
+                     key_added=f'leiden{suffix}_res{res}')
+
+adata.write(f"{OUTPUT_DIR}/cross_species_embedded.h5ad")
 ```
 
 ---
 
-## Phase 5: Visualization and Validation
+## Phase 6: Visualization
 
-### Step 5.1: Diagnostic UMAP plots
+Key plots (both `_raw` and `_harmony` embeddings):
+
+1. **Color by species** — assess mixing vs. separation
+2. **Color by `celltype_max` / `top_celltype`** — do homologous cell types co-locate?
+3. **Per-species panels** — highlight each species on the shared UMAP background
+4. **Leiden clusters** (`res=0.5, 1.0, 2.0`)
+5. **Key TF motif scores** — GATA1/4, SOX2/10, PAX6, MYOD1, TAL1, HAND2, NKX2-5, TBX5
+
+---
+
+## Phase 7: Validation and Conservation Analysis
+
+### Cluster species composition
 
 ```python
-# 1. Color by species — check for mixing vs. separation
-sc.pl.umap(adata_motif, color='species')
-
-# 2. Color by cell type of max accessibility
-sc.pl.umap(adata_motif, color='celltype_max_accessibility')
-
-# 3. Per-species panels within the shared UMAP
-for species in ['zebrafish', 'mouse', 'human']:
-    mask = adata_motif.obs['species'] == species
-    sc.pl.umap(adata_motif[mask], color='celltype_max_accessibility',
-               title=f'{species} peaks in cross-species UMAP')
-
-# 4. Leiden clusters
-sc.pl.umap(adata_motif, color='leiden_res1.0')
-
-# 5. Spot-check key TF motif scores
-for motif in ['GATA4', 'SOX2', 'PAX6', 'MYOD1', 'TAL1', 'FOXP1']:
-    if motif in adata_motif.var_names:
-        sc.pl.umap(adata_motif, color=motif)
+species_comp = pd.crosstab(
+    adata.obs['leiden_harmony_res1.0'], adata.obs['species'], normalize='index'
+)
 ```
 
-### Step 5.2: Validate cross-species cluster coherence
+### Conservation classification
 
-```python
-def validate_cluster_coherence(adata_motif):
-    # Species mixing per cluster
-    cluster_species = pd.crosstab(
-        adata_motif.obs['leiden_res1.0'],
-        adata_motif.obs['species'],
-        normalize='index'
-    )
-    print(cluster_species)
+| Category | Criteria |
+|----------|----------|
+| `deeply_conserved` | All 3 species > 10% |
+| `mammal_specific` | zebrafish < 5%, mouse & human > 10% |
+| `species_specific:{name}` | One species > 85% |
+| `partially_conserved` | Everything else |
 
-    # Cell type enrichment per cluster, per species
-    for species in ['zebrafish', 'mouse', 'human']:
-        mask = adata_motif.obs['species'] == species
-        ct_enrich = pd.crosstab(
-            adata_motif.obs.loc[mask, 'leiden_res1.0'],
-            adata_motif.obs.loc[mask, 'celltype_max_accessibility'],
-            normalize='index'
-        )
-        print(f"\n{species}:\n{ct_enrich}")
+### Cell type enrichment per cluster per species
 
-    # Top motifs per cross-species cluster
-    for cluster in adata_motif.obs['leiden_res1.0'].unique():
-        mask = adata_motif.obs['leiden_res1.0'] == cluster
-        mean_scores = pd.Series(
-            np.mean(adata_motif.X[mask, :], axis=0),
-            index=adata_motif.var_names
-        )
-        print(f"\nCluster {cluster} top motifs: {mean_scores.nlargest(10).index.tolist()}")
-```
+Cross-reference cross-species Leiden clusters with species-specific `celltype_max` / `top_celltype`.
+Homologous cell types should co-cluster in conserved clusters.
 
-### Step 5.3: Cross-reference with species-specific UMAPs
+### Temporal dynamics (zebrafish)
 
-Build a confusion matrix mapping species-specific leiden clusters (from individual-species UMAPs) to cross-species leiden clusters. Homologous cell-type clusters across species should map to the same cross-species cluster.
-
----
-
-## Phase 6: Biological Analysis
-
-### Step 6.1: Identify conserved vs. species-specific regulatory programs
-
-```python
-def classify_conservation(adata_motif):
-    cluster_species = pd.crosstab(
-        adata_motif.obs['leiden_res1.0'],
-        adata_motif.obs['species'],
-        normalize='index'
-    )
-    for cluster in cluster_species.index:
-        fracs = cluster_species.loc[cluster]
-        if all(fracs > 0.15):
-            label = "deeply_conserved"
-        elif fracs['zebrafish'] < 0.1 and fracs['mouse'] > 0.15 and fracs['human'] > 0.15:
-            label = "mammal_specific"
-        elif max(fracs) > 0.8:
-            label = f"species_specific_{fracs.idxmax()}"
-        else:
-            label = "partially_conserved"
-        print(f"Cluster {cluster}: {label} | {dict(fracs.round(2))}")
-```
-
-### Step 6.2: Temporal dynamics of conservation (zebrafish-specific)
-
-For zebrafish peaks in each cross-species cluster, map their timepoint of maximum accessibility.
-
-**Hypothesis:** deeply conserved regulatory programs are enriched in earlier developmental stages (phylotypic period), while species-specific programs emerge later.
-
----
-
-## Output Files
-
-```
-notebooks/EDA_peak_umap_cross_species/
-├── outputs/
-│   ├── motif_database/
-│   │   ├── jaspar_core_vertebrate.motif
-│   │   └── motif_metadata.csv
-│   ├── peak_sequences/
-│   │   ├── zebrafish_peaks.bed / zebrafish_peaks.fa
-│   │   ├── mouse_peaks.bed    / mouse_peaks.fa
-│   │   └── human_peaks.bed    / human_peaks.fa
-│   ├── motif_scores/
-│   │   ├── zebrafish_motif_scores.txt
-│   │   ├── mouse_motif_scores.txt
-│   │   └── human_motif_scores.txt
-│   └── cross_species_embedding/
-│       ├── cross_species_motif_adata.h5ad
-│       ├── cross_species_umap_no_harmony.h5ad
-│       └── cross_species_umap_with_harmony.h5ad
-└── figures/
-    ├── umap_by_species.pdf
-    ├── umap_by_celltype.pdf
-    ├── umap_by_leiden.pdf
-    ├── umap_per_species_panels.pdf
-    ├── cluster_species_composition.pdf
-    ├── cluster_motif_enrichment.pdf
-    └── conservation_classification.pdf
-```
-
----
-
-## Dependencies
-
-```
-# Python
-scanpy >= 1.9
-anndata >= 0.8
-pandas, numpy
-harmonypy
-pybedtools
-matplotlib, seaborn
-
-# Command-line tools
-homer  (annotatePeaks.pl, findMotifsGenome.pl)
-bedtools
-```
+For zebrafish peaks in each cross-species cluster, map `timepoint` to assess whether
+deeply conserved regulatory programs are enriched at earlier developmental stages.
 
 ---
 
@@ -435,44 +339,36 @@ bedtools
 
 | Parameter | Default | Notes |
 |-----------|---------|-------|
-| Peak width for motif scanning | 500 bp centered on summit | Wider = more motifs but more noise |
-| Motif score type | Continuous (log-odds) | Binary is alternative but less informative |
-| Within-species normalization | Z-score per motif | Critical for removing GC/genome bias |
-| Number of PCs | 50 | Check variance explained; may need 30–100 |
-| Harmony correction | Run both with/without | Compare to assess over-correction |
-| UMAP n_neighbors | 15 | Standard; may adjust for dataset size |
-| UMAP min_dist | 0.1 | Lower = tighter clusters |
-| Leiden resolution | 0.5, 1.0, 2.0 | Multiple resolutions for hierarchy |
+| Peak width | 500 bp | Centered on midpoint |
+| Scanner | GimmeMotifs | Fallback: HOMER with parallel chunks |
+| Normalization | Z-score within species | Removes GC/genome bias |
+| n_PCs | 50 | Check variance explained |
+| Harmony | Run both with/without | Compare to detect over-correction |
+| n_neighbors | 15 | Standard |
+| min_dist | 0.1 | |
+| Leiden resolutions | 0.5, 1.0, 2.0 | |
+
+---
+
+## Open Questions / TODOs Before Starting
+
+- [ ] **Confirm JASPAR file path** — user has JASPAR motifs downloaded; fill in path in `00_config.py`
+- [ ] **Human genome version** — h5ad has `hg19` coordinates; need hg19 FASTA for `bedtools getfasta`, or liftover to hg38 first
+- [ ] **Mouse genome FASTA** — verify mm10 FASTA path (GTF is GRCm39 but peaks likely mm10/GRCm38)
+- [ ] **Zebrafish FASTA** — confirm danRer11 FASTA path
+- [ ] **GimmeMotifs availability** — check if `gimmemotifs` is installed in `sc_rapids` or another env
+- [ ] **`peak_lineage` in zebrafish** — verify column name for lineage metadata in zebrafish h5ad
 
 ---
 
 ## Execution Order
 
 ```
-Phase 1: Preparation
-  1.1  Download + convert JASPAR motifs to HOMER format
-  1.2  Extract peak sequences from each species h5ad → BED → FASTA
-  1.3  Verify peak counts and genome build consistency
-
-Phase 2: Motif Scanning
-  2.1  Run HOMER annotatePeaks.pl for each species (parallelizable)
-  2.2  Parse HOMER output into peaks × motifs DataFrames
-
-Phase 3: Build Combined Matrix
-  3.1  Concatenate across species into single AnnData
-  3.2  Within-species z-score normalization
-
-Phase 4: Embedding
-  4.1  PCA (n=50)
-  4.2  Harmony correction (optional, run in parallel with 4.3)
-  4.3  Neighbors → UMAP → Leiden (with and without Harmony)
-
-Phase 5: Visualization + Validation
-  5.1  Diagnostic UMAP plots (species, celltype, motifs, leiden)
-  5.2  Cluster coherence analysis
-  5.3  Cross-reference with species-specific UMAPs
-
-Phase 6: Biological Analysis
-  6.1  Conservation classification (conserved / mammal-specific / species-specific)
-  6.2  Temporal dynamics analysis (zebrafish timepoint enrichment per cluster)
+Phase 1:  01_prepare_peaks.py        (fast, CPU only)
+Phase 2:  02_prepare_motifs.py       (fast, CPU only)
+Phase 3:  03_scan_motifs.py          (SLURM, 3 parallel jobs, GPU not needed)
+Phase 4:  04_build_matrix.py         (CPU, ~30 min for 1.87M peaks)
+Phase 5:  05_embed_umap.py           (CPU/GPU, ~1–2h)
+Phase 6:  06_visualize.py            (CPU, ~15 min)
+Phase 7:  07_validate.py             (CPU, ~15 min)
 ```
