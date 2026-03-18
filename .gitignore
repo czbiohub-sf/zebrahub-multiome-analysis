@@ -55,3 +55,10 @@ plan_refactor_v2.md
 
 # LiteMind cache
 scripts/litemind_peak_analysis/.cache/
+
+# CONCORD comparison figures
+figures/peak_psuedobulk_dynamics_v2/pca_vs_concord_peak_umap_all_peaks_comparison.pdf
+
+# Local data and saved model outputs
+data/
+scripts/save/
