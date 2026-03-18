@@ -54,8 +54,8 @@ print(peaks_pb)
 print("\n[2/5] Computing PCA-based UMAP...")
 peaks_pca = peaks_pb.copy()
 
-# Use log-normalized counts
-peaks_pca.X = peaks_pca.layers["log_norm"].copy()
+# Use median-scaled normalized counts (no log transformation)
+peaks_pca.X = peaks_pca.layers["normalized"].copy()
 rsc.get.anndata_to_GPU(peaks_pca)
 
 # Standard PCA workflow
@@ -75,8 +75,8 @@ print("PCA UMAP complete.")
 print("\n[3/5] Computing CONCORD-based UMAP...")
 peaks_concord = peaks_pb.copy()
 
-# Use log-normalized counts
-peaks_concord.X = peaks_concord.layers["log_norm"].copy()
+# Use median-scaled normalized counts (no log transformation)
+peaks_concord.X = peaks_concord.layers["normalized"].copy()
 
 # Scale the data (same preprocessing as PCA)
 sc.pp.scale(peaks_concord)

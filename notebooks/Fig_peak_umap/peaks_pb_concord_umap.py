@@ -68,7 +68,7 @@ peaks_pb
 peaks_pca = peaks_pb.copy()
 
 # Use log-normalized counts
-peaks_pca.X = peaks_pca.layers["log_norm"].copy()
+peaks_pca.X = peaks_pca.layers["normalized"].copy()
 rsc.get.anndata_to_GPU(peaks_pca)
 
 # Standard PCA workflow
@@ -94,7 +94,7 @@ sc.pl.embedding(peaks_pb, basis="X_umap_pca", color="timepoint", title="PCA-base
 peaks_concord = peaks_pb.copy()
 
 # Use log-normalized counts
-peaks_concord.X = peaks_concord.layers["log_norm"].copy()
+peaks_concord.X = peaks_concord.layers["normalized"].copy()
 
 # Scale the data (same preprocessing as PCA)
 sc.pp.scale(peaks_concord)
