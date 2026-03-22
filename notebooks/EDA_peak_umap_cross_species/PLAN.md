@@ -3,6 +3,110 @@
 
 ---
 
+## Execution Log
+
+> Status as of **2026-03-20**. Steps 1–4b completed. Embedding (Step 5) is next.
+
+### Actual Script Locations
+
+Scripts ended up in `scripts/jaspar-motif-scan/` (not `notebooks/EDA_peak_umap_cross_species/scripts/` as originally planned):
+
+| Script | Purpose | Status |
+|--------|---------|--------|
+| `scripts/jaspar-motif-scan/01_download_jaspar.py` | Download JASPAR 2024 CORE vertebrates | ✅ Done |
+| `scripts/jaspar-motif-scan/02_prepare_peaks.py` | Extract 500bp-centered BED + FASTA per species | ✅ Done |
+| `scripts/jaspar-motif-scan/03_scan_motifs.py` | Raw continuous PWM scan (`best_score`, threshold=0.0) | ✅ Done |
+| `scripts/jaspar-motif-scan/04_build_anndata.py` | Build raw-score h5ad | ✅ Done |
+| `scripts/jaspar-motif-scan/03b_scan_motifs_fpr.py` | Binary scan with FPR=0.01 genome-calibrated threshold | ✅ Done |
+| `scripts/jaspar-motif-scan/04b_build_anndata_fpr.py` | Build binarized h5ad | ✅ Done |
+| `scripts/jaspar-motif-scan/slurm/run_homer_scan.sh` | SLURM array job for raw scan | ✅ Done |
+| `scripts/jaspar-motif-scan/slurm/run_fpr_scan.sh` | SLURM array job for FPR binary scan | ✅ Done |
+
+### Input Data (Confirmed)
+
+| Species | h5ad path | Peaks | Genome |
+|---------|-----------|-------|--------|
+| Zebrafish | `.../annotated_data/objects_v2/peaks_by_ct_tp_pseudobulked_all_peaks_pca_concord.h5ad` | 640,831 | danRer11 |
+| Mouse | `.../public_data/mouse_argelaguet_2022/peaks_by_pb_celltype_stage_annotated_v2.h5ad` | 192,251 | mm10 |
+| Human | `.../public_data/human_domcke_2020/peaks_by_pb_celltype_stage_annotated.h5ad` | 1,041,455 | hg19 ✅ confirmed |
+
+Base path: `/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/data/`
+
+### Output Files
+
+All outputs under `/hpc/scratch/group.data.science/yang-joon.kim/multiome-cross-species-peak-umap/`:
+
+```
+motif_database/
+    jaspar_fixed.meme.motif        -- 879 JASPAR2024 CORE vertebrate motifs (MEME format)
+    motif_metadata.csv             -- motif_id, tf_name, consensus
+
+peak_sequences/
+    zebrafish_peaks.fa             -- 640,831 sequences × 500bp
+    mouse_peaks.fa                 -- 192,251 sequences × 500bp
+    human_peaks.fa                 -- 1,041,455 sequences × 500bp
+    {species}_peak_metadata.csv    -- peak obs metadata aligned to FASTA order
+
+motif_scores/                      -- Raw continuous PWM scores (best_score, threshold=0.0)
+    zebrafish_motif_scores.npz
+    mouse_motif_scores.npz
+    human_motif_scores.npz
+    {species}_motif_scores_meta.npz
+
+motif_scores_fpr/                  -- FPR=0.01 binary scores (Scanner.count)
+    zebrafish_motif_binary.npz
+    mouse_motif_binary.npz
+    human_motif_binary.npz
+    {species}_motif_binary_meta.npz
+
+cross_species_motif_scores.h5ad                     -- Raw PWM scores (5.96 GB)
+cross_species_motif_scores_FPR_0.010_binarized.h5ad -- Binary 0/1, FPR=0.01 (0.28 GB)
+```
+
+### Motif Database
+
+- **879 motifs** from JASPAR 2024 CORE vertebrates non-redundant
+- Format: MEME (whitespace-fixed from original JASPAR format)
+- File: `/hpc/scratch/.../motif_database/jaspar_fixed.meme.motif`
+
+### Scanning Benchmarks (SLURM, 16 CPUs)
+
+| Species | Peaks | Runtime | nnz (binary) | Mean motifs/peak | Density |
+|---------|-------|---------|-------------|-----------------|---------|
+| Zebrafish | 640,831 | 7.6 min | 4,917,151 | 7.67 | 0.0087 |
+| Mouse | 192,251 | 2.4 min | 2,225,144 | 11.57 | 0.0132 |
+| Human | 1,041,455 | 20.3 min | 8,812,237 | 8.46 | 0.0096 |
+
+FPR=0.01 random baseline: 8.8 motifs/peak (1% × 879 motifs).
+
+### Key Observations
+
+**Raw PWM scores are near-dense (89% non-zero):**
+`best_score(threshold=0.0)` returns a score for every motif on every peak, including random-sequence-level matches. This makes the raw h5ad nearly dense (5.96 GB), unsuitable for sparse downstream analysis. The FPR-binarized version (0.28 GB, density=0.97%) is the correct representation for embedding.
+
+**Per-species motif density (FPR=0.01 binarized):**
+- **Mouse** peaks are notably motif-dense (11.57 motifs/peak, 31% above baseline) — the Argelaguet 2022 dataset captures highly regulatory-active peaks
+- **Zebrafish** is below baseline (7.67) — vertebrate TF motifs (calibrated on mammalian genomes) match zebrafish peaks less often; expected given evolutionary distance
+- **Human** is near baseline (8.46) — reasonable given hg19 genome calibration
+
+**GimmeMotifs cache collision on cluster:**
+Running array jobs in parallel causes SQLite cache corruption in `~/.cache/gimmemotifs`. Fix: set `XDG_CACHE_HOME` to a per-task scratch directory in the SLURM script. See `slurm/run_fpr_scan.sh` for the working pattern:
+```bash
+GIMME_CACHE="/hpc/scratch/.../gimme_cache/task_${SLURM_ARRAY_TASK_ID}"
+mkdir -p "$GIMME_CACHE"
+export XDG_CACHE_HOME="$GIMME_CACHE"
+```
+
+### Next Steps
+
+- [ ] **Step 5:** Embed — PCA → (Harmony) → UMAP → Leiden on `cross_species_motif_scores_FPR_0.010_binarized.h5ad`
+- [ ] **Step 6:** Visualize — color by species, cell type, timepoint, Leiden clusters
+- [ ] **Step 7:** Validate — cluster species composition, conservation classification
+
+---
+
+---
+
 ## Overview
 
 Build a cross-species peak UMAP embedding zebrafish (~640K), mouse (~192K), and human (~1M) regulatory elements into a shared space based on TF binding motif composition (JASPAR2024 CORE vertebrates). Peaks with similar regulatory grammar co-embed regardless of sequence conservation.
@@ -128,10 +232,14 @@ df['end']   = center + 250
 bedtools getfasta -fi ${GENOME}.fa -bed {species}_peaks.bed -fo {species}_peaks.fa -name
 ```
 
-**Genome FASTAs needed:**
-- `danRer11.fa` — zebrafish (danRer11 / GRCz11)
-- `mm10.fa` — mouse (GRCm38)
-- `hg19.fa` — human (**hg19**, matching h5ad coordinates)
+**Genome FASTAs:**
+- Zebrafish: `/hpc/reference/sequencing_alignment/fasta_references/danRer11.primary.fa`
+- Mouse: `/hpc/reference/sequencing_alignment/fasta_references/mm10.fa` (+ `.fai`, GRCm38/mm10, downloaded March 2026)
+- Human: `/hpc/reference/sequencing_alignment/fasta_references/hg19.fa` (+ `.fai`, downloaded March 2026)
+
+**GTF files (gene annotation):**
+- Mouse: `/hpc/reference/sequencing_alignment/gff_files/Mus_musculus.GRCm38.92.gtf.gz` (Ensembl release 92, matches counting annotation, downloaded March 2026)
+- Human: `/hpc/reference/sequencing_alignment/gff_files/Homo_sapiens.GRCh37.75.gtf.gz` (Ensembl release 75, last GRCh37/hg19 release, downloaded March 2026)
 
 **Metadata to save per species:**
 
