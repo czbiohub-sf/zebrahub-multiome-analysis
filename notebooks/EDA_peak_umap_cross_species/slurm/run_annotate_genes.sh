@@ -2,7 +2,7 @@
 #SBATCH --job-name=annotate_genes_07
 #SBATCH --partition=cpu
 #SBATCH --cpus-per-task=4
-#SBATCH --mem=48G
+#SBATCH --mem=96G
 #SBATCH --time=1:00:00
 #SBATCH --output=/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/zebrahub-multiome-analysis/notebooks/EDA_peak_umap_cross_species/logs/annotate_genes_%j.out
 #SBATCH --error=/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/zebrahub-multiome-analysis/notebooks/EDA_peak_umap_cross_species/logs/annotate_genes_%j.err

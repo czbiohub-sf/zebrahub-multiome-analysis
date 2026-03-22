@@ -57,12 +57,20 @@ def peaks_from_obs(obs_index) -> pd.DataFrame:
       - "1-100-200"     (zebrafish / no-chr format, adds chr prefix)
     Returns columns: original_peak_id, Chromosome, Start, End
     """
-    parts = obs_index.str.split("-", n=2, expand=True)
+    # Use list comprehension for robustness across pandas versions
+    idx_list = list(obs_index)
+    chrs, starts, ends = [], [], []
+    for s in idx_list:
+        # rsplit from right with maxsplit=2 handles both "chr1-100-200" and "1-100-200"
+        p = s.rsplit("-", 2)
+        chrs.append(p[0])
+        starts.append(int(p[1]))
+        ends.append(int(p[2]))
     df = pd.DataFrame({
-        "original_peak_id": obs_index,
-        "Chromosome":       parts[0],
-        "Start":            parts[1].astype(int),
-        "End":              parts[2].astype(int),
+        "original_peak_id": idx_list,
+        "Chromosome":       chrs,
+        "Start":            starts,
+        "End":              ends,
     })
     # Ensure chr prefix
     mask = ~df["Chromosome"].str.startswith("chr")
@@ -278,33 +286,29 @@ def annotate_peaks_vectorised(obs_index: pd.Index, gtf_path: str, species_label:
 
     near_small = near_df[["Chromosome", "Start", "End", "nearest_gene", "distance_to_tss"]].copy()
     near_small = near_small.drop_duplicates(["Chromosome", "Start", "End"])
+    del near_df, near; gc.collect()
 
-    # ── gene body overlaps ───────────────────────────────────────────────────────
-    print(f"  [{species_label}] gene body overlaps ...")
-    gb_join = peaks_gr.join(genes_gr, suffix="_gene", apply_strand_suffix=False)
-    if not gb_join.empty:
-        gb_df  = gb_join.as_df()
-        gb_col = next((c for c in ["gene_name_gene", "gene_name"] if c in gb_df.columns), None)
-        if gb_col:
-            gb_agg = (gb_df
-                      .groupby(["Chromosome", "Start", "End"])[gb_col]
-                      .apply(lambda x: ",".join(sorted(set(x.dropna().astype(str)))))
-                      .reset_index()
-                      .rename(columns={gb_col: "gene_body_overlaps"}))
-        else:
-            gb_agg = pd.DataFrame(columns=["Chromosome", "Start", "End", "gene_body_overlaps"])
-    else:
-        gb_agg = pd.DataFrame(columns=["Chromosome", "Start", "End", "gene_body_overlaps"])
+    # Free GTF raw after exon extraction
+    if "gtf_raw" in dir():
+        del gtf_raw; gc.collect()
 
     # ── peak type ────────────────────────────────────────────────────────────────
+    # Skip gene body overlaps join — too memory-intensive for 1M+ peaks.
+    # gene_body_overlaps column will be left empty; not needed for ortholog matching.
+    gb_agg = pd.DataFrame(columns=["Chromosome", "Start", "End", "gene_body_overlaps"])
     print(f"  [{species_label}] peak types ...")
-    prom_ol  = peaks_gr.overlap(prom_gr).as_df()
-    exon_ol  = peaks_gr.overlap(exons_gr).as_df()
-    gene_ol  = peaks_gr.overlap(genes_gr).as_df()
 
+    prom_ol  = peaks_gr.overlap(prom_gr).as_df()
     prom_set = set(zip(prom_ol["Chromosome"], prom_ol["Start"], prom_ol["End"])) if len(prom_ol) else set()
+    del prom_ol; gc.collect()
+
+    exon_ol  = peaks_gr.overlap(exons_gr).as_df()
     exon_set = set(zip(exon_ol["Chromosome"], exon_ol["Start"], exon_ol["End"])) if len(exon_ol) else set()
+    del exon_ol, exons_gr; gc.collect()
+
+    gene_ol  = peaks_gr.overlap(genes_gr).as_df()
     gene_set = set(zip(gene_ol["Chromosome"], gene_ol["Start"], gene_ol["End"])) if len(gene_ol) else set()
+    del gene_ol, genes_gr, prom_gr, tss_gr; gc.collect()
 
     # Vectorised peak_type assignment
     keys = list(zip(peaks_df["Chromosome"], peaks_df["Start"], peaks_df["End"]))
