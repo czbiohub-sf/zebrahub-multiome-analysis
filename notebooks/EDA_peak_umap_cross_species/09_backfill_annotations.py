@@ -118,13 +118,21 @@ zf_obs_idx = zf_obs["original_peak_id"].astype(str)
 matched = zf_obs_idx.isin(zf_ann_indexed.index)
 print(f"  ZF peaks matching annotation: {matched.sum():,} / {len(zf_obs):,}")
 
+NUMERIC_COLS = {"distance_to_tss"}
 for col in zf_backfill_cols:
     new_col = f"zf_{col}" if col in ["celltype", "timepoint"] else col
     if new_col not in adata.obs.columns:
-        adata.obs[new_col] = np.nan
+        # Initialize with correct dtype to avoid pandas incompatible-dtype error
+        if col in NUMERIC_COLS:
+            adata.obs[new_col] = np.nan
+        else:
+            adata.obs[new_col] = ""
 
     vals = zf_obs_idx.map(zf_ann_indexed[col].to_dict())
-    adata.obs.loc[zf_mask, new_col] = vals.values
+    if col in NUMERIC_COLS:
+        adata.obs.loc[zf_mask, new_col] = pd.to_numeric(vals.values, errors="coerce")
+    else:
+        adata.obs.loc[zf_mask, new_col] = vals.fillna("").astype(str).values
 
 print(f"  ZF backfill complete.")
 del zf_ann, zf_obs; gc.collect()
@@ -162,9 +170,12 @@ print(f"  Mouse peaks matching annotation: {matched_mm.sum():,} / {len(mm_obs):,
 for col in ["nearest_gene", "distance_to_tss", "peak_type", "gene_body_overlaps"]:
     if col in mm_ann_idx.columns:
         if col not in adata.obs.columns:
-            adata.obs[col] = np.nan
+            adata.obs[col] = np.nan if col == "distance_to_tss" else ""
         vals = mm_obs_idx.map(mm_ann_idx[col].to_dict())
-        adata.obs.loc[mm_mask, col] = vals.values
+        if col == "distance_to_tss":
+            adata.obs.loc[mm_mask, col] = pd.to_numeric(vals.values, errors="coerce")
+        else:
+            adata.obs.loc[mm_mask, col] = vals.fillna("").astype(str).values
 
 print("  Mouse backfill complete.")
 del mm_ann, mm_obs; gc.collect()
@@ -197,9 +208,12 @@ print(f"  Human peaks matching annotation: {matched_hs.sum():,} / {len(hs_obs):,
 for col in ["nearest_gene", "distance_to_tss", "peak_type", "gene_body_overlaps"]:
     if col in hs_ann_idx.columns:
         if col not in adata.obs.columns:
-            adata.obs[col] = np.nan
+            adata.obs[col] = np.nan if col == "distance_to_tss" else ""
         vals = hs_obs_idx.map(hs_ann_idx[col].to_dict())
-        adata.obs.loc[hs_mask, col] = vals.values
+        if col == "distance_to_tss":
+            adata.obs.loc[hs_mask, col] = pd.to_numeric(vals.values, errors="coerce")
+        else:
+            adata.obs.loc[hs_mask, col] = vals.fillna("").astype(str).values
 
 print("  Human backfill complete.")
 del hs_ann, hs_obs; gc.collect()
