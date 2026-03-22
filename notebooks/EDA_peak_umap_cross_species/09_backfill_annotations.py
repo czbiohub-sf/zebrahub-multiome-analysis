@@ -246,6 +246,18 @@ if "peak_type" in adata.obs.columns:
     print(f"\n  peak_type distribution:\n{adata.obs['peak_type'].value_counts()}")
 
 
+# %% ── Clean obs dtypes before saving (h5py requires clean string columns) ───────
+print("\nCleaning obs dtypes for h5py compatibility ...")
+for col in list(adata.obs.columns):
+    s = adata.obs[col]
+    if s.dtype == object or hasattr(s, 'cat'):
+        # Convert to plain str; replace "nan" with ""
+        adata.obs[col] = s.astype(str).replace({"nan": "", "None": ""})
+    elif s.dtype.kind == 'f':
+        pass  # keep float columns as-is (NaN is valid in HDF5 float)
+print(f"  Done. Object columns cleaned.")
+
+
 # %% ── Save annotated h5ad ────────────────────────────────────────────────────────
 print(f"\nSaving to {OUTPUT_H5AD} ...")
 t_save = time.time()
