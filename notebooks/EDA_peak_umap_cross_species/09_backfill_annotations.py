@@ -119,14 +119,20 @@ matched = zf_obs_idx.isin(zf_ann_indexed.index)
 print(f"  ZF peaks matching annotation: {matched.sum():,} / {len(zf_obs):,}")
 
 NUMERIC_COLS = {"distance_to_tss"}
+
+# Convert any Categorical obs columns to string to allow new category values
+for cat_col in list(adata.obs.columns):
+    if hasattr(adata.obs[cat_col], 'cat'):
+        adata.obs[cat_col] = adata.obs[cat_col].astype(str)
+        print(f"  Converted Categorical → str: {cat_col}")
+
 for col in zf_backfill_cols:
     new_col = f"zf_{col}" if col in ["celltype", "timepoint"] else col
     if new_col not in adata.obs.columns:
-        # Initialize with correct dtype to avoid pandas incompatible-dtype error
-        if col in NUMERIC_COLS:
-            adata.obs[new_col] = np.nan
-        else:
-            adata.obs[new_col] = ""
+        # Initialize with correct dtype
+        adata.obs[new_col] = np.nan if col in NUMERIC_COLS else ""
+    elif hasattr(adata.obs[new_col], 'cat'):
+        adata.obs[new_col] = adata.obs[new_col].astype(str)
 
     vals = zf_obs_idx.map(zf_ann_indexed[col].to_dict())
     if col in NUMERIC_COLS:
