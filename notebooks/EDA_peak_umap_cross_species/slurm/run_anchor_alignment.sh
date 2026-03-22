@@ -5,15 +5,15 @@
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=128G
 #SBATCH --time=4:00:00
-#SBATCH --output=logs/procrustes_%j.out
-#SBATCH --error=logs/procrustes_%j.err
+#SBATCH --output=/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/zebrahub-multiome-analysis/notebooks/EDA_peak_umap_cross_species/logs/procrustes_%j.out
+#SBATCH --error=/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/zebrahub-multiome-analysis/notebooks/EDA_peak_umap_cross_species/logs/procrustes_%j.err
 
-set -euo pipefail
-
-SCRIPT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+SCRIPT_DIR="/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/zebrahub-multiome-analysis/notebooks/EDA_peak_umap_cross_species"
 mkdir -p "${SCRIPT_DIR}/logs"
 
-module load anaconda data.science
+source /hpc/user_apps/data.science/data.science.bashrc 2>/dev/null || true
+module load anaconda 2>/dev/null || true
+module load data.science 2>/dev/null || true
 
 echo "=== Script 12: Procrustes Alignment ==="
 echo "Start: $(date)"
