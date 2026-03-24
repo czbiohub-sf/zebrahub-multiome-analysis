@@ -14,8 +14,9 @@ SCRATCH: `/hpc/scratch/group.data.science/yang-joon.kim/multiome-cross-species-p
 | 09 backfill_annotations | 28842730 | ✅ Done | 19 min | ~55 GB | 17 GB annotated h5ad saved |
 | 10 select_root_anchors | (interactive) | ✅ Done | — | — | **344 root anchor triplets** |
 | 11 select_branch_anchors | 28859778 | ✅ Done | 2 min | 33.8 GB / 48 GB | **2,000 branch anchors** (ZF+MM only; see issues) |
-| 12 procrustes_alignment | — | ⏳ Pending | — | — | Waiting on script 11 fixes |
-| 13 visualize_aligned_umap | — | ⏳ Pending | — | — | — |
+| 12 procrustes_alignment | 28862xxx | ✅ Done | ~4h | ~128 GB | Motif-space (50D PCA) Procrustes; silhouette unchanged at 0.579; anchors 10% closer than random |
+| 13 visualize_aligned_umap | 28883051 | ✅ Done | ~3 min | — | Motif-space UMAP figures (5 types); per-species lineage panels added |
+| 14 align_pseudobulk_umap | 28883750 | ✅ Done | ~1 min | — | **2D pseudobulk UMAP Procrustes (preferred)**; MM scale=1.42, HS scale=1.28; 24% anchor improvement |
 
 ---
 
@@ -111,20 +112,19 @@ Mouse `celltype` values relevant to lineage assignment:
 
 ---
 
-## Pending Fixes for Script 11 (before re-running script 12)
+## Script 11 Final Fixes Applied (job 28860520)
 
-1. **`get_celltype_col()`**: return `peak_lineage` for human (not `celltype`)
-2. **LINEAGE_MAP keywords**: update mouse + human to use actual column values (see tables above)
-3. **`assign_lineage()` logic**: switch to first-match (don't override once labeled) to avoid
-   keyword collision between lineages
+All 3 fixes applied; branch anchors now cover all 3 species:
 
-Updated keyword targets:
+| Lineage | ZF | MM | HS | Total |
+|---------|----|----|-----|-------|
+| lateral_mesoderm | ✓ | ✓ | ✓ | 807 |
+| endoderm | ✓ | ✓ | ✓ | 450 |
+| neural_cns | ✓ | ✓ | ✓ | 399 |
+| paraxial_mesoderm | ✓ | ✓ | ✓ | 176 |
+| neural_crest | ✓ | ✓ | ✓ | 168 |
+| **Total** | | | | **2,000** |
 
-| Lineage | Mouse (`celltype`) | Human (`peak_lineage`) |
-|---------|-------------------|----------------------|
-| neural_cns | `neurectoderm` | `cns`, `sensory` |
-| paraxial_mesoderm | `paraxial` | `mesenchyme` |
-| lateral_mesoderm | `endothelium`, `blood_progenitor`, `allantois` | `cardiac`, `hematopoietic`, `renal`, `endothelial` |
-| endoderm | `endoderm` | `endoderm`, `endocrine` |
-| ectoderm | `exe_ectoderm` | *(empty — not in Domcke 2020)* |
-| neural_crest | `neural_crest` | `pns/neural crest` |
+1. `get_celltype_col()` returns `peak_lineage` for human
+2. LINEAGE_MAP uses species-specific keywords (no cross-contamination)
+3. `assign_lineage()` uses first-match logic
