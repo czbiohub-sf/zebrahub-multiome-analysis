@@ -179,33 +179,89 @@ plt.close(fig)
 print("  Done.")
 
 
-# %% ── Figure 4: Lineage labels per species ───────────────────────────────────────
-print("Fig 4: lineage labels ...")
-lineage_col = None
-for col in ["lineage", "zf_lineage", "lineage_label"]:
+# %% ── Figure 4a: Per-species panels colored by lineage annotation ────────────────
+# Each species uses its own most informative annotation column:
+#   zebrafish → "lineage"      (CNS, Paraxial Mesoderm, etc.)
+#   mouse     → "lineage"      (Paraxial Mesoderm, Lateral Mesoderm, etc.)
+#   human     → "peak_lineage" (CNS, Endoderm, PNS/Neural Crest, etc.)
+print("Fig 4a: per-species lineage panels ...")
+
+LINEAGE_COL_MAP = {
+    "zebrafish": "lineage",
+    "mouse":     "lineage",
+    "human":     "peak_lineage",
+}
+
+# Shared color palette across all species (union of all lineage labels)
+all_lineage_vals = set()
+for sp_name, col in LINEAGE_COL_MAP.items():
     if col in adata.obs.columns:
-        lineage_col = col
-        break
+        sp_mask = species_arr == sp_name
+        vals = adata.obs.loc[sp_mask, col].astype(str).replace({"nan": "", "None": ""})
+        all_lineage_vals.update(v for v in vals.unique() if v != "")
 
-if lineage_col:
-    lineage_arr = adata.obs[lineage_col].fillna("unknown").astype(str).values
-    unique_lineages = sorted(set(lineage_arr) - {"unknown", ""})
-    n_lin = len(unique_lineages)
-    palette = plt.cm.tab20(np.linspace(0, 1, max(n_lin, 1)))
-    lin_colors = {l: palette[i] for i, l in enumerate(unique_lineages)}
-    lin_colors["unknown"] = (0.8, 0.8, 0.8, 0.3)
+sorted_lineages = sorted(all_lineage_vals)
+palette = plt.cm.tab20(np.linspace(0, 1, max(len(sorted_lineages), 1)))
+lin_colors = {l: palette[i] for i, l in enumerate(sorted_lineages)}
+lin_colors[""] = (0.85, 0.85, 0.85, 0.15)
 
-    c_lin = np.array([lin_colors.get(l, (0.8,0.8,0.8,0.3)) for l in lineage_arr])
-    fig, ax = plt.subplots(figsize=(9, 7))
+fig, axes = plt.subplots(1, 3, figsize=(21, 7))
+for ax, sp_name in zip(axes, ["zebrafish", "mouse", "human"]):
+    sp_mask  = species_arr == sp_name
+    col      = LINEAGE_COL_MAP.get(sp_name, "lineage")
+
+    # Background: all other peaks light gray
+    scatter(ax, umap_aligned[~sp_mask], "lightgray", sizes=0.15, alpha=0.1)
+
+    if col in adata.obs.columns:
+        lin_vals = adata.obs[col].astype(str).replace({"nan": "", "None": ""}).values
+        sp_coords = umap_aligned[sp_mask]
+        sp_labels = lin_vals[sp_mask]
+
+        # Draw unlabeled first, then labeled on top
+        empty_mask = sp_labels == ""
+        scatter(ax, sp_coords[empty_mask],  "lightgray", sizes=0.2, alpha=0.15)
+
+        for lin in sorted_lineages:
+            m = sp_labels == lin
+            if m.sum() > 0:
+                scatter(ax, sp_coords[m], lin_colors[lin], sizes=1.5, alpha=0.7)
+
+        # Legend: only lineages present in this species
+        present = [l for l in sorted_lineages if (sp_labels == l).any()]
+        handles = [mpatches.Patch(color=lin_colors[l], label=l) for l in present]
+        ax.legend(handles=handles, fontsize=6, loc="upper right", ncol=1,
+                  markerscale=3, framealpha=0.7)
+    else:
+        scatter(ax, umap_aligned[sp_mask], SPECIES_COLORS[sp_name], sizes=0.5, alpha=0.5)
+
+    ax.set_title(f"{sp_name}  (col: {col})", fontsize=11)
+    ax.set_xlabel("UMAP1"); ax.set_ylabel("UMAP2")
+
+plt.suptitle("Aligned UMAP — lineage annotations per species", y=1.01, fontsize=13)
+plt.tight_layout()
+fig.savefig(f"{FIG_DIR}/aligned_umap_per_species_lineage.pdf", dpi=150, bbox_inches="tight")
+fig.savefig(f"{FIG_DIR}/aligned_umap_per_species_lineage.png", dpi=150, bbox_inches="tight")
+plt.close(fig)
+print("  Done.")
+
+
+# %% ── Figure 4b: Combined lineage overlay (all species, zebrafish lineage col) ───
+print("Fig 4b: combined lineage overlay (zebrafish lineage) ...")
+lin_col_zf = "lineage"
+if lin_col_zf in adata.obs.columns:
+    lineage_arr = adata.obs[lin_col_zf].astype(str).replace({"nan": "", "None": ""}).values
+    c_lin = np.array([lin_colors.get(l, (0.85, 0.85, 0.85, 0.15)) for l in lineage_arr])
     order = np.random.permutation(len(umap_aligned))
+    fig, ax = plt.subplots(figsize=(9, 7))
     scatter(ax, umap_aligned[order], c_lin[order])
-    handles = [mpatches.Patch(color=lin_colors[l], label=l) for l in unique_lineages]
+    handles = [mpatches.Patch(color=lin_colors[l], label=l) for l in sorted_lineages]
     ax.legend(handles=handles, fontsize=7, loc="upper right", ncol=2)
-    ax.set_title("Aligned UMAP — lineage labels")
+    ax.set_title("Aligned UMAP — zebrafish lineage labels (all species)")
     ax.set_xlabel("UMAP1"); ax.set_ylabel("UMAP2")
     plt.tight_layout()
-    fig.savefig(f"{FIG_DIR}/aligned_umap_lineage.pdf", dpi=150, bbox_inches="tight")
-    fig.savefig(f"{FIG_DIR}/aligned_umap_lineage.png", dpi=150, bbox_inches="tight")
+    fig.savefig(f"{FIG_DIR}/aligned_umap_lineage_zf.pdf", dpi=150, bbox_inches="tight")
+    fig.savefig(f"{FIG_DIR}/aligned_umap_lineage_zf.png", dpi=150, bbox_inches="tight")
     plt.close(fig)
     print("  Done.")
 else:
@@ -273,7 +329,7 @@ else:
 
 # %% ── Figure 7: Top DE motifs per aligned Leiden cluster (heatmap) ──────────────
 print("Fig 7: DE motif heatmap ...")
-if leiden_key and adata.n_vars <= 2000:
+if leiden_key and adata.n_vars <= 2000 and adata.n_obs <= 500_000:
     try:
         sc.tl.rank_genes_groups(adata, groupby=leiden_key, method="wilcoxon",
                                  use_raw=False, key_added="rank_genes_aligned")
@@ -319,7 +375,7 @@ else:
 print("Fig 8: TF family highlights ...")
 gene_col = "nearest_gene_symbol" if "nearest_gene_symbol" in adata.obs.columns else "nearest_gene"
 if gene_col in adata.obs.columns:
-    gene_arr = adata.obs[gene_col].fillna("").str.lower().values
+    gene_arr = adata.obs[gene_col].astype(str).replace({"nan": "", "None": ""}).str.lower().values
     for tf_family, members in TF_FAMILIES.items():
         members_lower = [m.lower() for m in members]
         tf_mask = np.array([g in members_lower for g in gene_arr])

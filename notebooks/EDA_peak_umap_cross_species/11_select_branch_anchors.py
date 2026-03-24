@@ -65,43 +65,47 @@ MIN_SPECIES    = 2         # gene must be lineage-specific in ≥ this many spec
 # These are fuzzy — we do substring / case-insensitive matching.
 
 LINEAGE_MAP = {
+    # Keywords must match the actual column values per species:
+    #   zebrafish → obs["celltype"]    (e.g. "neural", "optic_cup", "PSM")
+    #   mouse     → obs["celltype"]    (e.g. "Caudal_neurectoderm", "Paraxial_mesoderm")
+    #   human     → obs["peak_lineage"] (e.g. "CNS", "PNS/Neural Crest", "Endoderm")
     "neural_cns": {
         "zebrafish": ["neural", "cns", "brain", "spinal", "retina", "optic"],
-        "mouse":     ["neural", "ectoderm", "brain", "neuroectoderm", "spinal"],
-        "human":     ["neural", "brain", "neuroectoderm", "CNS"],
+        "mouse":     ["neurectoderm"],                          # Caudal_neurectoderm
+        "human":     ["cns", "sensory"],                       # CNS, Sensory/Eye
     },
     "paraxial_mesoderm": {
         "zebrafish": ["paraxial", "somite", "muscle", "myotome"],
-        "mouse":     ["mesoderm", "paraxial", "somite", "muscle"],
-        "human":     ["mesoderm", "paraxial", "somite", "muscle"],
+        "mouse":     ["paraxial"],                             # Paraxial_mesoderm
+        "human":     ["mesenchyme"],                           # Mesenchyme (best available)
     },
     "lateral_mesoderm": {
         "zebrafish": ["lateral", "heart", "cardiac", "blood", "hematopoietic"],
-        "mouse":     ["lateral", "heart", "cardiac", "blood", "hematopoietic"],
-        "human":     ["lateral", "heart", "cardiac", "blood", "hematopoietic"],
+        "mouse":     ["endothelium", "blood_progenitor", "allantois"],
+        "human":     ["cardiac", "hematopoietic", "renal", "endothelial"],
     },
     "endoderm": {
         "zebrafish": ["endoderm", "gut", "liver", "pharyngeal"],
-        "mouse":     ["endoderm", "gut", "liver", "primitive_gut"],
-        "human":     ["endoderm", "gut", "liver"],
+        "mouse":     ["endoderm"],                             # ExE_endoderm, Parietal_endoderm
+        "human":     ["endoderm", "endocrine"],                # Endoderm, Endocrine
     },
     "ectoderm": {
         "zebrafish": ["ectoderm", "epidermis", "skin", "periderm"],
-        "mouse":     ["ectoderm", "epidermis", "skin", "surface"],
-        "human":     ["ectoderm", "epidermis", "skin"],
+        "mouse":     ["exe_ectoderm"],                         # ExE_ectoderm
+        "human":     [],                                       # no surface ectoderm in Domcke 2020
     },
     "neural_crest": {
         "zebrafish": ["neural crest", "crest", "craniofacial"],
-        "mouse":     ["neural crest", "crest"],
-        "human":     ["neural crest", "crest"],
+        "mouse":     ["neural_crest"],                         # Neural_crest
+        "human":     ["pns/neural crest"],                     # PNS/Neural Crest
     },
 }
 
 # Save lineage mapping
 lineage_records = []
 for lineage, sp_map in LINEAGE_MAP.items():
-    for sp, terms in sp_map.items():
-        lineage_records.append({"lineage": lineage, "species": sp, "keywords": "|".join(terms)})
+    for species_key, terms in sp_map.items():
+        lineage_records.append({"lineage": lineage, "species": species_key, "keywords": "|".join(terms)})
 lineage_df = pd.DataFrame(lineage_records)
 lineage_df.to_csv(OUT_LINEAGE_CSV, index=False)
 print(f"Lineage mapping saved: {OUT_LINEAGE_CSV}")
@@ -145,28 +149,42 @@ print(f"  Done in {time.time()-t1:.1f}s")
 
 # %% ── Helper: assign lineage label to each peak ─────────────────────────────────
 def get_celltype_col(obs, species):
-    for col in ["celltype", "top_celltype", "zf_celltype", "lineage"]:
-        if col in obs.columns:
-            return col
+    # Human: peak_lineage has broad categories (CNS, Endoderm, PNS/Neural Crest, etc.)
+    # Mouse/ZF: celltype column has specific cell type names
+    if species == "human":
+        for col in ["peak_lineage", "lineage", "celltype"]:
+            if col in obs.columns:
+                vals = obs[col].astype(str).replace({"nan": "", "None": ""})
+                if (vals != "").any():
+                    return col
+    else:
+        for col in ["celltype", "top_celltype", "zf_celltype", "lineage"]:
+            if col in obs.columns:
+                return col
     return None
 
 
 def assign_lineage(obs_sub, species, lineage_map):
     """
     Returns a Series (indexed like obs_sub) with cross-species lineage label.
+    Uses first-match logic: once a peak is labeled it is not overridden.
     Peaks not matching any lineage get label 'other'.
     """
     ct_col = get_celltype_col(obs_sub, species)
     if ct_col is None:
         return pd.Series("other", index=obs_sub.index)
 
-    ct_values = obs_sub[ct_col].fillna("").str.lower()
+    ct_values = obs_sub[ct_col].astype(str).replace({"nan": "", "None": ""}).str.lower()
     lineage_labels = pd.Series("other", index=obs_sub.index)
 
     for lineage, sp_map in lineage_map.items():
         keywords = [k.lower() for k in sp_map.get(species, [])]
+        if not keywords:
+            continue
         match = ct_values.apply(lambda v: any(k in v for k in keywords))
-        lineage_labels[match] = lineage
+        # First-match: only label peaks not yet assigned
+        unassigned = lineage_labels == "other"
+        lineage_labels[match & unassigned] = lineage
 
     return lineage_labels
 
@@ -211,7 +229,7 @@ def get_branch_candidates(adata, species, lineage_map,
     if gene_col not in sub.columns:
         sub["_gene"] = ""
     else:
-        sub["_gene"] = sub[gene_col].fillna("").astype(str)
+        sub["_gene"] = sub[gene_col].astype(str).replace({"nan": "", "None": ""})
 
     sub = sub[sub["_gene"] != ""].copy()
     print(f"  [{species}] With gene symbol: {len(sub):,}")
