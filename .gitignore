@@ -56,6 +56,9 @@ plan_refactor_v2.md
 # LiteMind cache
 scripts/litemind_peak_analysis/.cache/
 
+# BioMart local cache
+*.sqlite
+
 # Large intermediate data (CSV coordinates, model checkpoints, SLURM logs)
 data/
 logs/
