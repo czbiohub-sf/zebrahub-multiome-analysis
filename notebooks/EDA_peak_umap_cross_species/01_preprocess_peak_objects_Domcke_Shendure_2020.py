@@ -83,10 +83,14 @@ def analyze_peaks_with_normalization(
 ):
     """
     1) Compute each cell's total_counts (sum of peaks/reads).
-    2) For each (celltype, timepoint) group, compute the total_coverage 
+    2) For each (celltype, timepoint) group, compute the total_coverage
        = sum of total_counts from all cells in that group.
     3) Create pseudobulk by summing (func='sum') each group's cells for the peaks matrix.
-    4) The common_scale_factor = median of all group_total_coverage.
+    4) The common_scale_factor = mean of all group_total_coverage.
+       NOTE: Unlike the zebrafish/mouse version (which uses median), we use
+       the mean here because the Domcke 2020 human dataset has greater
+       zero-inflation across pseudobulk groups, making the median less
+       representative of the central tendency of coverage.
     5) For each group g, normalized_pseudobulk = raw_pseudobulk * (common_scale_factor / group_total_coverage[g]).
 
     Returns
@@ -97,7 +101,7 @@ def analyze_peaks_with_normalization(
         - obs['total_coverage'] = group's raw coverage
         - obs['scale_factor'] = how much that group's coverage was scaled
         - obs['n_cells'] and obs['mean_depth'] optionally stored as well
-        - uns['common_scale_factor'] = the median coverage used for scaling
+        - uns['common_scale_factor'] = the mean coverage used for scaling
     """
 
     # 1) total_counts per cell
@@ -130,7 +134,8 @@ def analyze_peaks_with_normalization(
     if not isinstance(X, np.ndarray):
         X = X.toarray()
 
-    # 4) common_scale_factor = median of group_total_coverage
+    # 4) common_scale_factor = mean of group_total_coverage
+    #    (mean, not median — see docstring for rationale)
     common_scale_factor = np.mean(group_total_coverage.values)
 
     # 5) Rescale each group's pseudobulk
