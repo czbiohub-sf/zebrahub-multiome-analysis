@@ -62,3 +62,7 @@ figures/peak_psuedobulk_dynamics_v2/pca_vs_concord_peak_umap_all_peaks_compariso
 # Local data and saved model outputs
 data/
 scripts/save/
+
+# Peak parts list — local outputs (reports, CSVs, large matrices)
+notebooks/EDA_peak_parts_list/outputs/
+notebooks/EDA_peak_parts_list/logs/
