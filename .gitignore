@@ -66,3 +66,9 @@ scripts/save/
 
 # Large figures not tracked
 figures/peak_psuedobulk_dynamics_v2/pca_vs_concord_peak_umap_all_peaks_comparison.pdf
+# CONCORD comparison figures
+figures/peak_psuedobulk_dynamics_v2/pca_vs_concord_peak_umap_all_peaks_comparison.pdf
+
+# Local data and saved model outputs
+data/
+scripts/save/
