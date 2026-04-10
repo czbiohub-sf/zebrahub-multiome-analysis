@@ -21,7 +21,7 @@ OUTDIR  = f"{REPO}/notebooks/EDA_peak_parts_list/outputs/V3"
 MASTER_H5AD = f"{BASE}/data/annotated_data/objects_v2/peaks_by_ct_tp_master_anno.h5ad"
 V3_ZMAT     = f"{OUTDIR}/V3_specificity_matrix_celltype_level.h5ad"
 
-TOP_N = 50
+TOP_N = 200
 
 # %% Load data
 print("\nLoading master h5ad ...", flush=True)
@@ -80,7 +80,7 @@ for ct in ct_names:
     print(f"  {ct}: z-range [{z_col[top_idx[-1]]:.1f}, {z_col[top_idx[0]]:.1f}]")
 
 df = pd.DataFrame(all_rows)
-out_csv = f"{OUTDIR}/V3_all_celltypes_top50_peaks.csv"
+out_csv = f"{OUTDIR}/V3_all_celltypes_top200_peaks.csv"
 df.to_csv(out_csv, index=False)
 print(f"\nSaved: {out_csv}")
 print(f"  {len(df)} rows ({len(ct_names)} celltypes × {TOP_N} peaks)")
