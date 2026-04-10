@@ -43,7 +43,8 @@ REPO=${BASE}/zebrahub-multiome-analysis
 | **Master pseudobulk h5ad** | `${BASE}/data/annotated_data/objects_v2/peaks_by_ct_tp_master_anno.h5ad` | 4.4 GB | 640,830 peaks × 190 conditions. This is THE source of truth. |
 | **V3 z-score matrix** | `${REPO}/notebooks/EDA_peak_parts_list/outputs/V3/V3_specificity_matrix_celltype_level.h5ad` | 378 MB | 640,830 peaks × 31 celltypes. Celltype-level specificity z-scores. |
 | **Tau specificity metrics** | `${REPO}/notebooks/EDA_peak_parts_list/outputs/V3/V3_peak_specificity_metrics.csv` | 48 MB | Tau index + Gini coefficient for all 640K peaks. |
-| **Top peaks table** | `${REPO}/notebooks/EDA_peak_parts_list/outputs/V3/V3_celltype_level_top_peaks.csv` | 78 KB | Top-50 peaks per focal celltype (7 celltypes) with metadata. |
+| **Top peaks table (all 31)** | `${REPO}/notebooks/EDA_peak_parts_list/outputs/V3/V3_all_celltypes_top50_peaks.csv` | ~250 KB | Top-50 peaks for ALL 31 celltypes (1,550 rows) with metadata: coords, z-score, linked/nearest gene, peak_type, etc. **This is the primary table for the portal.** |
+| Top peaks table (focal 7) | `${REPO}/notebooks/EDA_peak_parts_list/outputs/V3/V3_celltype_level_top_peaks.csv` | 78 KB | Top-50 peaks for 7 focal celltypes only (legacy, used by motif enrichment scripts). |
 | **danRer11 FASTA** | `/hpc/reference/sequencing_alignment/fasta_references/danRer11.primary.fa` | 1.4 GB | Reference genome for sequence extraction. |
 
 ### Supplementary Data Files
