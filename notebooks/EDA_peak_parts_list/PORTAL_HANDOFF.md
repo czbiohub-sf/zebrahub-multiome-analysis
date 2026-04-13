@@ -14,7 +14,7 @@ The "Peak Parts List" is an interactive page on the Zebrahub web portal allowing
    └─ Tau specificity histogram (what fraction of peaks are celltype-specific?)
 
 2. User selects a celltype (dropdown, 31 options excluding PGCs)
-   └─ Shows top-50 peaks ranked by V3 z-score as a table:
+   └─ Shows top-200 peaks ranked by V3 z-score as a table:
       │  chr:start-end │ z-score │ linked_gene │ peak_type │ distance_to_tss │ ...
    └─ Peak UMAP highlights the 50 selected peaks
 
