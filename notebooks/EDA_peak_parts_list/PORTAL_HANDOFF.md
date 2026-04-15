@@ -47,13 +47,43 @@ REPO=${BASE}/zebrahub-multiome-analysis
 | Top peaks table (focal 7) | `${REPO}/notebooks/EDA_peak_parts_list/outputs/V3/V3_celltype_level_top_peaks.csv` | 78 KB | Top-50 peaks for 7 focal celltypes only (legacy, used by motif enrichment scripts). |
 | **danRer11 FASTA** | `/hpc/reference/sequencing_alignment/fasta_references/danRer11.primary.fa` | 1.4 GB | Reference genome for sequence extraction. |
 
+### FIMO Motif Data (on scratch — portal-ready)
+
+Precomputed FIMO scan of all 1,443 JASPAR H12CORE motifs against top-200 peaks for all 31 celltypes (6,200 peaks total). Run as a SLURM array (1 task per celltype), then merged with Fisher's exact test + FDR correction.
+
+All files at: `/hpc/scratch/group.data.science/yang-joon.kim/peak-parts-list-motifs/`
+
+| File | Full Path | Description |
+|------|-----------|-------------|
+| **Portal table with motifs** | `/hpc/scratch/group.data.science/yang-joon.kim/peak-parts-list-motifs/V3_all_celltypes_top200_peaks_with_motifs.csv` | Top-200 table (6,200 rows) with added columns: `n_tfs_with_hit`, `n_total_hits`, `top_tfs`, `has_motif_support` (bool, >=3 TFs). **Use this as the primary portal table.** |
+| **Motif enrichment** | `/hpc/scratch/group.data.science/yang-joon.kim/peak-parts-list-motifs/V3_top200_motif_enrichment_all31.csv` | Fisher's exact test results: enrichment z-score, FDR, hit rates, odds ratio for all 31 celltypes × TFs. Background = all other celltypes' 200 peaks pooled. |
+| **Motif positions** | `/hpc/scratch/group.data.science/yang-joon.kim/peak-parts-list-motifs/V3_top200_motif_positions.csv` | Every motif hit with exact position within the peak: `peak_id, tf, motif_accession, hit_start, hit_end, strand, score, pvalue`. Use to render motif position maps when user clicks a peak. |
+| **Hit matrix** | `/hpc/scratch/group.data.science/yang-joon.kim/peak-parts-list-motifs/V3_top200_motif_hit_matrix.csv` | Boolean matrix (6,200 peaks × ~949 unique TFs). Use for filtering peaks by TF presence. |
+| **Per-peak summary** | `/hpc/scratch/group.data.science/yang-joon.kim/peak-parts-list-motifs/V3_top200_peak_motif_summary.csv` | Per-peak: `n_tfs_with_hit`, `n_total_hits`, `top_tfs` (top 5 TFs with hit counts), `has_motif_support`. |
+
+Per-celltype batch files (intermediate): `/hpc/scratch/group.data.science/yang-joon.kim/peak-parts-list-motifs/batches/{celltype}_hits.csv` and `{celltype}_binary.npz`.
+
+### Temporal Profiles (all 31 celltypes × top-200)
+
+| File | Full Path | Description |
+|------|-----------|-------------|
+| **Temporal profiles (all 31)** | `${REPO}/notebooks/EDA_peak_parts_list/outputs/V3/V3_all_celltypes_top200_temporal_profiles.csv` | 37,200 rows (31 celltypes × 200 peaks × 6 timepoints). Columns: `celltype, peak_id, rank, V3_zscore, linked_gene, nearest_gene, timepoint, tp_int, accessibility, n_cells, reliable`. Use to render temporal bar charts when user clicks a peak. The `reliable` column (bool) flags timepoints with >=20 cells — grey out or hide unreliable timepoints in the UI. |
+| Temporal profiles (focal 7, legacy) | `${REPO}/notebooks/EDA_peak_parts_list/outputs/V3/V3_celltype_level_temporal_profiles.csv` | 1,900 rows — 7 focal celltypes × top-50 only (superseded by the all-31 version above). |
+
+### Precomputed Figures
+
+| Directory | Full Path | Description |
+|-----------|-----------|-------------|
+| **Peak UMAPs (V2)** | `${REPO}/figures/peak_parts_list/V3/peak_umap/all_celltypes_V2/` | 248 files: all 31 celltypes × top-50/top-200 × labeled/nolabel × pdf/png. Flat color, no grid, no colorbar. Filename pattern: `{celltype}_top{50,200}_umap{,_nolabel}.{pdf,png}` |
+| **Motif position maps (V2)** | `${REPO}/figures/peak_parts_list/V3/motif_position_maps_V2_top200/` | 139 maps across 28 celltypes (top 5 peaks each). Shows exact TF binding site positions within each peak, filtered to FDR < 0.05 enriched TFs only. Subdirectories per celltype. |
+| **Motif enrichment heatmaps (top-200)** | `${REPO}/figures/peak_parts_list/V3/motif_enrichment/V3_interesting6_motif_*_top200.{pdf,png}` | Heatmaps for the 6 interesting celltypes computed from top-200 peaks (vs top-50 in the originals). Three versions: `zscore_hitrate_top200` (A+B panels), `log2fold_top200`, `heatmap_colorbar_top200`. More robust enrichment with 4× larger sample. |
+
 ### Supplementary Data Files
 
 | File | Path | Size | Description |
 |------|------|------|-------------|
-| Motif enrichment (all 31) | `outputs/V3/V3_all31_motif_enrichment.csv` | 4.2 MB | Fisher's exact test results for all 31 celltypes × 949 TFs |
+| Motif enrichment (top-50, legacy) | `outputs/V3/V3_all31_motif_enrichment.csv` | 4.2 MB | Fisher's exact test from top-50 peaks (legacy, superseded by top-200 on scratch) |
 | Motif enrichment (interesting 6) | `outputs/V3/V3_interesting6_motif_enrichment.csv` | 852 KB | Subset for 6 highlighted celltypes |
-| Temporal profiles | `outputs/V3/V3_celltype_level_temporal_profiles.csv` | 162 KB | 6-timepoint accessibility for top peaks |
 | RNA pseudobulk | `outputs/V3/rna_by_ct_tp_pseudobulked.h5ad` | 40 MB | 32,057 genes × 176 conditions |
 | RNA z-scores | `outputs/V3/rna_specificity_matrix_celltype_level.h5ad` | 6.7 MB | 32,057 genes × 31 celltypes |
 
