@@ -189,9 +189,55 @@ F-H: "it's validated and multi-dimensional"
 
 ---
 
-## 10. Open Questions / Next Steps
+## 10. Expanded to Top-200 Peaks (sessions Apr 10–15)
+
+### Top-200 peaks table for all 31 celltypes
+- `V3_all_celltypes_top200_peaks.csv` — 6,200 rows (31 × 200), portal primary table
+- Portal can filter dynamically via `rank` column or `V3_zscore` slider
+
+### FIMO precomputation (all 1,443 JASPAR motifs × 6,200 peaks)
+- Run as SLURM array (31 tasks, one per celltype, ~13 min each on preempted)
+- Merged + Fisher's exact test (each celltype's 200 peaks vs all other ~6,000 pooled)
+- Output on scratch: `/hpc/scratch/group.data.science/yang-joon.kim/peak-parts-list-motifs/`
+  - `V3_all_celltypes_top200_peaks_with_motifs.csv` — portal table with `has_motif_support` column
+  - `V3_top200_motif_enrichment_all31.csv` — enrichment z-scores, FDR
+  - `V3_top200_motif_positions.csv` — exact motif positions for every hit
+  - `V3_top200_motif_hit_matrix.csv` — peaks × TFs boolean matrix
+
+### Key insight: motif support as causal filter
+- Peaks WITHOUT TF motif hits are likely passenger/structural elements (passive chromatin opening, CTCF boundaries, repetitive elements)
+- Peaks WITH motif hits are candidate functional enhancers (TF-driven)
+- Portal should flag this distinction: `has_motif_support` (>=3 TFs) for synthetic enhancer design use case
+
+### Motif enrichment heatmaps (top-200 vs top-50)
+Top-200 gives more robust statistics. Key changes vs top-50:
+- **neural_crest**: AP2 family now leads (AP2C, AP2B, AP2A) alongside SOX8 — AP2 is a core NC specifier
+- **hatching_gland**: FOX family dominates (FOXI1, FOXA2, FOXJ3, FOXA1, FOXP1) — cleaner signal
+- **epidermis**: TEAD4 appears (Hippo pathway, known in epidermal biology)
+- Figures: `V3_interesting6_motif_*_top200.{pdf,png}` (preserved originals from top-50)
+
+### Temporal profiles for all 31 celltypes
+- `V3_all_celltypes_top200_temporal_profiles.csv` — 37,200 rows (31 × 200 × 6 timepoints)
+- Includes `reliable` flag (n_cells >= 20) for each timepoint
+- Supersedes the legacy 7-celltype version
+
+### Peak UMAPs V2 (all 31 celltypes)
+- `V3/peak_umap/all_celltypes_V2/` — 248 files
+- Flat color (no z-score gradient), no grid, no colorbar
+- Both top-50 and top-200 versions per celltype
+- Filename pattern: `{celltype}_top{50,200}_umap{,_nolabel}.{pdf,png}`
+
+### Motif position maps V2 (from top-200 FIMO)
+- `V3/motif_position_maps_V2_top200/` — 139 maps across 28 celltypes
+- Only shows FDR < 0.05 enriched TFs (not all 1,443)
+- Use to show "where in the DNA are the TF binding sites" for the SI figure panel f
+
+---
+
+## 11. Open Questions / Next Steps
 
 - **Cross-species conservation**: do the interesting-6 celltypes' top peaks overlap with conserved anchors from the cross-species UMAP project?
-- **GO enrichment**: for each celltype's top-50 peaks, what biological processes are the linked genes involved in? (dot plot: celltype × GO term)
+- **GO enrichment**: for each celltype's top-200 peaks, what biological processes are the linked genes involved in? (dot plot: celltype × GO term)
 - **Gene locus view generation**: create the gata4 locus figure with multi-celltype peak annotations
 - **Broader marker gene set**: extend reverse-lookup profiles to the 6 interesting celltypes (foxd3, sox10, egr2b, pax6a, vsx2, ctslb)
+- **Synthetic enhancer design demo**: pick one peak with strong motif support, show the full pipeline (query → select → sequence + motifs → CREsted input)
