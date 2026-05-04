@@ -148,9 +148,15 @@ def find_core_window(hits_df: pd.DataFrame, peak_len: int, win: int = 200) -> tu
     return best_start, best_start + win, best_count
 
 
-def compute_composite_score(df: pd.DataFrame) -> pd.DataFrame:
+def compute_composite_score(df: pd.DataFrame,
+                             target_celltype: str = None,
+                             prefer_distal: bool = False) -> pd.DataFrame:
     """Add composite score columns to peak DataFrame.
     Each numeric feature is converted to a percentile rank (0–1).
+
+    If target_celltype is given, peaks whose top1_celltype matches receive
+    a +0.15 bonus to the use_case_score.
+    If prefer_distal is True, intergenic peaks get +0.10 and intronic +0.05.
     """
     out = df.copy()
     for col, name in [("top1_z", "rank_specificity"),
@@ -166,7 +172,22 @@ def compute_composite_score(df: pd.DataFrame) -> pd.DataFrame:
                               "rank_tf_density", "rank_motif_strength"]].mean(axis=1)
     out["peak_type_factor"] = out["peak_type"].map(PEAK_TYPE_FACTOR).fillna(0.7)
     out["composite_score"] = (out["base_score"] * out["peak_type_factor"]).round(4)
-    return out.sort_values("composite_score", ascending=False).reset_index(drop=True)
+
+    # Use-case bonus (preserves the base composite score, adds context-specific boost)
+    out["mhb_target_match"] = (
+        out["top1_celltype"].astype(str) == target_celltype if target_celltype else False
+    )
+    distal_bonus = 0.0
+    if prefer_distal:
+        distal_bonus = out["peak_type"].map(
+            {"intergenic": 0.10, "intronic": 0.05}
+        ).fillna(0.0)
+    target_bonus = out["mhb_target_match"].astype(float) * 0.15 if target_celltype else 0.0
+    out["use_case_score"] = (out["composite_score"]
+                              + (target_bonus if target_celltype else 0)
+                              + distal_bonus).round(4)
+    sort_col = "use_case_score" if (target_celltype or prefer_distal) else "composite_score"
+    return out.sort_values(sort_col, ascending=False).reset_index(drop=True)
 
 
 def aggregate_per_peak_motif_stats(hits_df: pd.DataFrame) -> pd.DataFrame:
@@ -286,6 +307,12 @@ def main():
                    help="Generate per-peak motif-map PDFs (one per peak)")
     p.add_argument("--top-n-plot", type=int, default=None,
                    help="If set with --plot, only plot the top N peaks by composite score")
+    p.add_argument("--target-celltype", default=None,
+                   help="Optional target celltype (e.g., midbrain_hindbrain_boundary). "
+                        "Peaks where top1_celltype matches get +0.15 to use_case_score.")
+    p.add_argument("--prefer-distal", action="store_true",
+                   help="Add +0.10 to intergenic peaks and +0.05 to intronic peaks "
+                        "in use_case_score (favors distal-enhancer candidates).")
     args = p.parse_args()
 
     os.makedirs(args.output_dir, exist_ok=True)
@@ -326,11 +353,15 @@ def main():
     peaks[f"core_{args.core_win}bp_n_tfs"] = core_n_tfs
 
     # 5. Composite score and ranking
-    ranked = compute_composite_score(peaks)
+    ranked = compute_composite_score(peaks,
+                                      target_celltype=args.target_celltype,
+                                      prefer_distal=args.prefer_distal)
     ranked["rank"] = np.arange(1, len(ranked) + 1)
 
     # Reorder columns
-    front = ["rank", "composite_score", "peak_id", "chrom", "start", "end", "length",
+    use_case_cols = ["use_case_score"] if "use_case_score" in ranked.columns else []
+    front = ["rank"] + use_case_cols + [
+             "composite_score", "peak_id", "chrom", "start", "end", "length",
              "peak_type", "distance_to_tss",
              "linked_gene", "nearest_gene",
              "top1_celltype", "top1_z", "top2_celltype", "top2_z",
@@ -339,7 +370,8 @@ def main():
              f"core_{args.core_win}bp_start", f"core_{args.core_win}bp_end",
              f"core_{args.core_win}bp_n_tfs",
              "rank_specificity", "rank_activity", "rank_tf_density",
-             "rank_motif_strength", "base_score", "peak_type_factor"]
+             "rank_motif_strength", "base_score", "peak_type_factor",
+             "mhb_target_match"]
     front = [c for c in front if c in ranked.columns]
     other = [c for c in ranked.columns if c not in front]
     ranked = ranked[front + other]
@@ -349,24 +381,32 @@ def main():
     print(f"\nMaster ranking → {out_csv}")
 
     # 6. Summary text
+    score_col_name = "use_case_score" if "use_case_score" in ranked.columns and (
+        args.target_celltype or args.prefer_distal
+    ) else "composite_score"
+
     summary_lines = [
         f"SYNTHETIC ENHANCER RANKING — {args.label}",
-        "=" * 75,
+        "=" * 80,
         f"N peaks: {len(ranked)}",
-        f"FIMO motif DB: hits CSV at {args.fimo_hits}",
+        f"FIMO motif DB hits: {args.fimo_hits}",
         f"Composite = mean(rank_specificity, rank_activity, rank_tf_density,",
         f"                 rank_motif_strength) × peak_type_factor",
         f"Peak-type factors: {PEAK_TYPE_FACTOR}",
-        "",
-        "TOP 15 RANKED PEAKS:",
-        "-" * 75,
-        f"{'Rank':>4} {'Composite':>10} {'Peak ID':<26} {'Type':<10} "
-        f"{'top1':<22} {'z':>6} {'TFs':>4}  TopTFs",
     ]
+    if args.target_celltype:
+        summary_lines.append(f"Target celltype bonus (+0.15): {args.target_celltype}")
+    if args.prefer_distal:
+        summary_lines.append("Distal-enhancer bonus: intergenic +0.10, intronic +0.05")
+    summary_lines += ["", f"Sorted by: {score_col_name}", "",
+                       "TOP 15 RANKED PEAKS:", "-" * 80,
+                       f"{'Rank':>4} {'UseCase':>8} {'Comp':>6} {'Peak ID':<22} "
+                       f"{'Type':<10} {'top1':<22} {'z':>6} {'TFs':>4}  TopTFs"]
     for _, r in ranked.head(15).iterrows():
+        use_score = r.get("use_case_score", r["composite_score"])
         summary_lines.append(
-            f"{int(r['rank']):>4} {r['composite_score']:>10.3f} "
-            f"{r['peak_id']:<26} {str(r['peak_type'])[:9]:<10} "
+            f"{int(r['rank']):>4} {use_score:>8.3f} {r['composite_score']:>6.3f} "
+            f"{str(r['peak_id'])[:21]:<22} {str(r['peak_type'])[:9]:<10} "
             f"{str(r['top1_celltype'])[:21]:<22} "
             f"{r['top1_z']:>6.1f} {int(r['n_unique_tfs']):>4}  {r['top_tfs']}"
         )
