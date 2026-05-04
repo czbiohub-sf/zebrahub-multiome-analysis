@@ -68,7 +68,7 @@ def _decode(x):
 def run_fimo(peaks_csv: str,
              label: str,
              output_dir: str,
-             motif_db: str = "h12core",
+             motif_db: str = "jaspar2024",
              fasta: str = DEFAULT_FASTA,
              pval_thresh: float = DEFAULT_PVAL):
     """Run FIMO on a peak list and write hits + binary matrix to output_dir."""
@@ -198,8 +198,8 @@ def main():
     parser.add_argument("--peaks-csv",  required=True,  help="Path to peaks CSV (must have chrom, start, end columns)")
     parser.add_argument("--label",      required=True,  help="Output filename prefix (e.g., 'pax2a')")
     parser.add_argument("--output-dir", required=True,  help="Directory for output files")
-    parser.add_argument("--motif-db",   choices=list(MOTIF_DBS.keys()), default="h12core",
-                        help="Motif database (default: h12core)")
+    parser.add_argument("--motif-db",   choices=list(MOTIF_DBS.keys()), default="jaspar2024",
+                        help="Motif database (default: jaspar2024)")
     parser.add_argument("--fasta",      default=DEFAULT_FASTA, help=f"Genome FASTA (default: danRer11)")
     parser.add_argument("--pval",       type=float, default=DEFAULT_PVAL,
                         help=f"FIMO p-value threshold (default: {DEFAULT_PVAL})")
