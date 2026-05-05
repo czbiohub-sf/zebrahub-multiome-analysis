@@ -160,27 +160,76 @@ composite_score = base_score × peak_type_factor               # ∈ [0, 1]
 
 ---
 
-## use_case_score — context-specific boost (optional)
+## use_case_score — context-specific boosts + length penalty
 
-Two flags add bonus terms on top of `composite_score`:
+Several flags add bonuses or penalties on top of `composite_score`:
 
-| Flag | Bonus |
+| Flag | Effect |
 |---|---|
-| `--target-celltype <name>` | +0.15 if `top1_celltype == <name>` |
+| `--target-celltype <name>` | +0.15 if `top1_celltype == <name>` (primary tissue) |
+| `--permissive-celltypes a,b,c` | +0.05 if top1 is in this list (alternative tissues where the target gene is also expressed — flagged but **not** treated as off-target) |
 | `--prefer-distal` | +0.10 for `intergenic`, +0.05 for `intronic` |
+| `--max-synthesis-length N` | Synthesis-length penalty: peaks longer than N bp get a multiplicative `synthesis_length_factor` ≤ 1.0 (default N=500, IDT cutoff). Disable with `--no-synth-penalty` |
 
 ```
-use_case_score = composite_score
-               + (0.15 if top1 matches target_celltype else 0)
-               + (0.10 if intergenic, 0.05 if intronic, 0 otherwise)
+raw_score      = composite_score + target_bonus + permissive_bonus + distal_bonus
+synth_factor   = 1.0  if length ≤ max_synthesis_length
+                 max(0.4, 1.0 - 0.15 × (length - max_len) / 500)  otherwise
+use_case_score = raw_score × synth_factor
 ```
 
-When either flag is set, the output is sorted by `use_case_score`
-(descending). When neither is set, sort falls back to `composite_score`.
+`synthesis_length_factor` decays linearly: a 1000 bp peak gets ~0.85,
+a 2000 bp peak ~0.55, capped at 0.4 for very long peaks.
 
-The base components (`rank_*`, `composite_score`) are always preserved
-in the output CSV — bonuses are additive and transparent so you can
-re-rank by any column you want.
+When any flag is set, the output is sorted by `use_case_score`
+(descending). All base components (`rank_*`, `composite_score`,
+`synthesis_length_factor`, `target_match`, `top1_in_permissive`) are
+preserved in the output CSV — bonuses are additive and transparent so
+you can re-rank by any column you want.
+
+## Distance to a target gene's TSS
+
+For a marker-gene-driven enhancer query (e.g., pax2a), all peaks come
+from a small genomic neighborhood. The `--target-tss <chr:pos>` flag
+adds a `distance_to_target_tss` column with the centroid-to-TSS
+distance, so you can dissect proximal vs distal contributions to the
+same gene's expression.
+
+```bash
+--target-tss chr13:29770837   # pax2a TSS in danRer11
+```
+
+Look up via:
+```bash
+zcat /hpc/reference/sequencing_alignment/alignment_references/zebrafish_genome_GRCz11/genes/genes.gtf.gz \
+  | awk '$3=="transcript"' | grep 'gene_name "GENE_NAME"' \
+  | awk '{print $1, $4, $7}' | sort -u
+```
+
+## Compacting long peaks for synthesis (`--compact`)
+
+For peaks longer than `--max-synthesis-length`, the script can identify
+"motif hubs" — clusters of FIMO hits separated by gaps without binding
+sites — and output a compact representation suitable for stitched
+synthesis.
+
+Algorithm:
+1. Take midpoints of all FIMO hits.
+2. Cluster midpoints separated by < 80 bp gaps into hubs.
+3. Pad each hub by ±20 bp.
+4. Merge overlapping hubs.
+5. Output: `compact_segments` (semicolon-delimited absolute coords),
+   `compact_length` (sum of hub widths), `compact_n_segments` (count).
+
+A 1700 bp peak with three motif clusters might compact to 3 segments
+totaling ~900 bp. The compact-segment coordinates are absolute on the
+genome — you can use pysam to fetch each hub and concatenate them.
+
+Note: compaction does **not** preserve genomic context (the joins are
+artificial). It's meant for testing whether a stitched 3-hub
+construct still drives the expected expression — useful as an
+alternative to the full peak when the full peak is too long for
+cost-effective synthesis.
 
 ---
 
