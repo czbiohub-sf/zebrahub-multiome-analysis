@@ -42,6 +42,31 @@ from module_dict_colors import cell_type_color_dict
 
 DEFAULT_GTF = ("/hpc/reference/sequencing_alignment/alignment_references/"
                 "zebrafish_genome_GRCz11/genes/genes.gtf.gz")
+V3_ZMAT = f"{REPO}/notebooks/EDA_peak_parts_list/outputs/V3/V3_specificity_matrix_celltype_level.h5ad"
+
+
+def lookup_top1_accessibility(peaks_df: pd.DataFrame, v3_h5ad: str = V3_ZMAT) -> pd.Series:
+    """For each peak, return the absolute accessibility (log_norm) in its top1 celltype.
+
+    The V3 z-score h5ad stores per-celltype mean accessibility in obs
+    columns named 'accessibility_<celltype>'. We pull the value matching
+    each peak's top1_celltype.
+    """
+    import anndata as ad
+    z = ad.read_h5ad(v3_h5ad, backed="r")
+    # We need to pull obs for the peaks present
+    pids = peaks_df["peak_id"].astype(str).tolist()
+    obs = z.obs.loc[z.obs.index.isin(pids)].copy()
+    z.file.close()
+    # For each peak, fetch accessibility_<top1>
+    obs = obs.reset_index().rename(columns={"index": "peak_id"})
+    out = peaks_df[["peak_id", "top1_celltype"]].merge(obs, on="peak_id", how="left")
+    def fetch(row):
+        col = f"accessibility_{row['top1_celltype']}"
+        if col in row.index:
+            return float(row[col])
+        return float("nan")
+    return out.apply(fetch, axis=1)
 
 
 # ── GTF parsing ──────────────────────────────────────────────────────────────
@@ -123,22 +148,27 @@ def plot_locus_view(peaks: pd.DataFrame,
         ax_peaks, ax_chrom, ax_gene = axes
 
     # ── Row 1: peak blocks ──────────────────────────────────────────────
+    # Use absolute accessibility in top1 celltype (log_norm) for block height.
+    height_col = "top1_accessibility" if "top1_accessibility" in peaks.columns else "top1_z"
     ax_peaks.set_xlim(xmin, xmax)
-    z_max = max(float(peaks["top1_z"].max()), 1.0)
-    ax_peaks.set_ylim(0, z_max * 1.15)
-    ax_peaks.set_ylabel("V3 z-score (top celltype)", fontsize=10)
+    h_max = max(float(peaks[height_col].max()), 1.0)
+    ax_peaks.set_ylim(0, h_max * 1.15)
+    if height_col == "top1_accessibility":
+        ax_peaks.set_ylabel("Accessibility (log_norm) in top celltype", fontsize=10)
+    else:
+        ax_peaks.set_ylabel("V3 z-score (top celltype)", fontsize=10)
     title = (f"{gene_name} locus — {len(peaks)} peaks\n"
              f"chr{chrom_str}:{xmin:,}–{xmax:,}  ({span:,} bp)")
     ax_peaks.set_title(title, fontsize=11, loc="left")
 
     legend_celltypes = []
     for _, p in peaks.iterrows():
-        ct    = p["top1_celltype"]
-        color = cell_type_color_dict.get(ct, "#888888")
-        z     = float(p["top1_z"])
+        ct     = p["top1_celltype"]
+        color  = cell_type_color_dict.get(ct, "#888888")
+        height = float(p[height_col])
         # Ensure visible width for tiny peaks
-        width = max(p["end"] - p["start"], span / 250)
-        rect = mpatches.Rectangle((p["start"], 0), width, z,
+        width  = max(p["end"] - p["start"], span / 250)
+        rect = mpatches.Rectangle((p["start"], 0), width, height,
                                    facecolor=color, edgecolor="black",
                                    linewidth=0.5, alpha=0.92)
         ax_peaks.add_patch(rect)
@@ -253,6 +283,15 @@ def main():
             sys.exit(f"ERROR: peaks CSV missing required columns: {needed - set(peaks.columns)}")
     peaks["start"] = peaks["start"].astype(int)
     peaks["end"]   = peaks["end"].astype(int)
+
+    # Look up absolute accessibility in top1 celltype (more relevant
+    # than z-score for predicting "will this region be active")
+    print("Looking up per-peak accessibility in top1 celltype ...")
+    peaks["top1_accessibility"] = lookup_top1_accessibility(peaks)
+    n_missing = peaks["top1_accessibility"].isna().sum()
+    if n_missing > 0:
+        print(f"  WARNING: {n_missing} peaks missing accessibility — will fall back to top1_z for those")
+        peaks["top1_accessibility"] = peaks["top1_accessibility"].fillna(peaks["top1_z"])
 
     print(f"Loaded {len(peaks)} peaks")
 
