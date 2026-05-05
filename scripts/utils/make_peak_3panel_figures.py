@@ -243,8 +243,11 @@ def plot_panel_1B(ax, timepoints, vals, zs, top1_celltype):
                     ha="center", va="bottom", fontsize=6, color="#444")
 
 
-def plot_panel_2(ax, peak_row, hits_df, core_start_offset, core_end_offset):
-    """TF motif track plot — same style as rank_synthetic_enhancers per-peak plot."""
+def plot_panel_2(ax, peak_row, hits_df, core_start_offset, core_end_offset,
+                  compact_segments_offsets=None):
+    """TF motif track plot — same style as rank_synthetic_enhancers per-peak plot.
+    If compact_segments_offsets is provided, also draw the compact hubs as
+    light blue shaded boxes underneath the peak."""
     peak_len = int(peak_row["end"] - peak_row["start"])
 
     # Peak background
@@ -255,6 +258,12 @@ def plot_panel_2(ax, peak_row, hits_df, core_start_offset, core_end_offset):
                                      core_end_offset - core_start_offset, 0.20,
                                      facecolor="none", edgecolor="#cc3344",
                                      lw=1.6, ls="--", zorder=2))
+    # Compact-segments shading (blue, semi-transparent, below peak bar)
+    if compact_segments_offsets:
+        for s, e in compact_segments_offsets:
+            ax.add_patch(mpatches.Rectangle((s, 0.32), e - s, 0.08,
+                                             facecolor="#7AB8E0", edgecolor="#3a6f95",
+                                             lw=0.6, alpha=0.55, zorder=1))
 
     if not hits_df.empty:
         hits_sorted = hits_df.sort_values("hit_start").copy()
@@ -296,13 +305,18 @@ def plot_panel_2(ax, peak_row, hits_df, core_start_offset, core_end_offset):
                   title="TF family", title_fontsize=7)
 
     ax.set_xlim(-5, peak_len + 5)
-    ax.set_ylim(0.30, 1.05)
+    ax.set_ylim(0.25, 1.05)
     ax.set_xlabel("Position within peak (bp)", fontsize=8)
     ax.set_yticks([])
     for spine in ["top", "right", "left"]:
         ax.spines[spine].set_visible(False)
     ax.grid(False)
-    ax.set_title("TF motif positions (FIMO p<1e-4, JASPAR2024)", fontsize=9)
+    title = "TF motif positions (FIMO p<1e-4, JASPAR2024)"
+    if compact_segments_offsets:
+        comp_total = sum(e - s for s, e in compact_segments_offsets)
+        title += f"  |  compact: {len(compact_segments_offsets)} hubs, {comp_total} bp (blue shading)"
+    title += "  |  red dashed = 200 bp core"
+    ax.set_title(title, fontsize=9)
 
 
 def panel_3_summary_text(peak_row, hits_df) -> str:
@@ -321,10 +335,34 @@ def panel_3_summary_text(peak_row, hits_df) -> str:
 
     lines = []
     lines.append(f"PEAK: {peak_row['peak_id']}  |  rank {int(peak_row.get('rank', 0))}  |  "
-                 f"composite {peak_row.get('composite_score', 0):.3f}  |  "
-                 f"top1={peak_row.get('top1_celltype','?')} (z={peak_row.get('top1_z',0):.1f})  |  "
+                 f"composite {peak_row.get('composite_score', 0):.3f}"
+                 + (f"  |  use_case {peak_row.get('use_case_score', 0):.3f}"
+                    if not pd.isna(peak_row.get('use_case_score', None)) else "")
+                 )
+    lines.append(f"  top1={peak_row.get('top1_celltype','?')} (z={peak_row.get('top1_z',0):.1f})  |  "
                  f"peak_type={peak_row.get('peak_type','?')}, "
+                 f"length={int(peak_row.get('length', 0))} bp, "
                  f"TSS dist {peak_row.get('distance_to_tss','NA')}")
+    # pax2a-specific or target-TSS line
+    if "distance_to_target_tss" in peak_row.index and not pd.isna(peak_row.get("distance_to_target_tss", None)):
+        d = int(peak_row["distance_to_target_tss"])
+        kb = d / 1000.0
+        lines.append(f"  Distance from peak centroid to TARGET gene TSS: {d:,} bp (~{kb:.1f} kb)")
+    # tissue classification
+    tag = []
+    if peak_row.get("target_match", False):
+        tag.append("PRIMARY TARGET match")
+    elif peak_row.get("top1_in_permissive", False):
+        tag.append("alternative tissue (also expresses target gene)")
+    else:
+        tag.append("off-tissue (top1 outside known target-expressed celltypes)")
+    if "synthesis_length_factor" in peak_row.index:
+        sf = float(peak_row["synthesis_length_factor"])
+        tag.append(f"synth_factor={sf:.2f}")
+    if "compact_length" in peak_row.index and not pd.isna(peak_row.get("compact_length", None)):
+        tag.append(f"compact={int(peak_row['compact_length'])} bp / "
+                   f"{int(peak_row.get('compact_n_segments', 0))} hubs")
+    lines.append("  " + "  |  ".join(tag))
     lines.append("")
 
     # Top-line summary numbers
@@ -374,7 +412,18 @@ def make_peak_figure(peak_row, hits_df, ct_names, ct_z, tps, tp_vals, tp_z,
 
     # Panel 2: motif map (full width middle)
     ax2 = fig.add_subplot(gs[1, :])
-    plot_panel_2(ax2, peak_row, hits_df, core_s_off, core_e_off)
+    # Parse compact segments if present in the row (semicolon-delimited absolute coords)
+    compact_offs = None
+    seg_str = peak_row.get("compact_segments", None)
+    if isinstance(seg_str, str) and seg_str.strip():
+        try:
+            absolute = [tuple(map(int, p.split("-"))) for p in seg_str.split(";")]
+            compact_offs = [(s - int(peak_row["start"]), e - int(peak_row["start"]))
+                             for s, e in absolute]
+        except Exception:
+            compact_offs = None
+    plot_panel_2(ax2, peak_row, hits_df, core_s_off, core_e_off,
+                  compact_segments_offsets=compact_offs)
 
     # Panel 3: text summary
     ax3 = fig.add_subplot(gs[2, :])

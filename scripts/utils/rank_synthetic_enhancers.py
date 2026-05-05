@@ -103,6 +103,66 @@ PEAK_TYPE_FACTOR = {
 }
 
 
+# ── Compacting & synthesis length helpers ────────────────────────────────────
+
+def compact_peak(hits_df: pd.DataFrame,
+                 peak_len: int,
+                 gap_threshold: int = 80,
+                 flank: int = 20,
+                 max_total: int = None):
+    """Identify motif 'hubs' within a peak and return compact segments.
+
+    Returns
+    -------
+    segments : list[(rel_start, rel_end)]
+        Hub regions (offsets within the peak).
+    total_len : int
+        Sum of segment widths — the synthesis-friendly compact length.
+    """
+    if peak_len <= 0:
+        return [(0, peak_len)], peak_len
+    if max_total is not None and peak_len <= max_total:
+        return [(0, peak_len)], peak_len
+    if hits_df is None or hits_df.empty:
+        return [(0, peak_len)], peak_len
+
+    midpoints = sorted(((hits_df["hit_start"] + hits_df["hit_end"]) // 2).astype(int).tolist())
+    if not midpoints:
+        return [(0, peak_len)], peak_len
+
+    clusters = [[midpoints[0]]]
+    for m in midpoints[1:]:
+        if m - clusters[-1][-1] < gap_threshold:
+            clusters[-1].append(m)
+        else:
+            clusters.append([m])
+
+    segs = []
+    for c in clusters:
+        s = max(0, min(c) - flank)
+        e = min(peak_len, max(c) + flank)
+        segs.append((s, e))
+    # merge overlapping
+    segs.sort()
+    merged = [segs[0]]
+    for s, e in segs[1:]:
+        if s <= merged[-1][1]:
+            merged[-1] = (merged[-1][0], max(merged[-1][1], e))
+        else:
+            merged.append((s, e))
+    total = sum(e - s for s, e in merged)
+    return merged, total
+
+
+def synthesis_length_factor(length: int, max_synth: int = 500) -> float:
+    """1.0 if length ≤ max_synth, linearly declining (cap at 0.4 for very long).
+    Each additional 500 bp over the cap costs ~0.15 from the multiplier."""
+    if length <= max_synth:
+        return 1.0
+    excess = length - max_synth
+    return max(0.4, 1.0 - 0.15 * (excess / 500.0))
+
+
 # ── Core helpers ─────────────────────────────────────────────────────────────
 
 def annotate_peaks_from_cache(peaks: pd.DataFrame) -> pd.DataFrame:
@@ -150,7 +210,10 @@ def find_core_window(hits_df: pd.DataFrame, peak_len: int, win: int = 200) -> tu
 
 def compute_composite_score(df: pd.DataFrame,
                              target_celltype: str = None,
-                             prefer_distal: bool = False) -> pd.DataFrame:
+                             prefer_distal: bool = False,
+                             permissive_celltypes: list = None,
+                             max_synth_len: int = 500,
+                             apply_synth_penalty: bool = True) -> pd.DataFrame:
     """Add composite score columns to peak DataFrame.
     Each numeric feature is converted to a percentile rank (0–1).
 
@@ -174,19 +237,35 @@ def compute_composite_score(df: pd.DataFrame,
     out["composite_score"] = (out["base_score"] * out["peak_type_factor"]).round(4)
 
     # Use-case bonus (preserves the base composite score, adds context-specific boost)
-    out["mhb_target_match"] = (
+    out["target_match"] = (
         out["top1_celltype"].astype(str) == target_celltype if target_celltype else False
     )
+    permissive = set(permissive_celltypes or [])
+    out["top1_in_permissive"] = out["top1_celltype"].astype(str).isin(permissive) if permissive else False
+
     distal_bonus = 0.0
     if prefer_distal:
         distal_bonus = out["peak_type"].map(
             {"intergenic": 0.10, "intronic": 0.05}
         ).fillna(0.0)
-    target_bonus = out["mhb_target_match"].astype(float) * 0.15 if target_celltype else 0.0
-    out["use_case_score"] = (out["composite_score"]
-                              + (target_bonus if target_celltype else 0)
-                              + distal_bonus).round(4)
-    sort_col = "use_case_score" if (target_celltype or prefer_distal) else "composite_score"
+    target_bonus = out["target_match"].astype(float) * 0.15 if target_celltype else 0.0
+    permissive_bonus = (
+        out["top1_in_permissive"].astype(float) * 0.05 if permissive else 0
+    )
+
+    out["synthesis_length_factor"] = (
+        out["length"].apply(lambda L: synthesis_length_factor(int(L), max_synth_len))
+        if apply_synth_penalty else 1.0
+    )
+    raw = (out["composite_score"]
+           + (target_bonus if target_celltype else 0)
+           + (permissive_bonus if permissive else 0)
+           + (distal_bonus if prefer_distal else 0))
+    out["use_case_score"] = (raw * out["synthesis_length_factor"]).round(4)
+
+    sort_col = "use_case_score" if (
+        target_celltype or prefer_distal or permissive or apply_synth_penalty
+    ) else "composite_score"
     return out.sort_values(sort_col, ascending=False).reset_index(drop=True)
 
 
@@ -313,6 +392,22 @@ def main():
     p.add_argument("--prefer-distal", action="store_true",
                    help="Add +0.10 to intergenic peaks and +0.05 to intronic peaks "
                         "in use_case_score (favors distal-enhancer candidates).")
+    p.add_argument("--permissive-celltypes", default=None,
+                   help="Comma-separated celltypes where the target gene is also "
+                        "expressed (alternative tissues). Peaks with top1 in this "
+                        "list get +0.05 — NOT penalized as off-target.")
+    p.add_argument("--target-tss", default=None,
+                   help="Target gene TSS as 'chr:pos' (e.g., 'chr13:29770837' for "
+                        "pax2a). Adds distance_to_target_tss column (centroid-to-TSS).")
+    p.add_argument("--max-synthesis-length", type=int, default=500,
+                   help="Peaks longer than this get a synthesis-length penalty in "
+                        "use_case_score (IDT charges much more above this length). "
+                        "Default 500.")
+    p.add_argument("--no-synth-penalty", action="store_true",
+                   help="Disable the synthesis-length penalty (use original lengths).")
+    p.add_argument("--compact", action="store_true",
+                   help="Compute compact-segments: motif 'hubs' joined for synthesis "
+                        "of long peaks. Adds compact_segments and compact_length cols.")
     args = p.parse_args()
 
     os.makedirs(args.output_dir, exist_ok=True)
@@ -352,26 +447,67 @@ def main():
     peaks[f"core_{args.core_win}bp_end"]   = core_ends
     peaks[f"core_{args.core_win}bp_n_tfs"] = core_n_tfs
 
+    # 4b. Optional compacting: motif hubs joined for long-peak synthesis
+    if args.compact:
+        seg_strs, comp_lens, n_segs = [], [], []
+        for _, peak_row in peaks.iterrows():
+            peak_hits = hits[hits["peak_id"] == peak_row["peak_id"]]
+            peak_len = int(peak_row["end"] - peak_row["start"])
+            segs, total = compact_peak(peak_hits, peak_len,
+                                        max_total=args.max_synthesis_length)
+            # segments in absolute coords for downstream sequence extraction
+            abs_segs = [(int(peak_row["start"]) + s, int(peak_row["start"]) + e)
+                         for s, e in segs]
+            seg_strs.append(";".join(f"{s}-{e}" for s, e in abs_segs))
+            comp_lens.append(total)
+            n_segs.append(len(segs))
+        peaks["compact_segments"] = seg_strs
+        peaks["compact_length"]   = comp_lens
+        peaks["compact_n_segments"] = n_segs
+
+    # 4c. Distance to target gene TSS (centroid-to-TSS)
+    if args.target_tss:
+        chrom_in, pos_in = args.target_tss.split(":")
+        target_chrom = chrom_in.replace("chr", "")
+        target_pos = int(pos_in)
+        peaks["centroid"] = ((peaks["start"] + peaks["end"]) // 2).astype(int)
+        peaks["distance_to_target_tss"] = peaks.apply(
+            lambda r: int(abs(r["centroid"] - target_pos))
+            if str(r["chrom"]) == target_chrom else np.nan,
+            axis=1,
+        )
+
     # 5. Composite score and ranking
-    ranked = compute_composite_score(peaks,
-                                      target_celltype=args.target_celltype,
-                                      prefer_distal=args.prefer_distal)
+    permissive_list = ([s.strip() for s in args.permissive_celltypes.split(",")]
+                        if args.permissive_celltypes else None)
+    ranked = compute_composite_score(
+        peaks,
+        target_celltype=args.target_celltype,
+        prefer_distal=args.prefer_distal,
+        permissive_celltypes=permissive_list,
+        max_synth_len=args.max_synthesis_length,
+        apply_synth_penalty=not args.no_synth_penalty,
+    )
     ranked["rank"] = np.arange(1, len(ranked) + 1)
 
     # Reorder columns
     use_case_cols = ["use_case_score"] if "use_case_score" in ranked.columns else []
+    target_cols = (["distance_to_target_tss"] if args.target_tss else [])
+    compact_cols = (["compact_length", "compact_n_segments", "compact_segments"]
+                     if args.compact else [])
     front = ["rank"] + use_case_cols + [
              "composite_score", "peak_id", "chrom", "start", "end", "length",
-             "peak_type", "distance_to_tss",
+             "peak_type", "distance_to_tss"] + target_cols + [
              "linked_gene", "nearest_gene",
              "top1_celltype", "top1_z", "top2_celltype", "top2_z",
              "max_z", "max_accessibility", "tau",
              "n_unique_tfs", "n_motif_hits", "median_neg_log_p", "top_tfs",
              f"core_{args.core_win}bp_start", f"core_{args.core_win}bp_end",
-             f"core_{args.core_win}bp_n_tfs",
+             f"core_{args.core_win}bp_n_tfs"] + compact_cols + [
              "rank_specificity", "rank_activity", "rank_tf_density",
              "rank_motif_strength", "base_score", "peak_type_factor",
-             "mhb_target_match"]
+             "synthesis_length_factor",
+             "target_match", "top1_in_permissive"]
     front = [c for c in front if c in ranked.columns]
     other = [c for c in ranked.columns if c not in front]
     ranked = ranked[front + other]
