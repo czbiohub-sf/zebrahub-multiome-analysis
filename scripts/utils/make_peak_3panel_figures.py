@@ -132,7 +132,10 @@ def _name_match(p: str, prefix_set: set) -> bool:
 
 
 def classify_tf(tf_name: str) -> str:
-    """Return 'explicit', 'implicit', 'background', or 'other'."""
+    """Return 'explicit', 'implicit', 'background', or 'other'.
+    Uses the hardcoded MHB curation. For other tissues, supply a
+    tf_biology_table.csv via load_tf_biology_lookup() — that overrides
+    this function via classify_tf_with_lookup()."""
     if not tf_name:
         return "other"
     parts = re.split(r"[\W_]+", tf_name.upper())
@@ -147,6 +150,36 @@ def classify_tf(tf_name: str) -> str:
     if ZF_BACKGROUND.match(tf_name):
         return "background"
     return "other"
+
+
+# ── Tissue-agnostic classification via agent-curated biology table ──────────
+
+def load_tf_biology_lookup(csv_path: str) -> dict:
+    """Load a tf_biology_table.csv (filled by the curating agent) and
+    return a {tf_name → category} dict. Categories are normalized to
+    lowercase 'explicit', 'implicit', 'background', or 'other' to match
+    classify_tf() return values."""
+    if csv_path is None or not os.path.exists(csv_path):
+        return {}
+    df = pd.read_csv(csv_path)
+    if "tf" not in df.columns or "category" not in df.columns:
+        return {}
+    table = {}
+    for _, r in df.iterrows():
+        tf = str(r["tf"]).strip()
+        cat = str(r.get("category", "")).strip().lower()
+        if cat in ("explicit", "implicit", "background", "irrelevant", "other"):
+            # normalize 'irrelevant' → 'other'
+            table[tf] = "other" if cat == "irrelevant" else cat
+    return table
+
+
+def classify_tf_with_lookup(tf_name: str, lookup: dict) -> str:
+    """Look up `tf_name` in the agent-curated lookup; fall back to the
+    hardcoded MHB classifier if no entry."""
+    if lookup and tf_name in lookup:
+        return lookup[tf_name]
+    return classify_tf(tf_name)
 
 
 # ── Data loading helpers ─────────────────────────────────────────────────────
@@ -319,14 +352,20 @@ def plot_panel_2(ax, peak_row, hits_df, core_start_offset, core_end_offset,
     ax.set_title(title, fontsize=9)
 
 
-def panel_3_summary_text(peak_row, hits_df) -> str:
-    """Return a multi-line markdown-style summary for the text panel."""
+def panel_3_summary_text(peak_row, hits_df, tf_lookup: dict = None) -> str:
+    """Return a multi-line markdown-style summary for the text panel.
+    If `tf_lookup` (from load_tf_biology_lookup) is provided, it
+    overrides the hardcoded MHB curation per-TF."""
     if hits_df.empty:
         return "No FIMO hits."
 
     # Best hit per TF
     best = hits_df.loc[hits_df.groupby("tf")["pvalue"].idxmin()].copy()
-    best["category"] = best["tf"].apply(classify_tf)
+    if tf_lookup:
+        best["category"] = best["tf"].apply(
+            lambda t: classify_tf_with_lookup(t, tf_lookup))
+    else:
+        best["category"] = best["tf"].apply(classify_tf)
     best = best.sort_values("pvalue")
 
     explicit = best[best["category"] == "explicit"]
@@ -392,7 +431,7 @@ def panel_3_summary_text(peak_row, hits_df) -> str:
 
 
 def make_peak_figure(peak_row, hits_df, ct_names, ct_z, tps, tp_vals, tp_z,
-                     core_s_off, core_e_off, outpath):
+                     core_s_off, core_e_off, outpath, tf_lookup: dict = None):
     fig = plt.figure(figsize=(13, 11.0))
     gs = gridspec.GridSpec(
         nrows=3, ncols=2,
@@ -428,7 +467,7 @@ def make_peak_figure(peak_row, hits_df, ct_names, ct_z, tps, tp_vals, tp_z,
     # Panel 3: text summary
     ax3 = fig.add_subplot(gs[2, :])
     ax3.axis("off")
-    summary = panel_3_summary_text(peak_row, hits_df)
+    summary = panel_3_summary_text(peak_row, hits_df, tf_lookup=tf_lookup)
     ax3.text(0.0, 0.97, summary, ha="left", va="top",
              fontsize=8.5, family="monospace")
 
@@ -459,7 +498,14 @@ def main():
                    help="Number of top-ranked peaks to plot (default: 10)")
     p.add_argument("--core-win", type=int, default=200,
                    help="Core window width column suffix (default: 200)")
+    p.add_argument("--tf-biology-csv", default=None,
+                   help="Optional agent-curated TF biology table "
+                        "(columns: tf, category) — overrides the hardcoded "
+                        "MHB curation per-TF. Use for non-MHB tissues.")
     args = p.parse_args()
+    tf_lookup = load_tf_biology_lookup(args.tf_biology_csv) if args.tf_biology_csv else {}
+    if tf_lookup:
+        print(f"Loaded {len(tf_lookup)} TF biology entries from {args.tf_biology_csv}")
 
     os.makedirs(args.output_dir, exist_ok=True)
 
@@ -498,7 +544,8 @@ def main():
         outpath = (f"{args.output_dir}/peak_summary_rank"
                    f"{int(peak_row['rank']):02d}_{peak_id}.pdf")
         make_peak_figure(peak_row, peak_hits, ct_names, ct_z,
-                          tps, tp_vals, tp_z, core_s_off, core_e_off, outpath)
+                          tps, tp_vals, tp_z, core_s_off, core_e_off, outpath,
+                          tf_lookup=tf_lookup)
         print(f"  rank {int(peak_row['rank']):02d}: {peak_id}  →  {outpath}")
 
     print("\nDone.")

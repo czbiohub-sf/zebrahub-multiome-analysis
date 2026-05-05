@@ -120,23 +120,73 @@ gene_locus_explore.py  ──► one-command driver
 
 ## Generalizing to other tissues / genes
 
-The pipeline is gene-agnostic. Three things are MHB-specific in the
-current code and worth knowing about:
+The pipeline is gene-agnostic. Three things still need tissue context:
 
-1. **`MHB_EXPLICIT` / `MHB_IMPLICIT` TF curation** in
-   `make_peak_3panel_figures.py`. These are MHB-relevant TF prefixes
-   (PAX, EN, OTX, GBX, FGF8, WNT1/8, LMX, IRX, etc.). For another
-   tissue, add a parallel list (e.g., `NC_EXPLICIT` for neural crest:
-   SOX9/10, FOXD3, SNAI1/2, TFAP2, ZIC, MSX1/2, etc.) and a
-   `--tissue` flag. **Easy 30-minute refactor when you want it.**
+1. **TF biology curation** (the EXPLICIT / IMPLICIT classification
+   shown in each peak's text panel). Default: hardcoded MHB list in
+   `make_peak_3panel_figures.py`. **For non-MHB tissues, use the
+   agent-curation workflow below — no code edits required.**
 
-2. **`--target-celltype` and `--permissive-celltypes`.** These are
-   already user-supplied CLI args — pass any combination relevant to
-   your gene. No code change needed.
+2. **`--target-celltype` and `--permissive-celltypes`.** Already
+   user-supplied CLI args — pass any combination relevant to your
+   gene. No code change needed.
 
-3. **GTF.** The default is danRer11 zebrafish
+3. **GTF.** Default is danRer11 zebrafish
    (`/hpc/reference/sequencing_alignment/alignment_references/zebrafish_genome_GRCz11/genes/genes.gtf.gz`).
-   For other species you can pass `--gtf` to most utilities.
+   For other species pass `--gtf` to the relevant utilities.
+
+### Agent-driven TF curation workflow (replaces hardcoded MHB list)
+
+Instead of hand-curating TF lists per tissue, use this two-step flow:
+
+```bash
+# 1. After running gene_locus_explore.py, generate the research brief:
+$PYTHON scripts/utils/tf_biology_lookup.py \
+    --fimo-hits results/<gene>/<gene>_jaspar_fimo_hits.csv \
+    --label <gene> \
+    --target-tissue <celltype> \
+    --target-gene <gene> \
+    --output-dir results/<gene>/ \
+    --top-n 25
+```
+
+This produces:
+- `<gene>_tf_research_brief.md` — markdown with prepared **ZFIN, NCBI
+  Gene, Alliance Genome, PubMed** query URLs for each of the top-N
+  TFs. URLs include the target tissue and gene as search terms so the
+  TF + tissue association is what's being looked up.
+- `<gene>_tf_biology_table.csv` — stub table with columns `tf,
+  n_peaks_bound, fraction_peaks, best_pvalue, jaspar_accession,
+  category, citations, notes`. The `category, citations, notes`
+  columns are blank, ready for an agent to fill.
+
+```bash
+# 2. An agent (Claude with WebSearch / WebFetch, or a researcher) opens
+#    the brief, follows the prepared URLs, and fills in for each TF:
+#       category   ∈ {EXPLICIT, IMPLICIT, IRRELEVANT}
+#       citations  PMID / DOI / ZFIN entries (semicolon-delimited)
+#       notes      1-line mechanism / role
+```
+
+```bash
+# 3. Re-run the 3-panel figures pointing at the filled CSV:
+$PYTHON scripts/utils/make_peak_3panel_figures.py \
+    --ranking-csv results/<gene>/<gene>_enhancer_ranking.csv \
+    --fimo-hits   results/<gene>/<gene>_jaspar_fimo_hits.csv \
+    --output-dir  results/<gene>/<gene>_3panel/ \
+    --top-n       10 \
+    --tf-biology-csv results/<gene>/<gene>_tf_biology_table.csv
+```
+
+The text panels now classify TFs based on the agent's tissue-specific
+curation rather than the hardcoded MHB list.
+
+**Why this design.** The set of "MHB explicit" TFs (PAX, EN, OTX, …)
+is hand-curation that breaks for every new tissue. By moving the
+classification into a per-query CSV that an agent fills via
+literature search, the pipeline scales to any gene/tissue without
+code edits — and the agent's reasoning + citations are preserved as
+part of the analysis trail.
 
 ---
 
@@ -175,7 +225,8 @@ should contain. The CSVs already drive every visual encoding.
 | `run_fimo_on_peaks.py` | FIMO TF motif scan on any peaks CSV (JASPAR2024 / H12CORE / CIS-BP) |
 | `rank_synthetic_enhancers.py` | Composite-score ranking + 200 bp core + compact hubs |
 | `plot_peaks_locus_view.py` | Chromosome-track view (the headline figure) |
-| `make_peak_3panel_figures.py` | Per-peak 3-panel deep dive |
+| `make_peak_3panel_figures.py` | Per-peak 3-panel deep dive (accepts `--tf-biology-csv` for agent-curated tissue classification) |
+| `tf_biology_lookup.py` | Aggregates top-N TFs from FIMO output → research-brief markdown + stub CSV for agent curation |
 | `gtf_helpers.py` | `get_gene_tss()`, `get_gene_struct()` — shared GTF utilities |
 | `SYNTHETIC_ENHANCER_PIPELINE.md` | AgenticCRE-focused pipeline doc (DE-genes → synthesis seeds) |
 | `GENE_LOCUS_EXPLORER.md` | This file |
