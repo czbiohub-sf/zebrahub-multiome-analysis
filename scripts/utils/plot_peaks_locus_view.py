@@ -39,9 +39,8 @@ import matplotlib.patches as mpatches
 REPO = "/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/zebrahub-multiome-analysis"
 sys.path.insert(0, f"{REPO}/scripts/utils")
 from module_dict_colors import cell_type_color_dict
+from gtf_helpers import DEFAULT_GTF, get_gene_struct as get_gene_struct_from_gtf
 
-DEFAULT_GTF = ("/hpc/reference/sequencing_alignment/alignment_references/"
-                "zebrafish_genome_GRCz11/genes/genes.gtf.gz")
 V3_ZMAT = f"{REPO}/notebooks/EDA_peak_parts_list/outputs/V3/V3_specificity_matrix_celltype_level.h5ad"
 
 
@@ -67,44 +66,6 @@ def lookup_top1_accessibility(peaks_df: pd.DataFrame, v3_h5ad: str = V3_ZMAT) ->
             return float(row[col])
         return float("nan")
     return out.apply(fetch, axis=1)
-
-
-# ── GTF parsing ──────────────────────────────────────────────────────────────
-
-def get_gene_struct_from_gtf(gtf_path: str, gene_name: str):
-    """Return (chrom, gene_start, gene_end, strand, exons) for the longest
-    transcript of `gene_name`. exons = list of (start, end)."""
-    opener = gzip.open if gtf_path.endswith(".gz") else open
-    transcripts = defaultdict(list)
-    tx_meta = {}
-    with opener(gtf_path, "rt") as f:
-        for line in f:
-            if line.startswith("#"):
-                continue
-            parts = line.rstrip("\n").split("\t")
-            if len(parts) < 9:
-                continue
-            ftype = parts[2]
-            attr_str = parts[8]
-            if f'gene_name "{gene_name}"' not in attr_str:
-                continue
-            chrom, start, end, strand = parts[0], int(parts[3]), int(parts[4]), parts[6]
-            m = re.search(r'transcript_id "([^"]+)"', attr_str)
-            tx = m.group(1) if m else None
-            if not tx:
-                continue
-            if ftype == "transcript":
-                tx_meta[tx] = (chrom, start, end, strand)
-            elif ftype == "exon":
-                transcripts[tx].append((start, end))
-
-    if not tx_meta:
-        return None
-    # Pick the longest transcript
-    longest = max(tx_meta.items(), key=lambda kv: kv[1][2] - kv[1][1])
-    tx, (chrom, gs, ge, strand) = longest
-    exons = sorted(transcripts.get(tx, []))
-    return chrom, gs, ge, strand, exons
 
 
 # ── Plotting ─────────────────────────────────────────────────────────────────
