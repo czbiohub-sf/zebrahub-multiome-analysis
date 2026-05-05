@@ -167,7 +167,29 @@ def main():
                "--fimo-hits",   fimo_hits,
                "--output-dir",  panel_dir,
                "--top-n",       str(args.top_n_3panel)]
+        # Use agent-curated TF biology if a previous run already produced one
+        tf_csv = f"{args.output_dir}/{label}_tf_biology_table.csv"
+        if os.path.exists(tf_csv):
+            try:
+                # Only use it if the agent has filled in any 'category' values
+                df = pd.read_csv(tf_csv)
+                if "category" in df.columns and df["category"].astype(str).str.len().sum() > 0:
+                    cmd += ["--tf-biology-csv", tf_csv]
+                    print(f"  → using agent-filled TF biology: {tf_csv}")
+            except Exception:
+                pass
         run(cmd, f"[5/5] 3-panel deep-dive (top {args.top_n_3panel} peaks)")
+
+    # ── 6. (always) Generate TF biology research brief for agent curation ─
+    cmd = [PYTHON, f"{UTILS}/tf_biology_lookup.py",
+           "--fimo-hits", fimo_hits,
+           "--label", label,
+           "--output-dir", args.output_dir,
+           "--top-n", "25"]
+    if args.target_celltype:
+        cmd += ["--target-tissue", args.target_celltype]
+    cmd += ["--target-gene", args.gene]
+    run(cmd, "[6/6] TF biology research brief (for agent curation)")
 
     print("\n" + "=" * 70)
     print(f"DONE — gene_locus_explore for {args.gene}")
