@@ -132,6 +132,42 @@ Results are saved in `scripts/litemind_peak_analysis/results/`:
 
 See `scripts/litemind_peak_analysis/README.md` for detailed documentation.
 
+## Gene Locus Explorer (`scripts/utils/`)
+
+Gene-agnostic pipeline for going from a gene name → all its associated
+chromatin peaks → ranked synthetic-enhancer candidates → publication
+figures. Single-command driver:
+
+```bash
+PYTHON=/hpc/user_apps/data.science/conda_envs/single-cell-base/bin/python
+$PYTHON scripts/utils/gene_locus_explore.py \
+    --gene sox10 --output-dir results/sox10/ \
+    --target-celltype neural_crest
+```
+
+**Key utilities (all in `scripts/utils/`):**
+
+| Script | Purpose |
+|---|---|
+| `gene_locus_explore.py` | One-command driver chaining the 5 steps below |
+| `marker_gene_peaks.py` | gene name → peaks CSV (Cicero-linked + nearest-TSS) with V3 z-scores attached |
+| `build_peak_metadata_cache.py` | One-time builder for the 77 MB peak metadata cache (parquet) |
+| `run_fimo_on_peaks.py` | FIMO TF-motif scan on any peaks CSV (default: JASPAR2024) |
+| `rank_synthetic_enhancers.py` | Composite-score ranking + 200 bp core extraction + motif-hub compacting for IDT-friendly synthesis |
+| `plot_peaks_locus_view.py` | Chromosome-track view: peaks colored by top1 celltype, height = log_norm accessibility, with gene body / exons / TSS |
+| `make_peak_3panel_figures.py` | Per-peak deep dive: celltype z-score bars + timepoint specificity + motif track + TF biology summary |
+| `gtf_helpers.py` | Shared `get_gene_tss()` / `get_gene_struct()` |
+
+**Reference docs:**
+- `scripts/utils/GENE_LOCUS_EXPLORER.md` — vision + how to extend to any gene
+- `scripts/utils/SYNTHETIC_ENHANCER_PIPELINE.md` — AgenticCRE-focused pipeline (DE-genes → synthesis seeds)
+
+The peak metadata cache parquet (gitignored) lives at:
+`notebooks/EDA_peak_parts_list/outputs/V3/peak_metadata_cache.parquet`
+
+Sanity-tested on `pax2a` (33 peaks, MHB) and `sox10` (26 peaks, neural
+crest). Total runtime ~1–3 min per gene.
+
 ## Development Workflow
 
 ### Working with Notebooks
