@@ -8,21 +8,36 @@
 #
 # Env: single-cell-base (no pysam/pymemesuite needed)
 
-import os, time
+import os, time, argparse
 import numpy as np
 import pandas as pd
 from scipy.stats import fisher_exact
 from statsmodels.stats.multitest import multipletests
 
+# Registry mirror — we only need the suffix; TF parsing already happened at batch time.
+MOTIF_DB_SUFFIX = {
+    "h12core":        "",
+    "jaspar2024":     "_jaspar2024",
+    "cisbpv2_danrer": "_cisbpv2_danrer",
+}
+
+parser = argparse.ArgumentParser(description="Merge FIMO batches + Fisher's exact test")
+parser.add_argument("--motif-db", choices=list(MOTIF_DB_SUFFIX.keys()), default="h12core",
+                    help="Motif database (must match batch run). Default: h12core")
+args = parser.parse_args()
+
+SUFFIX = MOTIF_DB_SUFFIX[args.motif_db]
+
 print("=== Script 09j-merge: Merge FIMO Batches + Fisher's Exact Test ===")
-print(f"Start: {time.strftime('%c')}")
+print(f"Start:    {time.strftime('%c')}")
+print(f"Motif DB: {args.motif_db}  (suffix='{SUFFIX}')")
 
 # %% Paths
 BASE    = "/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome"
 REPO    = f"{BASE}/zebrahub-multiome-analysis"
 V3_DIR  = f"{REPO}/notebooks/EDA_peak_parts_list/outputs/V3"
 SCRATCH     = "/hpc/scratch/group.data.science/yang-joon.kim/peak-parts-list-motifs"
-BATCH_DIR   = f"{SCRATCH}/batches"
+BATCH_DIR   = f"{SCRATCH}/batches{SUFFIX}"
 TOP200_CSV  = f"{V3_DIR}/V3_all_celltypes_top200_peaks.csv"
 
 # %% Discover celltypes from batch directory
@@ -56,8 +71,8 @@ pos_df = pd.concat(all_positions, ignore_index=True)
 print(f"  Total: {len(all_peak_ids)} peaks, {len(pos_df)} motif hits")
 
 # Save merged positions
-pos_df.to_csv(f"{SCRATCH}/V3_top200_motif_positions.csv", index=False)
-print(f"  Saved: V3_top200_motif_positions.csv")
+pos_df.to_csv(f"{SCRATCH}/V3_top200_motif_positions{SUFFIX}.csv", index=False)
+print(f"  Saved: V3_top200_motif_positions{SUFFIX}.csv")
 
 # %% Build binary hit matrix: peaks × unique TFs
 print("\nBuilding binary hit matrix (peaks × TFs) ...", flush=True)
@@ -80,8 +95,8 @@ for _, row in peak_tf_hits.iterrows():
         hit_mat[pid_to_row[pid], tf_to_col[tf]] = True
 
 hit_df = pd.DataFrame(hit_mat, index=peak_ids_ordered, columns=unique_tfs)
-hit_df.to_csv(f"{SCRATCH}/V3_top200_motif_hit_matrix.csv")
-print(f"  Saved: V3_top200_motif_hit_matrix.csv  ({hit_df.shape})")
+hit_df.to_csv(f"{SCRATCH}/V3_top200_motif_hit_matrix{SUFFIX}.csv")
+print(f"  Saved: V3_top200_motif_hit_matrix{SUFFIX}.csv  ({hit_df.shape})")
 
 # %% Celltype → peak mapping (from batch discovery above)
 ct_to_peaks = celltype_peak_map
@@ -163,7 +178,7 @@ fisher_df["log2_fold"] = np.log2(
 )
 
 # Save enrichment results
-enrich_path = f"{SCRATCH}/V3_top200_motif_enrichment_all31.csv"
+enrich_path = f"{SCRATCH}/V3_top200_motif_enrichment_all31{SUFFIX}.csv"
 fisher_df.to_csv(enrich_path, index=False)
 print(f"  Saved: {enrich_path}  ({len(fisher_df)} rows)")
 
@@ -190,7 +205,7 @@ for pid in peak_ids_ordered:
 peak_summary["top_tfs"] = pd.Series(top_tfs_per_peak)
 peak_summary["has_motif_support"] = peak_summary["n_tfs_with_hit"] >= 3
 
-summary_path = f"{SCRATCH}/V3_top200_peak_motif_summary.csv"
+summary_path = f"{SCRATCH}/V3_top200_peak_motif_summary{SUFFIX}.csv"
 peak_summary.to_csv(summary_path)
 print(f"  Saved: {summary_path}")
 
@@ -200,7 +215,7 @@ portal_table = top200.merge(
     peak_summary[["n_tfs_with_hit", "n_total_hits", "top_tfs", "has_motif_support"]],
     left_on="peak_id", right_index=True, how="left"
 )
-portal_path = f"{SCRATCH}/V3_all_celltypes_top200_peaks_with_motifs.csv"
+portal_path = f"{SCRATCH}/V3_all_celltypes_top200_peaks_with_motifs{SUFFIX}.csv"
 portal_table.to_csv(portal_path, index=False)
 print(f"  Saved: {portal_path}  ({len(portal_table)} rows)")
 
@@ -223,10 +238,10 @@ for ct in all_celltypes:
     print(f"  {ct:<30} {n_sig:>3} sig TFs  top: {', '.join(top3)}")
 
 print(f"\nOutput files:")
-print(f"  {SCRATCH}/V3_top200_motif_positions.csv")
-print(f"  {SCRATCH}/V3_top200_motif_hit_matrix.csv")
-print(f"  {SCRATCH}/V3_top200_motif_enrichment_all31.csv")
-print(f"  {SCRATCH}/V3_top200_peak_motif_summary.csv")
-print(f"  {SCRATCH}/V3_all_celltypes_top200_peaks_with_motifs.csv")
+print(f"  {SCRATCH}/V3_top200_motif_positions{SUFFIX}.csv")
+print(f"  {SCRATCH}/V3_top200_motif_hit_matrix{SUFFIX}.csv")
+print(f"  {SCRATCH}/V3_top200_motif_enrichment_all31{SUFFIX}.csv")
+print(f"  {SCRATCH}/V3_top200_peak_motif_summary{SUFFIX}.csv")
+print(f"  {SCRATCH}/V3_all_celltypes_top200_peaks_with_motifs{SUFFIX}.csv")
 
 print(f"\nDone. End: {time.strftime('%c')}")
