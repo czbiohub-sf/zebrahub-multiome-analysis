@@ -48,10 +48,8 @@ MEME_PATH   = ("/hpc/projects/data.science/yangjoon.kim/github_repos/"
 V3_ZMAT     = f"{OUTDIR}/V3_specificity_matrix_celltype_level.h5ad"
 ENRICH_CSV  = f"{OUTDIR}/V3_all31_motif_enrichment.csv"
 
-INTERESTING_6 = [
-    "epidermis", "neural_crest", "hemangioblasts",
-    "hindbrain", "optic_cup", "hatching_gland",
-]
+# Run for ALL celltypes (loaded from z-score matrix below)
+INTERESTING_6 = None  # will be set to all ct_names after loading
 TOP_N_PEAKS = 5
 TOP_N_TFS   = 10   # top enriched TFs per celltype to scan for
 PVAL_THRESH = 1e-4
@@ -71,6 +69,10 @@ ct_names = list(z_adata.var_names)
 
 enrich_df = pd.read_csv(ENRICH_CSV)
 print(f"  Enrichment: {len(enrich_df)} rows")
+
+# Use all celltypes from z-score matrix
+INTERESTING_6 = list(ct_names)
+print(f"  Will process all {len(INTERESTING_6)} celltypes")
 
 # %% Load JASPAR motifs
 print("Loading JASPAR motifs ...", flush=True)
@@ -263,7 +265,7 @@ for ct in INTERESTING_6:
 fa.close()
 
 # %% Save motif positions CSV
-motif_csv = f"{OUTDIR}/V3_interesting6_top5_motif_positions.csv"
+motif_csv = f"{OUTDIR}/V3_all_celltypes_top5_motif_positions.csv"
 pd.DataFrame(all_peak_motif_data).to_csv(motif_csv, index=False)
 print(f"\nSaved: {motif_csv} ({len(all_peak_motif_data)} rows)")
 
