@@ -21,24 +21,65 @@ from pymemesuite.common import (MotifFile, Sequence as MemeSequence,
                                  Background, Array as MemeArray)
 from pymemesuite.fimo import FIMO as FIMOScanner
 
+# %% Motif-database registry (shared schema with 09j_precompute_motif_hits_top200.py)
+
+def _parse_h12core(acc, name):
+    return (acc or "").split(".")[0]
+
+def _parse_jaspar2024(acc, name):
+    parts = (acc or "").split(":")
+    return parts[1] if len(parts) >= 2 else (acc or "")
+
+def _parse_cisbpv2(acc, name):
+    return name or (acc or "").split(".")[0]
+
+GRELU_MEME = ("/hpc/projects/data.science/yangjoon.kim/github_repos/"
+              "gReLU/src/grelu/resources/meme")
+SCRATCH_ROOT = "/hpc/scratch/group.data.science/yang-joon.kim/peak-parts-list-motifs"
+
+MOTIF_DBS = {
+    "h12core": {
+        "path":      f"{GRELU_MEME}/H12CORE_meme_format.meme",
+        "suffix":    "",
+        "tf_parser": _parse_h12core,
+    },
+    "jaspar2024": {
+        "path":      f"{GRELU_MEME}/jaspar_2024_consensus.meme",
+        "suffix":    "_jaspar2024",
+        "tf_parser": _parse_jaspar2024,
+    },
+    "cisbpv2_danrer": {
+        "path":      f"{SCRATCH_ROOT}/motif_dbs/cisbpv2_danrer.meme",
+        "suffix":    "_cisbpv2_danrer",
+        "tf_parser": _parse_cisbpv2,
+    },
+}
+
 parser = argparse.ArgumentParser()
 parser.add_argument("--celltype-idx", type=int, required=True,
                     help="Index into sorted list of 31 celltypes")
+parser.add_argument("--motif-db", choices=list(MOTIF_DBS.keys()), default="h12core")
 args = parser.parse_args()
 
-CT_IDX = args.celltype_idx
+CT_IDX    = args.celltype_idx
+db_cfg    = MOTIF_DBS[args.motif_db]
+MEME_PATH = db_cfg["path"]
+SUFFIX    = db_cfg["suffix"]
+tf_parser = db_cfg["tf_parser"]
+
+if not os.path.exists(MEME_PATH):
+    sys.exit(f"ERROR: MEME file not found: {MEME_PATH}")
 
 # %% Paths
 BASE    = "/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome"
 REPO    = f"{BASE}/zebrahub-multiome-analysis"
 V3_DIR  = f"{REPO}/notebooks/EDA_peak_parts_list/outputs/V3"
-SCRATCH = "/hpc/scratch/group.data.science/yang-joon.kim/peak-parts-list-motifs/batches"
+# Batches go into a suffix-specific subdir so H12CORE / JASPAR / CIS-BP runs don't collide
+SCRATCH = f"{SCRATCH_ROOT}/batches{SUFFIX}"
 os.makedirs(SCRATCH, exist_ok=True)
 
 TOP200_CSV = f"{V3_DIR}/V3_all_celltypes_top200_peaks.csv"
 FASTA_PATH = "/hpc/reference/sequencing_alignment/fasta_references/danRer11.primary.fa"
-MEME_PATH  = ("/hpc/projects/data.science/yangjoon.kim/github_repos/"
-              "gReLU/src/grelu/resources/meme/H12CORE_meme_format.meme")
 
 PVAL_THRESH = 1e-4
 
@@ -81,15 +122,23 @@ fa.close()
 n_valid = len(peak_ids)
 print(f"  Valid sequences: {n_valid}/{n_peaks}")
 
-# %% Load motifs
-print("Loading JASPAR motifs ...", flush=True)
+# %% Load motifs (database-dependent TF name extraction)
+print(f"Loading motifs from {args.motif_db} ...", flush=True)
 motif_file = MotifFile(MEME_PATH)
 motif_list = list(motif_file)
-motif_names = [m.accession.decode() if isinstance(m.accession, bytes) else str(m.accession)
-               for m in motif_list]
-motif_tf_names = [n.split(".")[0] for n in motif_names]
+
+def _decode(x):
+    if x is None:
+        return ""
+    return x.decode() if isinstance(x, bytes) else str(x)
+
+motif_accessions = [_decode(m.accession) for m in motif_list]
+motif_display    = [_decode(getattr(m, "name", "")) for m in motif_list]
+motif_tf_names   = [tf_parser(acc, name) for acc, name in zip(motif_accessions, motif_display)]
+motif_names      = motif_accessions  # preserve downstream variable name
+
 n_motifs = len(motif_list)
-print(f"  {n_motifs} motifs")
+print(f"  {n_motifs} motifs, {len(set(motif_tf_names))} unique TFs")
 
 _bg = Background(motif_list[0].alphabet, MemeArray([0.25, 0.25, 0.25, 0.25]))
 
