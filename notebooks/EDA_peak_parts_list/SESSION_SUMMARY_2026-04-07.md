@@ -232,6 +232,25 @@ Top-200 gives more robust statistics. Key changes vs top-50:
 - Only shows FDR < 0.05 enriched TFs (not all 1,443)
 - Use to show "where in the DNA are the TF binding sites" for the SI figure panel f
 
+### Validation: marker gene promoters captured by the parts list
+
+Examining the hemangioblast top-20 peaks revealed that **promoters of well-known hematopoietic marker genes** are captured by the V3 z-score ranking:
+- **Rank 18: gata1a promoter** (chr11:25418422-25419319, z=77.8) — the master hematopoietic TF's own promoter
+- **Rank 17: hbbe2 promoter** (chr12:20340228-20341000, z=78.4) — hemoglobin beta embryonic
+- **Rank 19: hemgn promoter** (chr1:26666203-26666587, z=75.6) — hemogen, a hematopoietic marker
+- **Rank 1: slc4a1a promoter** (chr3:20091735-20092313, z=144.8) — Band 3, classic erythroid
+
+This corroborates the "parts list" claim: the approach recovers known biology (marker gene promoters) without any gene-level supervision — it works purely from chromatin accessibility patterns. The fact that both regulatory enhancers (intronic/intergenic peaks) AND promoters of canonical marker genes appear in the same ranked list validates that the V3 specificity z-score captures biologically meaningful celltype identity.
+
+### Combined motif position panel for SI figure
+
+Generated a side-by-side panel of two hemangioblast peaks showing distinct TF regulatory logic:
+- **Panel A (rank 3, CABZ01069040.1, 472bp)**: GATA cluster (GATA1-6) + TAL1/bHLH — core hematopoietic specification axis
+- **Panel B (rank 5, tfr1a, 568bp)**: GATA + KLF + TAL1 + MYB convergence — erythroid differentiation + proliferation
+
+TF families color-coded consistently (red=GATA, blue=TAL1, green=KLF, brown=MYB).
+Figure: `V3/motif_position_maps_V2_top200/hemangioblasts_rank3_rank5_combined_motif_map.{pdf,png}`
+
 ---
 
 ## 11. Open Questions / Next Steps
