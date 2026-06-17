@@ -168,6 +168,29 @@ The peak metadata cache parquet (gitignored) lives at:
 Sanity-tested on `pax2a` (33 peaks, MHB) and `sox10` (26 peaks, neural
 crest). Total runtime ~1–3 min per gene.
 
+## Peak Parts List — Multi-Database Motif Rescan (`notebooks/EDA_peak_parts_list/`)
+
+Batch FIMO motif scanning of the **top-200 peaks per celltype** (31 celltypes
+≈ 6,200 peaks) — distinct from the per-gene `run_fimo_on_peaks.py` above.
+Scans three motif databases for cross-database robustness:
+
+| Database | Scope | Output suffix |
+|---|---|---|
+| **H12CORE** (default) | HOCOMOCO v12 CORE, broad vertebrate (~1,443 PWMs) | none |
+| **JASPAR 2024** | clustered consensus profiles (182 PWMs) | `_jaspar` |
+| **CIS-BP v2 (Danio rerio)** | zebrafish-specific (~5,300 PWMs) | `_cisbp` |
+
+Key scripts (in `notebooks/EDA_peak_parts_list/`):
+- `09j_fimo_batch.py` — batch FIMO runner, `--motif-db {h12core,jaspar2024,cisbpv2_danrer}`
+- `09j_convert_cisbp_pfm_to_meme.py` — CIS-BP PFM → MEME conversion
+- `09j_precompute_motif_hits_top200.py` — precompute hit matrix for downstream panels
+- `09j_merge_and_test.py` — merge per-celltype FIMO + Fisher's-exact enrichment
+- `09i_motif_position_maps.py` — per-peak motif position maps
+- Per-DB SLURM runners: `slurm/run_09j_{fimo_array,merge}_{jaspar2024,cisbpv2}.sh`
+
+Scratch outputs: `/hpc/scratch/group.data.science/yang-joon.kim/peak-parts-list-motifs/`
+Reference: `notebooks/EDA_peak_parts_list/MOTIF_DATABASES.md` (+ `MOTIF_RESCAN_PLAN.md`)
+
 ## Development Workflow
 
 ### Working with Notebooks
