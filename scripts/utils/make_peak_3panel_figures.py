@@ -30,19 +30,13 @@ import numpy as np
 import pandas as pd
 import anndata as ad
 
-# ── Publication figure settings ──
-import matplotlib as _mpl
-_mpl.rcParams.update(_mpl.rcParamsDefault)
-_mpl.rcParams['font.family'] = 'Arial'
-_mpl.rcParams["pdf.fonttype"] = 42
-_mpl.rcParams["ps.fonttype"]  = 42
-import seaborn as _sns
-_sns.set(style="whitegrid", context="paper")
-_mpl.rcParams["savefig.dpi"]  = 300
+# ── Publication figure settings (shared module: scripts/utils/pub_fig_style.py) ──
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from pub_fig_style import apply as _apply_pub_style
+_apply_pub_style()
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 import matplotlib.gridspec as gridspec
-_mpl.rcParams["savefig.dpi"]  = 300
 
 REPO = "/hpc/projects/data.science/yangjoon.kim/zebrahub_multiome/zebrahub-multiome-analysis"
 sys.path.insert(0, f"{REPO}/scripts/utils")
