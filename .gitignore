@@ -76,3 +76,10 @@ scripts/save/
 # Peak parts list — local outputs (reports, CSVs, large matrices)
 notebooks/EDA_peak_parts_list/outputs/
 notebooks/EDA_peak_parts_list/logs/
+
+# Peak parts list — generated figure directories (PDFs/PNGs, regenerable)
+figures/peak_parts_list/V1/
+figures/peak_parts_list/V2/
+figures/peak_parts_list/V3/
+figures/peak_parts_list/TF_logos/
+figures/peak_parts_list/peak_profile_examples/
