@@ -1,85 +1,73 @@
-# IDE directories
-.idea
-.vscode
+# ============================================================
+# .gitignore — Zebrahub-Multiome (public Resource repo)
+# Keeps main lean and prevents re-bloat. NOTE: we DO track the
+# rendered .ipynb notebooks (with outputs) — do not ignore *.ipynb.
+# ============================================================
 
-# Python bytecode and cache
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+
+# Python cache / checkpoints
 *.pyc
 *.pyo
 __pycache__/
-
-# Jupyter notebook checkpoints
+.pytest_cache/
 .ipynb_checkpoints/
 
-# Jupyter notebooks (use .py files via jupytext pairing instead)
-*.ipynb
-
-# Specific files
-figures/peak_umap_annotated/peak_umaps_chroms_each.pdf
-REFACTOR.md
-
-# Large data files - not tracked in git
+# Large binary / data artifacts (never track)
 *.h5ad
-*.oracle
+*.h5
 *.zarr
-
-# Large CSV result files (moved to output/ directory)
-notebooks/Fig_peak_umap/peak_umap_3d_annotated*.csv
-notebooks/Fig_peak_umap/nearest_neighbors*_peak_distance_statistics.csv
-
-# Output files
-notebooks/Fig_peak_umap/output/
-notebooks/Fig3_GRN_dynamics/output/
-notebooks/Fig2_ATAC_RNA_correlation_metacells/output/
-notebooks/Fig_GRN_zoom_in/output/
-
-# Large archived notebooks and data
-notebooks/Fig1_atlas_QC/data/
-notebooks/Fig2_ATAC_RNA_correlation_metacells/archive/
-
-# LLM-generated prompts (large generated outputs - 186MB)
-notebooks/Fig_peak_umap/llm_annotation/prompts/
-notebooks/Fig_peak_umap/llm_annotation/litemind_prompt_leiden_coarse/
-
-# Chromatin velocity exploration (deprecated)
-figures/chrom_velocity/
-notebooks/Fig_peak_umap/chrom_velo/
-
-# Documentation drafts
-docs/
-
-# Cross-species EDA figures
-notebooks/EDA_peak_umap_cross_species/figures/
-
-# Planning documents
-plan_refactor_v2.md
-
-# LiteMind cache
-scripts/litemind_peak_analysis/.cache/
-
-# BioMart local cache
+*.loom
+*.oracle
+*.pkl
+*.pickle
+*.npy
+*.npz
+*.mtx
 *.sqlite
+*.bam
+*.bai
+*.bw
+*.bigwig
 
-# Large intermediate data (CSV coordinates, model checkpoints, SLURM logs)
-data/
-logs/
+# Logs
+*.log
+/logs/
+
+# Generated figures (regenerable from notebooks/scripts)
+figures/
+
+# Large data / scratch / output dirs (root-anchored so Fig1_atlas_QC/data/ stays tracked)
+/data/
 scripts/save/
-
-# Large figures not tracked
-figures/peak_psuedobulk_dynamics_v2/pca_vs_concord_peak_umap_all_peaks_comparison.pdf
-# CONCORD comparison figures
-figures/peak_psuedobulk_dynamics_v2/pca_vs_concord_peak_umap_all_peaks_comparison.pdf
-
-# Local data and saved model outputs
-data/
-scripts/save/
-
-# Peak parts list — local outputs (reports, CSVs, large matrices)
 notebooks/EDA_peak_parts_list/outputs/
 notebooks/EDA_peak_parts_list/logs/
+notebooks/Fig_peak_umap/output/
 
-# Peak parts list — generated figure directories (PDFs/PNGs, regenerable)
-figures/peak_parts_list/V1/
-figures/peak_parts_list/V2/
-figures/peak_parts_list/V3/
-figures/peak_parts_list/TF_logos/
-figures/peak_parts_list/peak_profile_examples/
+# LiteMind caches / generated outputs
+scripts/litemind_peak_analysis/.cache/
+scripts/litemind_peak_analysis/results/
+notebooks/Fig_peak_umap/llm_annotation/prompts/
+
+# Internal / AI scaffolding & planning docs (not for publication)
+CLAUDE.md
+LITEMIND_INTEGRATION_PLAN.md
+REFACTOR.md
+plan_refactor_v2.md
+.claude/
+/docs/
+
+# Secrets / environment
+.env
+.env.*
+*.key
+*.pem
+credentials.json
+
+# The 3 oversized notebooks are published as jupytext .py only (see README) — ignore their .ipynb
+notebooks/Fig_peak_umap/02_01_hierarchical_clustering_peak_umap.ipynb
+notebooks/Fig2_ATAC_RNA_correlation_metacells/Fig2_metacell_RNA_ATAC_dynamics_v2.ipynb
+notebooks/Fig3_GRN_dynamics/Fig3_SI_GRN_similarity_quant.ipynb
