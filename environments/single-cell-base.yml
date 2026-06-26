@@ -1,4 +1,4 @@
-name: /hpc/user_apps/data.science/conda_envs/single-cell-base
+name: single-cell-base
 channels:
   - conda-forge
   - bioconda
@@ -252,4 +252,3 @@ dependencies:
     - webencodings==0.5.1
     - websocket-client==1.8.0
     - xlsxwriter==3.2.0
-prefix: /hpc/user_apps/data.science/conda_envs/single-cell-base
