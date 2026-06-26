@@ -10,7 +10,7 @@ This repository contains the curated analysis code that produced the figures in 
 
 - **Interactive atlas / data portal:** https://zebrahub.ds.czbiohub.org/
 - **Manuscript (preprint):** [Zebrahub-Multiome: Uncovering Gene Regulatory Network Dynamics During Zebrafish Embryogenesis. *bioRxiv* (2024).](https://www.biorxiv.org/content/10.1101/2024.10.18.618987v1) doi:10.1101/2024.10.18.618987
-- **Peer-reviewed version:** [TODO: author to provide final Nature Methods citation + DOI once published]
+- **Peer-reviewed version:** _to be added upon publication._
 
 ### Analysis scope (by figure)
 
@@ -278,7 +278,7 @@ The notebooks consume a small set of processed objects rather than re-deriving e
 
 ### Data-availability statement (template for the manuscript)
 
-> Raw sequencing data have been deposited at NCBI SRA BioProject PRJNA1164307 and are publicly available as of the date of publication. Processed and annotated single-cell objects, and the derived pseudobulk/metacell/GRN objects required to reproduce the figures, are available at Google Drive (folder 1lk3VdHQuEiXTHZufMXp0C84T3pncqdCF) and through the Zebrahub data portal (https://zebrahub.ds.czbiohub.org/). All original analysis code is available in this repository (DOI: **[TODO: Zenodo code-archive DOI]**). Any additional information required to reanalyze the data is available from the lead contact upon request.
+> Raw sequencing data have been deposited at NCBI SRA BioProject PRJNA1164307 and are publicly available as of the date of publication. Processed and annotated single-cell objects, and the derived pseudobulk/metacell/GRN objects required to reproduce the figures, are available at Google Drive (folder 1lk3VdHQuEiXTHZufMXp0C84T3pncqdCF) and through the Zebrahub data portal (https://zebrahub.ds.czbiohub.org/). All original analysis code is available in this repository (a citable Zenodo snapshot will be deposited upon acceptance). Any additional information required to reanalyze the data is available from the lead contact upon request.
 
 ---
 
@@ -345,8 +345,8 @@ If you use this code, the atlas, or the derived data, please cite the Zebrahub-M
 > [Zebrahub-Multiome: Uncovering Gene Regulatory Network Dynamics During Zebrafish Embryogenesis. *bioRxiv* (2024).](https://www.biorxiv.org/content/10.1101/2024.10.18.618987v1) doi:10.1101/2024.10.18.618987
 
 **Peer-reviewed version:**
-> **[TODO: update with final Nature Methods citation + DOI once published]**
+> _Peer-reviewed citation to be added upon publication._
 
 Please also consider citing the key tools this Resource builds on where relevant: **SEACells** (metacells, Fig. 2), **CellOracle** (GRN + in-silico KO, Fig. 3–4), and **Signac/Cicero** (ATAC preprocessing).
 
-**Code archive:** for a permanent, citable snapshot of this repository, **[TODO: author to provide Zenodo DOI for the tagged code release]**.
+**Code archive:** a permanent, citable Zenodo snapshot of this repository will be deposited upon acceptance.
