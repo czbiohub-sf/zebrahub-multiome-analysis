@@ -71,3 +71,7 @@ credentials.json
 notebooks/Fig_peak_umap/02_01_hierarchical_clustering_peak_umap.ipynb
 notebooks/Fig2_ATAC_RNA_correlation_metacells/Fig2_metacell_RNA_ATAC_dynamics_v2.ipynb
 notebooks/Fig3_GRN_dynamics/Fig3_SI_GRN_similarity_quant.ipynb
+
+# Regenerable LiteMind LLM prompt artifacts — preserved locally, removed from published history
+notebooks/Fig_peak_umap/prompts/
+notebooks/Fig_peak_umap/litemind_prompt_leiden_coarse/
