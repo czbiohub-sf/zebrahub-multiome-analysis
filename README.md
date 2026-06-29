@@ -15,10 +15,14 @@ This repository contains the curated analysis code that produced the figures in 
 ### Analysis scope (by figure)
 
 - **Figure 1 — Atlas & QC** (`notebooks/Fig1_atlas_QC/`): integrated RNA+ATAC atlas, QC metrics, whole-embryo RNA/ATAC analysis, marker-gene/peak dotplots, and ATAC coverage tracks.
-- **Figure 2 — RNA–ATAC correlation via metacells** (`notebooks/Fig2_ATAC_RNA_correlation_metacells/`): SEACells metacell aggregation and RNA–ATAC correlation/co-accessibility dynamics across timepoints.
-- **Figure 3 — GRN dynamics** (`notebooks/Fig3_GRN_dynamics/`): cell-type/timepoint-resolved gene regulatory networks, sub-GRN regulatory programs, and network-similarity comparisons.
-- **Figure 4 — In-silico knockouts** (`notebooks/Fig4_in_silico_KO/`): CellOracle-based in-silico perturbation (KO) simulations and trajectory/UMAP analyses of perturbation effects.
-- **Supporting analyses:** peak UMAP & clustering (`notebooks/Fig_peak_umap/`), cross-species GRN/peak comparisons (`notebooks/Fig_cross_species_GRN/`, `notebooks/EDA_peak_umap_cross_species/`), GRN zoom-ins (`notebooks/Fig_GRN_zoom_in/`), and exploratory analyses under `notebooks/EDA_*`.
+- **Figure 2 — RNA–ATAC dynamics via metacells** (`notebooks/Fig2_ATAC_RNA_correlation_metacells/`): SEACells metacell aggregation and RNA–ATAC correlation / gene-UMAP dynamics across timepoints.
+- **Figure 3 — Genome-wide peak UMAP** (`notebooks/Fig_peak_umap/`): pseudobulk peak UMAP, hierarchical clustering, motif enrichment, peak→gene association, and trajectories (the "peaks parts list").
+- **Figure 4 — GRN dynamics** (`notebooks/Fig3_GRN_dynamics/`): cell-type/timepoint-resolved gene regulatory networks, sub-GRN regulatory programs, and network-similarity comparisons.
+- **Figure 5 — In-silico knockouts** (`notebooks/Fig4_in_silico_KO/`): CellOracle-based in-silico perturbation (KO) simulations and trajectory/UMAP analyses of perturbation effects.
+- **Figure 6 — Resource / web portal**: interactive exploration of the atlas plus a re-presentation of the peak, GRN, and KO results (composite figure; see the data-portal link above).
+- **Supporting analyses:** cross-species GRN/peak comparisons (`notebooks/Fig_cross_species_GRN/`, `notebooks/EDA_peak_umap_cross_species/`), GRN zoom-ins (`notebooks/Fig_GRN_zoom_in/`), the peak "parts list" (`notebooks/EDA_peak_parts_list/`), and exploratory analyses under `notebooks/EDA_*`.
+
+> **Note:** the `notebooks/` directory names predate the V2 figure renumbering — e.g. manuscript **Fig 3** (peak UMAP) lives in `notebooks/Fig_peak_umap/`, **Fig 4** (GRN) in `notebooks/Fig3_GRN_dynamics/`, and **Fig 5** (in-silico KO) in `notebooks/Fig4_in_silico_KO/`. See the **Figure → Notebook Map** for the exact mapping.
 
 ---
 
@@ -34,9 +38,9 @@ The analysis is split across **three conda environments** (one per figure group)
 
 | Environment file | Used for | Python | Key packages (pinned) |
 |---|---|---|---|
-| `environments/single-cell-base.yml` | **Fig. 1** — atlas integration, QC | **3.10.13** | scanpy 1.9.8, anndata 0.10.5.post1, numpy 1.26.4, pandas 2.2.0, scikit-learn 1.3.0, scipy 1.12.0, leidenalg 0.10.2, umap-learn 0.5.3; (pip) scvelo 0.3.2, scanorama 1.7.4, scrublet 0.2.3, muon 0.1.6, pyslingshot 0.1.5 |
+| `environments/single-cell-base.yml` | **Figs. 1 & 3** — atlas/QC + genome-wide peak UMAP | **3.10.13** | scanpy 1.9.8, anndata 0.10.5.post1, numpy 1.26.4, pandas 2.2.0, scikit-learn 1.3.0, scipy 1.12.0, leidenalg 0.10.2, umap-learn 0.5.3; (pip) scvelo 0.3.2, scanorama 1.7.4, scrublet 0.2.3, muon 0.1.6, pyslingshot 0.1.5 |
 | `environments/seacells.yml` | **Fig. 2** — RNA–ATAC correlation via metacells | **3.8.18** | SEACells 0.3.3, scanpy 1.9.8, anndata 0.9.2, numpy 1.24.4, pandas 1.5.3, scikit-learn 1.3.1, scipy 1.10.1, palantir 1.3.2, ray 2.10.0, jax/jaxlib 0.4.13 |
-| `environments/celloracle_env.yml` | **Figs. 3 & 4** — GRN dynamics + in-silico KO | **3.8.17** | CellOracle 0.18.0, cellrank 2.0.5, scanpy 1.9.3, anndata 0.9.2, numpy 1.24.4, pandas 1.5.3, gimmemotifs 0.17.0, genomepy 0.16.1, velocyto 0.17.17, xgboost 1.7.6, torch 2.0.1 |
+| `environments/celloracle_env.yml` | **Figs. 4 & 5** — GRN dynamics + in-silico KO | **3.8.17** | CellOracle 0.18.0, cellrank 2.0.5, scanpy 1.9.3, anndata 0.9.2, numpy 1.24.4, pandas 1.5.3, gimmemotifs 0.17.0, genomepy 0.16.1, velocyto 0.17.17, xgboost 1.7.6, torch 2.0.1 |
 
 **Conda channels** used (all three): `conda-forge`, `bioconda`, `defaults`; the `seacells` env additionally lists `anaconda`. Install via `conda` (or the faster, drop-in `mamba`).
 
@@ -106,9 +110,9 @@ zebrahub-multiome-analysis/
 ├── jupytext.toml                   # pairs each .ipynb with a .py:percent text file
 │
 ├── environments/                   # conda environment specs (one per analysis stage)
-│   ├── single-cell-base.yml        # Fig 1
+│   ├── single-cell-base.yml        # Figs 1 & 3
 │   ├── seacells.yml                # Fig 2
-│   └── celloracle_env.yml          # Fig 3 / Fig 4
+│   └── celloracle_env.yml          # Figs 4 & 5
 │
 ├── notebooks/                      # analysis notebooks, organized by figure
 │   ├── Fig1_atlas_QC/              # atlas integration, QC, marker genes/peaks, coverage plots
