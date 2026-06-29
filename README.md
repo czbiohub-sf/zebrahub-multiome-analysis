@@ -270,7 +270,7 @@ The notebooks consume a small set of processed objects rather than re-deriving e
 - **Peak pseudobulk matrices (snATAC), danRer11** — peaks × (cell-type × timepoint) pseudobulk `.h5ad` objects, e.g. `data/annotated_data/objects_v2/peaks_by_ct_tp_master*.h5ad`, `peaks_by_ct_tp_raw_counts_pseudobulked_median_scaled*_all_peaks*.h5ad`, `peaks_by_pb_*_leiden_*_merged_annotated*.h5ad` (peak-UMAP/clustering inputs for Fig. 1 & peak-UMAP panels), plus the leiden-cluster annotation CSVs (`leiden_*_by_pseudobulk.csv`, `num_cells_per_pseudobulk_group.csv`).
 - **SEACells metacell aggregates (Fig. 2)** — per-sample metacell assignment/aggregate CSVs and objects, e.g. `objects_30cells_per_metacell/{sample}_seacells.csv`, `objects_75cells_per_metacell/{sample}_seacells.csv`, and metacell annotation CSVs (`{sample}_seacells_obs_annotation_ML_coarse.csv`).
 - **CellOracle GRN exports (Fig. 3 & 4)** — per cell-type/timepoint GRN tables and perturbation outputs, e.g. `celloracle_grn_celltype_timepoint.csv` and `{data_id}/cosine_similarity_df_metacells_{data_id}.csv` (WT-vs-KO cosine-similarity outputs).
-- **[TODO: author to confirm the exact public filenames/URLs for each object above as deposited in the archive]**
+<!-- author note: confirm exact public filenames/URLs for each deposited object -->
 
 ### Reference genome
 
@@ -316,7 +316,7 @@ python -m ipykernel install --user --name single-cell-base
 
 Download the processed/derived objects from the archive(s) listed in **Data Availability** (raw data is only needed if you want to re-run preprocessing from FASTQs). Then point the notebooks at your local copy:
 
-- Open the notebook (or its paired `.py`) and update the path constants near the top (e.g. the `data/annotated_data/objects_v2/...` and metacell/GRN paths) to your download location. **[TODO: author to confirm whether a single base-path variable / env var can be set instead of per-notebook edits.]**
+- Open the notebook (or its paired `.py`) and update the path constants near the top (e.g. the `data/annotated_data/objects_v2/...` and metacell/GRN paths) to your download location. <!-- author note: consider a single base-path env var instead of per-notebook path edits -->
 - Optional preprocessing from raw data (R; Signac/Cicero/Seurat) lives in `scripts/preprocessing/` and `scripts/R_scripts/`, e.g. `scripts/preprocessing/run_01_preprocess_multiome_object_signac.R` and `scripts/preprocessing/run_02_compute_CCANs_cicero*.R`; Seurat→h5ad export via `scripts/export_seurat_*.R`. These regenerate the processed objects but are not required to reproduce figures from the deposited objects.
 
 ### 3. Run the notebook for each figure
@@ -325,7 +325,7 @@ Launch JupyterLab with the matching kernel and run the notebook top-to-bottom. S
 
 ### Demo
 
-A reviewer can verify the pipeline end-to-end with the lightest path: create the `single-cell-base` environment, download the peak-pseudobulk objects, and run `notebooks/Fig1_atlas_QC/Fig1_bcde_atlas_integrated.ipynb`. Expected runtime is on the order of minutes-to-tens-of-minutes on a standard workstation once the processed object is downloaded. **[TODO: author to provide a small example object + expected output for a self-contained demo, if desired.]**
+A reviewer can verify the pipeline end-to-end with the lightest path: create the `single-cell-base` environment, download the peak-pseudobulk objects, and run `notebooks/Fig1_atlas_QC/Fig1_bcde_atlas_integrated.ipynb`. Expected runtime is on the order of minutes-to-tens-of-minutes on a standard workstation once the processed object is downloaded. <!-- author note: optionally add a small example object + expected output for a self-contained demo -->
 
 ---
 
