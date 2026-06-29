@@ -67,7 +67,7 @@ The `environments/*.yml` files are portability-cleaned — plain `name:` and no 
 ### Create the environments
 
 ```bash
-# Fig. 1 — atlas + QC
+# Figs 1 & 3 — atlas/QC + peak UMAP
 conda env create -f environments/single-cell-base.yml
 # Fig. 2 — SEACells metacells
 conda env create -f environments/seacells.yml
@@ -78,7 +78,7 @@ conda env create -f environments/celloracle_env.yml
 Activate the environment matching the figure you are reproducing:
 
 ```bash
-conda activate single-cell-base   # Fig. 1
+conda activate single-cell-base   # Figs 1 & 3
 conda activate seacells           # Fig. 2
 conda activate celloracle_env     # Figs. 4 & 5
 ```
@@ -273,7 +273,7 @@ The notebooks consume a small set of processed objects rather than re-deriving e
 
 - **Peak pseudobulk matrices (snATAC), danRer11** — peaks × (cell-type × timepoint) pseudobulk `.h5ad` objects, e.g. `data/annotated_data/objects_v2/peaks_by_ct_tp_master*.h5ad`, `peaks_by_ct_tp_raw_counts_pseudobulked_median_scaled*_all_peaks*.h5ad`, `peaks_by_pb_*_leiden_*_merged_annotated*.h5ad` (peak-UMAP/clustering inputs for Fig. 1 & peak-UMAP panels), plus the leiden-cluster annotation CSVs (`leiden_*_by_pseudobulk.csv`, `num_cells_per_pseudobulk_group.csv`).
 - **SEACells metacell aggregates (Fig. 2)** — per-sample metacell assignment/aggregate CSVs and objects, e.g. `objects_30cells_per_metacell/{sample}_seacells.csv`, `objects_75cells_per_metacell/{sample}_seacells.csv`, and metacell annotation CSVs (`{sample}_seacells_obs_annotation_ML_coarse.csv`).
-- **CellOracle GRN exports (Fig. 3 & 4)** — per cell-type/timepoint GRN tables and perturbation outputs, e.g. `celloracle_grn_celltype_timepoint.csv` and `{data_id}/cosine_similarity_df_metacells_{data_id}.csv` (WT-vs-KO cosine-similarity outputs).
+- **CellOracle GRN exports (Figs. 4 & 5)** — per cell-type/timepoint GRN tables and perturbation outputs, e.g. `celloracle_grn_celltype_timepoint.csv` and `{data_id}/cosine_similarity_df_metacells_{data_id}.csv` (WT-vs-KO cosine-similarity outputs).
 <!-- author note: confirm exact public filenames/URLs for each deposited object -->
 
 ### Reference genome
@@ -351,6 +351,6 @@ If you use this code, the atlas, or the derived data, please cite the Zebrahub-M
 **Peer-reviewed version:**
 > _Peer-reviewed citation to be added upon publication._
 
-Please also consider citing the key tools this Resource builds on where relevant: **SEACells** (metacells, Fig. 2), **CellOracle** (GRN + in-silico KO, Fig. 3–4), and **Signac/Cicero** (ATAC preprocessing).
+Please also consider citing the key tools this Resource builds on where relevant: **SEACells** (metacells, Fig. 2), **CellOracle** (GRN + in-silico KO, Figs. 4–5), and **Signac/Cicero** (ATAC preprocessing).
 
 **Code archive:** a permanent, citable Zenodo snapshot of this repository will be deposited upon acceptance.
