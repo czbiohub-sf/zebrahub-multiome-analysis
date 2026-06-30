@@ -75,3 +75,7 @@ notebooks/Fig3_GRN_dynamics/Fig3_SI_GRN_similarity_quant.ipynb
 # Regenerable LiteMind LLM prompt artifacts — preserved locally, removed from published history
 notebooks/Fig_peak_umap/prompts/
 notebooks/Fig_peak_umap/litemind_prompt_leiden_coarse/
+
+# Local-only, auto-loaded project guidance (CLAUDE Code) — not for publication
+CLAUDE.local.md
+CLAUDE_local.md
