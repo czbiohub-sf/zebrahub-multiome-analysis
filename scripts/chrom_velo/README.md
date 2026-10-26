@@ -1,5 +1,12 @@
 # Chromatin Velocity Analysis - Hybrid Approach
 
+> **Historical implementation.** The hybrid-method description below is preserved
+> for provenance. For the current exploratory algorithms, validation results, and
+> reproduction instructions, start with the
+> [chromatin dynamics analysis](../../notebooks/EDA_chromatin_velocity/README.md).
+> Current tests have not established a global developmental stream or consistent
+> predictive gain from Cicero in the tested peak subset.
+
 This directory contains a new implementation of chromatin velocity computation that addresses the limitations of the previous method.
 
 ## ⚡ TL;DR - Quick Start
