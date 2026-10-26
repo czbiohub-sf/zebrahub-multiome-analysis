@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Synthetic peak accessibility · 20 celltypes × 6 stages</title>
+<style>
+body{margin:0;background:#f1f5f9;color:#172b43;font:15px system-ui,sans-serif} main{max-width:1500px;margin:auto;padding:24px}
+h1{font-size:27px;margin:0 0 8px} p{line-height:1.5;margin:8px 0} .label{font-size:13px;color:#4c6077}
+.controls{display:flex;gap:16px;flex-wrap:wrap;margin:22px 0;background:white;padding:16px;border-radius:8px}
+label{display:flex;flex-direction:column;gap:6px;font-size:13px} select{font:inherit;padding:7px;border:1px solid #cbd5e1;border-radius:4px}
+.row{display:grid;grid-template-columns:1.1fr 1fr;gap:16px}.panel{background:white;border-radius:8px;padding:12px;min-width:0}
+#atlas{height:670px}#curves{height:330px}#rates{height:290px}#dimensions{font-weight:650;color:#155eaa}
+#peak-note,#color-note{font-size:13px;color:#4c6077;padding:0 10px}.check{display:block;margin:10px}
+@media(max-width:900px){.row{grid-template-columns:1fr}#atlas{height:480px}main{padding:12px}}
+</style></head><body><main>
+<h1>How does each peak change across celltypes and time?</h1>
+<p><strong>Every dot is one simulated peak.</strong> Each peak has 120 continuous accessibility values: 20 celltypes × 6 developmental stages.</p>
+<p><span id="dimensions"></span> · Four synthetic celltype families · Noisy sampling means with known ground truth</p>
+<p class="label">Choose a celltype and stage, or click any peak to inspect its trajectory. All atlas views use fixed peak coordinates. Opening and closing refer to changes within the selected celltype.</p>
+<div class="controls">
+<label>Celltype<select id="celltype"></select></label>
+<label>Color shows<select id="metric"><option value="truth_state">True accessibility</option><option value="observed">Measured accessibility</option><option value="truth_velocity">True opening/closing rate</option><option value="velocity_temporal">Estimated temporal rate</option><option value="velocity">Estimated cis-smoothed rate</option></select></label>
+<label>Atlas view<select id="dimension"><option value="2">2D UMAP</option><option value="3">3D UMAP</option></select></label>
+<label>Time <span id="stage-label"></span><input id="stage" type="range" min="0" max="5" value="2" step="1"></label>
+<label>Example peak<select id="example"></select></label>
+</div>
+<div class="row"><section class="panel"><div id="atlas"></div><p id="color-note"></p></section>
+<section class="panel"><div id="curves"></div><p id="peak-note"></p><label class="check"><input id="all-celltypes" type="checkbox" checked> Show the other 19 celltypes as faint truth curves</label><div id="rates"></div></section></div>
+<p class="label">This is a controlled synthetic benchmark, not measured zebrafish biology. Beta-distributed sampling noise varies with simulated cell count and depth. The cis graph includes missing and incorrect edges. UMAP was computed from measured profiles; ground-truth annotations were used only for evaluation and display.</p>
+</main><script>__PLOTLY__</script><script>const DATA=__DATA__;</script><script>__APP__</script></body></html>
